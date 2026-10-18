@@ -1,0 +1,3149 @@
+'use strict';
+
+// 单宠时代（2026-08-07 起）：永远只有一只打工伙伴盯全部工具，AGENT 恒为 'all'。
+// 该常量保留仅为兼容旧查询参数与下方少量分支判断。
+const AGENT = new URLSearchParams(location.search).get('agent') || 'all';
+
+const stage = document.getElementById('stage');
+const cat = document.getElementById('cat');
+
+// Each character falls back to its own immutable idle pose.
+const catImg = document.getElementById('cat-img');
+const CAT_FALLBACK = '../assets/salary-cat.png';
+if (catImg) {
+  catImg.onerror = () => {
+    const fallback = petAssetCatalog.character.id === 'salary-cat' ? CAT_FALLBACK : petAssetCatalog.fallbackAsset?.url;
+    if (fallback && !catAssetMatches(fallback)) catImg.src = fallback;
+    else catImg.hidden = true;
+  };
+}
+const PET_ASSET_REGISTRY = window.AgentPawPetAssets;
+let petAssetCatalog = PET_ASSET_REGISTRY.defaultCatalog();
+
+function slotAssetUrls(slotId) {
+  const slot = petAssetCatalog.slots[slotId];
+  return slot && Array.isArray(slot.active) ? slot.active.map((asset) => asset.url).filter(Boolean) : [];
+}
+
+function stateAssetUrls(stateName) {
+  const slotId = PET_ASSET_REGISTRY.slotForState(stateName);
+  const active = slotAssetUrls(slotId);
+  return active.length ? active : slotAssetUrls('idle');
+}
+
+function applyPetAssetCatalog(next) {
+  petAssetCatalog = PET_ASSET_REGISTRY.normalizeCatalog(next);
+  catImg.hidden = false;
+  catImg.alt = petAssetCatalog.character.name;
+  cat.setAttribute('aria-label', window.AgentPawI18n.text("{0}：打开当前状态；右键打开菜单", [petAssetCatalog.character.name]));
+  poolCycles.clear();
+  ambientCycles.clear();
+  stopPoolRot();
+  ambientStop();
+  xiabanVisualKey = null;
+  xiabanVisualAsset = null;
+  updateCat(state);
+}
+
+// Any state can now have more than one pose. Entering a state chooses one,
+// then a long-running state rotates every 60 seconds. Each state owns an
+// independent shuffled cycle so adding a custom pose never causes repeats.
+const POOL_ROTATE_MS = 60 * 1000;
+let poolRot = null;
+let poolState = null;
+const poolCycles = new Map();
+
+function shufflePool(items) {
+  const out = items.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+function nextPoolFile(name, pool) {
+  const signature = pool.join('\u0000');
+  let cycle = poolCycles.get(name);
+  if (!cycle || cycle.signature !== signature || cycle.remaining.length === 0) {
+    const remaining = shufflePool(pool);
+    // 洗牌仍然是随机的，但避免跨轮次紧挨着播出同一张，观感更自然。
+    if (cycle && cycle.last && remaining.length > 1 && remaining[0] === cycle.last) {
+      const swap = 1 + Math.floor(Math.random() * (remaining.length - 1));
+      [remaining[0], remaining[swap]] = [remaining[swap], remaining[0]];
+    }
+    cycle = { signature, remaining, last: null };
+    poolCycles.set(name, cycle);
+  }
+  const file = cycle.remaining.shift();
+  cycle.last = file;
+  return file;
+}
+
+function showPoolFile(name, pool) {
+  const source = nextPoolFile(name, pool);
+  if (source && !catAssetMatches(source)) { catImg.hidden = false; catImg.src = source; }
+}
+
+function stopPoolRot() {
+  if (poolRot) clearInterval(poolRot);
+  poolRot = null;
+  poolState = null;
+}
+
+/* ====================================================================
+   闲时作息（ambient）：无任务时的「下班生活」
+   --------------------------------------------------------------------
+   一直播同一张睡觉图既呆板又不真实——人闲下来也不是倒头就睡。这里挂一层
+   **只影响画面、不改语义**的作息表：语义态仍然是 sleeping（会话点过滤、
+   气泡抑制、playAction 屏蔽、STATES.md 优先级全部照旧），变的只有两样：
+   显示哪张 GIF，以及 💤 角标亮不亮。
+
+   为什么不直接把语义态改成 loafing/idle：loafing 现在的含义是「任务进行中
+   的工具间隙」，idle 是「一轮已收尾、等你下一句」。若无任务时也复用它们，
+   你就再也无法一眼分辨「伙伴在摸鱼」到底有没有活在跑，诊断价值直接归零。
+
+   作息曲线：越闲越困。刚下班基本在活动，夜深了基本在睡，但任何阶段都保留
+   反向可能——所以永远不会静止成一张图。
+   ==================================================================== */
+function ambientScenes(wantSleep) {
+  const slotId = wantSleep ? 'ambient-sleep' : 'ambient-awake';
+  return slotAssetUrls(slotId).map((url) => ({
+    gif: url,
+    sleep: wantSleep,
+    hold: /\/cat-roam\.gif(?:[?#]|$)/.test(url) ? [8000, 16000] : null,
+  }));
+}
+// awake = 抽到「醒着的活动」的概率；hold = 片段停留时长区间（区间内随机，避免机械感）。
+// maxSleepRun / maxAwakeRun 是节奏护栏：概率负责自然感，护栏保证不会一直睡或一直醒。
+// 越往后不只是越困，切换也越慢——睡沉了还每 30 秒换个睡姿，看着像在发抖。
+const AMBIENT_PHASES = [
+  { until: 5 * 60 * 1000,  awake: 0.85, hold: [15000, 35000], maxSleepRun: 2, maxAwakeRun: 4 },  // 刚下班：几乎都在活动，节奏快
+  { until: 20 * 60 * 1000, awake: 0.45, hold: [25000, 55000], maxSleepRun: 2, maxAwakeRun: 3 },  // 犯困期：活动与打盹各半
+  { until: Infinity,       awake: 0.15, hold: [45000, 120000], maxSleepRun: 3, maxAwakeRun: 2 }, // 夜深了：以睡为主，偶尔翻身摸手机
+];
+let ambientAt = 0;      // 进入闲时作息的时刻
+let ambientTimer = null;
+let ambientGif = null;  // 当前片段，用于判断是否刚进入闲时
+let ambientSleepRun = 0; // 连续睡觉片段数；超过阶段护栏就安排醒来活动
+let ambientAwakeRun = 0; // 连续醒着片段数；超过阶段护栏就安排打盹
+const ambientCycles = new Map(); // 睡觉/醒着各自独立的一轮随机队列
+
+function ambientPhase() {
+  const elapsed = perfNow() - ambientAt;
+  return AMBIENT_PHASES.find((p) => elapsed < p.until) || AMBIENT_PHASES[AMBIENT_PHASES.length - 1];
+}
+
+function nextAmbientScene(wantSleep) {
+  let same = ambientScenes(wantSleep);
+  if (!same.length) same = ambientScenes(!wantSleep);
+  const key = wantSleep ? 'sleep' : 'awake';
+  let cycle = ambientCycles.get(key);
+  const signature = same.map((scene) => scene.gif).join('\u0000');
+  if (!cycle || cycle.signature !== signature || cycle.remaining.length === 0) {
+    const remaining = shufflePool(same);
+    if (cycle && cycle.last && remaining.length > 1 && remaining[0].gif === cycle.last) {
+      const swap = 1 + Math.floor(Math.random() * (remaining.length - 1));
+      [remaining[0], remaining[swap]] = [remaining[swap], remaining[0]];
+    }
+    cycle = { signature, remaining, last: null };
+    ambientCycles.set(key, cycle);
+  }
+  const scene = cycle.remaining.shift();
+  cycle.last = scene.gif;
+  return scene;
+}
+
+function ambientPick(phase) {
+  let wantSleep;
+  if (ambientGif == null) {
+    // 刚结束一轮工作先缓一会儿：第一幕固定是待命/摸鱼/发呆，不会一进闲置就倒头睡。
+    wantSleep = false;
+  } else if (ambientSleepRun >= phase.maxSleepRun) {
+    wantSleep = false;
+  } else if (ambientAwakeRun >= phase.maxAwakeRun) {
+    wantSleep = true;
+  } else {
+    wantSleep = Math.random() >= phase.awake;
+  }
+  return nextAmbientScene(wantSleep);
+}
+
+function ambientStep() {
+  const phase = ambientPhase();
+  const sc = ambientPick(phase);
+  ambientGif = sc.gif;
+  if (sc.sleep) {
+    ambientSleepRun++;
+    ambientAwakeRun = 0;
+  } else {
+    ambientAwakeRun++;
+    ambientSleepRun = 0;
+  }
+  if (!catAssetMatches(sc.gif)) { catImg.hidden = false; catImg.src = sc.gif; }
+  if (sleepEl) sleepEl.classList.toggle('on', sc.sleep); // 💤 只在真睡的片段亮
+  const [lo, hi] = sc.hold || phase.hold; // 片段自带时长优先（如 roam 幅度大要短播）
+  ambientTimer = setTimeout(ambientStep, lo + Math.random() * (hi - lo));
+}
+
+function ambientStart() {
+  if (ambientTimer) return; // 已在跑：保留时段进度，别把「越闲越困」重置回刚下班
+  ambientAt = perfNow();
+  ambientGif = null;
+  ambientSleepRun = 0;
+  ambientAwakeRun = 0;
+  ambientStep();
+}
+
+function ambientStop() {
+  if (ambientTimer) { clearTimeout(ambientTimer); ambientTimer = null; }
+  ambientGif = null;
+  ambientSleepRun = 0;
+  ambientAwakeRun = 0;
+}
+
+// 定时下班片段：只在本机当地时间的两个下班窗口播放，且只覆盖真正无任务的
+// idle/sleeping。它不是业务状态，不会把 sleeping 伪装成 loafing，也不会盖住工作。
+const XIABAN_DURATION_MS = 10 * 60 * 1000;
+const XIABAN_DEFAULT_TIMES = Object.freeze({ lunch: '10:55', evening: '16:55' });
+let xiabanSchedule = { ...XIABAN_DEFAULT_TIMES };
+const XIABAN_STATES = new Set(['idle', 'sleeping']);
+const XIABAN_COPY_KEYS = {
+  lunch: ['bub.xiabanLunch1', 'bub.xiabanLunch2', 'bub.xiabanLunch3'],
+  evening: ['bub.xiabanEvening1', 'bub.xiabanEvening2', 'bub.xiabanEvening3'],
+};
+const XIABAN_ANNOUNCED_STORAGE_KEY = 'agentpaw.xiaban-announced-window';
+let xiabanTimer = null;
+let xiabanVisualKey = null;
+let xiabanVisualAsset = null;
+let xiabanAnnouncedWindow = (() => {
+  try { return window.localStorage && window.localStorage.getItem(XIABAN_ANNOUNCED_STORAGE_KEY); }
+  catch { return null; }
+})();
+
+function isXiabanClockTime(value) {
+  return typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function xiabanStartEntries() {
+  return [
+    { period: 'lunch', time: xiabanSchedule.lunch },
+    { period: 'evening', time: xiabanSchedule.evening },
+  ].filter((entry) => isXiabanClockTime(entry.time)).map((entry) => ({
+    ...entry,
+    startMin: Number(entry.time.slice(0, 2)) * 60 + Number(entry.time.slice(3)),
+  }));
+}
+
+function applyXiabanSchedule(next) {
+  if (!next || !isXiabanClockTime(next.lunch) || !isXiabanClockTime(next.evening)) return false;
+  xiabanSchedule = { lunch: next.lunch, evening: next.evening };
+  if (xiabanTimer) {
+    clearTimeout(xiabanTimer);
+    xiabanTimer = null;
+  }
+  scheduleXiabanBoundary();
+  if (XIABAN_STATES.has(state)) updateCat(state);
+  return true;
+}
+
+function xiabanWindow(now = Date.now()) {
+  const d = new Date(now);
+  const dayMs = (((d.getHours() * 60 + d.getMinutes()) * 60 + d.getSeconds()) * 1000) + d.getMilliseconds();
+  for (const entry of xiabanStartEntries()) {
+    const { startMin } = entry;
+    const startMs = startMin * 60 * 1000;
+    if (dayMs >= startMs && dayMs < startMs + XIABAN_DURATION_MS) {
+      // 日期 + 时段共同组成去重 key：同一窗口反复收到状态
+      // 快照也只播报一次，第二天自动解锁。
+      const dateKey = [d.getFullYear(), d.getMonth() + 1, d.getDate()].join('-');
+      return {
+        remainingMs: startMs + XIABAN_DURATION_MS - dayMs,
+        period: entry.period,
+        key: `${dateKey}:${startMin}`,
+      };
+    }
+  }
+  return null;
+}
+
+function xiabanBoundaryDelay(now = Date.now()) {
+  const today = new Date(now);
+  today.setHours(0, 0, 0, 0);
+  let best = Infinity;
+  for (let dayOffset = 0; dayOffset <= 1; dayOffset++) {
+    const day = new Date(today);
+    day.setDate(day.getDate() + dayOffset);
+    for (const entry of xiabanStartEntries()) {
+      const { startMin } = entry;
+      const start = new Date(day);
+      start.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
+      for (const boundary of [start.getTime(), start.getTime() + XIABAN_DURATION_MS]) {
+        const delay = boundary - now;
+        if (delay > 100) best = Math.min(best, delay);
+      }
+    }
+  }
+  return Number.isFinite(best) ? Math.max(250, best) : 60 * 60 * 1000;
+}
+
+function scheduleXiabanBoundary() {
+  if (xiabanTimer) return;
+  xiabanTimer = setTimeout(() => {
+    xiabanTimer = null;
+    updateCat(state);
+    scheduleXiabanBoundary();
+  }, xiabanBoundaryDelay());
+}
+
+function announceXiaban(info) {
+  if (!info || xiabanAnnouncedWindow === info.key) return;
+  // 用户正在操作卡片/菜单时不抢界面，也不先标记已播报；
+  // 下一次状态快照进来后仍可以补播。
+  if (askActive || actionPopOpen || radialOpen || peekOpen) return;
+  const keys = XIABAN_COPY_KEYS[info.period] || XIABAN_COPY_KEYS.evening;
+  const key = keys[Math.floor(Math.random() * keys.length)];
+  xiabanAnnouncedWindow = info.key;
+  // 记住最近一个已播报窗口，避免在 10 分钟内重启应用后
+  // 又立即播一次；新日期/新时段的 key 不同，会正常解锁。
+  try { if (window.localStorage) window.localStorage.setItem(XIABAN_ANNOUNCED_STORAGE_KEY, info.key); } catch {}
+  showBubble(t(key), Math.min(6500, Math.max(3200, info.remainingMs)));
+}
+
+function xiabanMaybeShow(s) {
+  scheduleXiabanBoundary();
+  const info = xiabanWindow();
+  if (!XIABAN_STATES.has(s) || !info) {
+    xiabanVisualKey = null;
+    xiabanVisualAsset = null;
+    return false;
+  }
+  const pool = slotAssetUrls('xiaban');
+  if (!pool.length) return false;
+  if (xiabanVisualKey !== info.key || !xiabanVisualAsset) {
+    xiabanVisualKey = info.key;
+    xiabanVisualAsset = nextPoolFile('xiaban', pool);
+  }
+  if (!catAssetMatches(xiabanVisualAsset)) { catImg.hidden = false; catImg.src = xiabanVisualAsset; }
+  if (sleepEl) sleepEl.classList.remove('on');
+  announceXiaban(info);
+  return true;
+}
+
+function updateCat(s) {
+  if (!catImg) return;
+  if (xiabanMaybeShow(s)) {
+    ambientStop();
+    stopPoolRot();
+    return;
+  }
+  if (s === 'sleeping') { stopPoolRot(); ambientStart(); return; } // 画面交给作息表
+  ambientStop();
+  const pool = stateAssetUrls(s);
+  if (pool.length) {
+    if (poolState !== s) {
+      stopPoolRot();
+      poolState = s;
+      showPoolFile(s, pool);
+      poolRot = setInterval(() => {
+        const cur = stateAssetUrls(state);
+        if (!cur.length || state !== s) { stopPoolRot(); return; }
+        showPoolFile(s, cur);
+      }, POOL_ROTATE_MS);
+    }
+  } else {
+    stopPoolRot();
+  }
+}
+
+function catAssetMatches(source) {
+  if (!catImg) return false;
+  try {
+    return new URL(catImg.src, window.location.href).href === new URL(source, window.location.href).href;
+  } catch {
+    return String(catImg.getAttribute('src') || '') === String(source || '');
+  }
+}
+const bubble = document.getElementById('bubble');
+const bubbleText = document.getElementById('bubble-text');
+const chipCost = document.getElementById('chip-cost');
+const chipTokens = document.getElementById('chip-tokens');
+const chipContext = document.getElementById('chip-context');
+const chip = document.getElementById('chip');
+const compactRow = document.getElementById('compact-row');
+const quotaEl = document.getElementById('chip-quota');
+const quotaPopover = document.getElementById('quota-popover');
+const quotaPopoverTitle = document.getElementById('quota-popover-title');
+const quotaPopoverStatus = document.getElementById('quota-popover-status');
+const quotaPopoverRows = document.getElementById('quota-popover-rows');
+const quotaPopoverInsight = document.getElementById('quota-popover-insight');
+const quotaPopoverUpdated = document.getElementById('quota-popover-updated');
+const quotaPopoverHint = document.getElementById('quota-popover-hint');
+const quotaPopoverClose = document.getElementById('quota-popover-close');
+const sessionsEl = document.getElementById('sessions');
+const radial = document.getElementById('radial');
+const thinkEl = document.getElementById('think');
+const sleepEl = document.getElementById('sleep');
+const propEl = document.getElementById('prop');
+const sidekickEl = document.getElementById('sidekick');
+const askEl = document.getElementById('ask');
+const askScroll = document.getElementById('ask-scroll');
+const askLabel = document.getElementById('ask-label');
+const askSess = document.getElementById('ask-sess');
+const askQhead = document.getElementById('ask-qhead');
+const askQ = document.getElementById('ask-q');
+const askHint = document.getElementById('ask-hint');
+const askOpts = document.getElementById('ask-opts');
+const askInputRow = document.getElementById('ask-input-row'); // .ask-other
+const askText = document.getElementById('ask-text');
+const askPage = document.getElementById('ask-page');
+const askFoot = document.getElementById('ask-foot');
+const askSubmit = document.getElementById('ask-submit');
+const askBack = document.getElementById('ask-back');
+const askTerm = document.getElementById('ask-term');
+const notepad = document.getElementById('notepad');
+const npBadge = document.getElementById('np-badge');
+const actionPop = document.getElementById('action-pop');
+const acActs = document.getElementById('ac-acts');
+const acActSec = document.getElementById('ac-act-sec');
+const peekEl = document.getElementById('peek');
+const peekState = document.getElementById('peek-state');
+const peekTitle = document.getElementById('peek-title');
+const peekSubtitle = document.getElementById('peek-subtitle');
+const peekList = document.getElementById('peek-list');
+const peekSummary = document.getElementById('peek-summary');
+const peekHint = document.getElementById('peek-hint');
+const peekFocus = document.getElementById('peek-focus');
+const peekPanel = document.getElementById('peek-panel');
+const peekClose = document.getElementById('peek-close');
+
+// Keep the non-native details card closed even if a cached/older HTML shell
+// is ever loaded before the renderer finishes its first stats pass.
+quotaPopover.classList.add('hidden');
+quotaEl.setAttribute('aria-expanded', 'false');
+
+let askActive = false;
+let askQueue = []; // 当前所有待处理的选择/输入（每项含 project）
+let askIdx = 0;
+let lastAskSig = ''; // 当前面板内容签名，避免每 2s 重渲冲掉用户输入
+const answered = new Set(); // 已答的 key，避免快照延迟导致重弹
+let askHover = false; // 鼠标在选项面板上
+let elic = null;      // elicitation 渲染态：{ key, questions, qIdx, answers, selected }
+// 面板开着、且(鼠标在面板上 / 输入框聚焦/有草稿 / 已选了选项) = 交互中：
+// 此时别重渲面板、别改打工伙伴状态，免得打断你思考/选择。面板一关就自动解除。
+const isInteracting = () => askActive && (askHover || document.activeElement === askText || !!(askText && askText.value) || (elic && elic.selected != null));
+
+// i18n: shared/i18n.js is loaded as a <script> before this file.
+const t = (key, vars) => window.AgentPawI18n.t(key, vars);
+const backgroundStatus = (session) => window.AgentPawI18n.backgroundStatus(session);
+// A reason arrives as a stable key ('reply'|'plan'|'perm'); older payloads may
+// still carry free text, so fall back to whatever came in.
+const waitPhrase = (reason) => (reason ? t('wait.' + reason) : t('wait.default'));
+const reasonWord = (reason) => (reason ? t('reason.' + reason) : t('reason.default'));
+const esc = (s) => String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+// 带上 sessionId：否则同一项目下两个并行会话若问了同样的问题，会共用一个 key，
+// 答掉一个就把另一个也标记成 answered 吞掉。choice 各构造处都带 sessionId。
+const choiceKey = (c) => {
+  if (!c) return '';
+  if (c.permId) return `perm:${c.permId}`;
+  if (c.actionId) return `action:${c.actionId}`;
+  // Compatibility fallback for old snapshots; authorization choices always
+  // take one of the stable branches above.
+  return (c.sessionId || '') + '|' + (c.project || '') + '|' + (c.question || '');
+};
+
+// 动态定高：按弹层内容和可见锚点预留空间，
+// 避免固定大窗口留白 / 顶屏被下移。先扩到目标宽度再量高度：如果在基础
+// 320px 窄窗里先测，长文本会被过度换行，错误地把弹层撑到整屏高。
+const POPUP_W = 520;
+const POPUP_BOTTOM = 200;
+const ASK_VIEWPORT_MAX_H = 520;
+const BASE_PET_FRAME_H = 340;
+const RESTING_FRAME_MAX_W = 360;
+const RESTING_FRAME_MAX_H = 360;
+let fitPopupSeq = 0;
+let edgeLayout = { vertical: 'above', horizontal: 'center' };
+
+function browserWorkArea() {
+  const s = window.screen || {};
+  const width = Number.isFinite(s.availWidth) ? s.availWidth : (window.innerWidth || 320);
+  const height = Number.isFinite(s.availHeight) ? s.availHeight : (window.innerHeight || 340);
+  return {
+    x: Number.isFinite(s.availLeft) ? s.availLeft : 0,
+    y: Number.isFinite(s.availTop) ? s.availTop : 0,
+    width,
+    height,
+  };
+}
+
+function petGeometrySnapshot() {
+  const el = curSkinEl();
+  if (!el || !Number.isFinite(window.screenX) || !Number.isFinite(window.screenY)) return null;
+  const rect = el.getBoundingClientRect();
+  const viewportW = Math.max(1, window.innerWidth || 320);
+  const viewportH = Math.max(1, window.innerHeight || 340);
+  return {
+    workArea: browserWorkArea(),
+    windowRect: { x: window.screenX, y: window.screenY, width: viewportW, height: viewportH },
+    petRect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+  };
+}
+
+function setStageEdgeLayout(next) {
+  const layout = next || edgeLayout;
+  edgeLayout = {
+    vertical: layout.vertical === 'below' ? 'below' : 'above',
+    horizontal: ['left', 'right'].includes(layout.horizontal) ? layout.horizontal : 'center',
+  };
+  stage.classList.toggle('edge-below', edgeLayout.vertical === 'below');
+  stage.classList.toggle('edge-left', edgeLayout.horizontal === 'left');
+  stage.classList.toggle('edge-right', edgeLayout.horizontal === 'right');
+  if (actionPopOpen) positionActionPop();
+  if (propEl && propEl.classList.contains('on')) positionProp();
+}
+
+// Changing the flex anchor moves the pet inside the transparent BrowserWindow.
+// This payload lets the main process move/resize that window in the opposite
+// direction, so the visible pet stays on exactly the same screen pixel.
+function anchoredLayoutPayload(next) {
+  const before = petGeometrySnapshot();
+  if (!before) { setStageEdgeLayout(next); return null; }
+  const oldPet = before.petRect;
+  const wa = before.workArea;
+  const waRight = wa.x + wa.width;
+  const waBottom = wa.y + wa.height;
+  const wr = before.windowRect;
+  const compactHorizontalFrame = wr.width <= RESTING_FRAME_MAX_W;
+  const compactVerticalFrame = wr.height <= RESTING_FRAME_MAX_H;
+  let screenX = wr.x + oldPet.x;
+  let screenY = wr.y + oldPet.y;
+
+  // A frame at the work-area edge plus a large transparent inset means the OS
+  // stopped the BrowserWindow before the user's visible pet reached the edge.
+  // Treat that as an explicit edge drag and snap the *pet body*, not the frame.
+  if (compactVerticalFrame && next.vertical === 'below' && wr.y <= wa.y + 3 && oldPet.y > 18) screenY = wa.y;
+  if (compactVerticalFrame && next.vertical === 'above'
+    && wr.y + wr.height >= waBottom - 3 && wr.height - oldPet.y - oldPet.height > 18) {
+    screenY = waBottom - oldPet.height;
+  }
+  if (compactHorizontalFrame && next.horizontal === 'left' && wr.x <= wa.x + 3 && oldPet.x > 18) screenX = wa.x;
+  if (compactHorizontalFrame && next.horizontal === 'right'
+    && wr.x + wr.width >= waRight - 3 && wr.width - oldPet.x - oldPet.width > 18) {
+    screenX = waRight - oldPet.width;
+  }
+  setStageEdgeLayout(next);
+  const rect = curSkinEl().getBoundingClientRect();
+  const viewportW = Math.max(1, window.innerWidth || 320);
+  const viewportH = Math.max(1, window.innerHeight || 340);
+  const xAlign = edgeLayout.horizontal;
+  const yAlign = edgeLayout.vertical === 'below' ? 'top' : 'bottom';
+  const xOffset = xAlign === 'left'
+    ? rect.left
+    : xAlign === 'right'
+      ? viewportW - rect.right
+      : rect.left + rect.width / 2 - viewportW / 2;
+  const yOffset = yAlign === 'top' ? rect.top : viewportH - rect.bottom;
+  return {
+    screenX, screenY,
+    width: rect.width, height: rect.height,
+    xAlign, yAlign, xOffset, yOffset,
+  };
+}
+
+function restingEdgeLayout() {
+  const snapshot = petGeometrySnapshot();
+  if (!snapshot || !window.PetGeometry) return edgeLayout;
+  // In an expanded popup the bottom-anchored pet's local y grows by exactly
+  // the extra window height. Remove that artificial offset before deciding
+  // whether the visible pet itself is actually in the top-edge zone.
+  const frameHeightExcess = Math.max(0, snapshot.windowRect.height - BASE_PET_FRAME_H);
+  let topThreshold = snapshot.petRect.y - frameHeightExcess + 2;
+  if (edgeLayout.vertical === 'below') {
+    // Measure the real normal-layout inset for the current pet/status stack.
+    // A fixed number is wrong as soon as a chip/bubble changes height and can
+    // make pointerup flip the pet back too early.
+    const previous = { ...edgeLayout };
+    setStageEdgeLayout({ ...previous, vertical: 'above' });
+    topThreshold = curSkinEl().getBoundingClientRect().top - frameHeightExcess + 2;
+    setStageEdgeLayout(previous);
+  }
+  return window.PetGeometry.chooseRestingLayout({
+    ...snapshot,
+    current: edgeLayout,
+    threshold: Math.max(24, topThreshold),
+    inferVerticalFrameClamp: snapshot.windowRect.height <= RESTING_FRAME_MAX_H,
+    inferHorizontalFrameClamp: snapshot.windowRect.width <= RESTING_FRAME_MAX_W,
+  });
+}
+
+function popupEdgeLayout(height, popupHeight) {
+  const snapshot = petGeometrySnapshot();
+  if (!snapshot || !window.PetGeometry) return edgeLayout;
+  return window.PetGeometry.choosePopupLayout({
+    ...snapshot,
+    current: edgeLayout,
+    popupHeight: Math.max(80, Number(popupHeight) || (Number(height) || 340) - POPUP_BOTTOM),
+    inferVerticalFrameClamp: snapshot.windowRect.height <= RESTING_FRAME_MAX_H,
+    inferHorizontalFrameClamp: snapshot.windowRect.width <= RESTING_FRAME_MAX_W,
+  });
+}
+
+function positionActionPop() {
+  const rowRect = compactRow.getBoundingClientRect();
+  const stageRect = stage.getBoundingClientRect();
+  const inset = Math.ceil(Math.max(0, edgeLayout.vertical === 'below'
+    ? rowRect.bottom - stageRect.top
+    : stageRect.bottom - rowRect.top));
+  // Follow the whole visible stack (pet, dots and capsule) on either side,
+  // including when the minimum frame leaves extra transparent space.
+  actionPop.style.setProperty('--action-pop-inset', `${inset + 10}px`);
+  return inset;
+}
+
+function setRequestedPetSize(w, h, options = {}) {
+  const width = Number(w) || 0;
+  const height = Number(h) || 0;
+  const nextLayout = options.popup
+    ? popupEdgeLayout(height, options.popupHeight)
+    : restingEdgeLayout();
+  const anchor = anchoredLayoutPayload(nextLayout);
+  try { window.pet.setPetSize(width, height, anchor, options.popup ? 'popup' : 'resting'); } catch {}
+}
+
+// The resting pet window used to stay at BASE_W even when the capsule grew
+// past it. Keep the capsule uncompressed and let the transparent frame follow
+// its real intrinsic width so the cat and the session dots remain centred on
+// the same visual stack.
+const CAPSULE_FRAME_MIN_W = 320;
+const CAPSULE_FRAME_MAX_W = 900;
+const CAPSULE_FRAME_GUTTER = 24;
+let restingFitFrame = null;
+
+function measuredRestingWidth() {
+  const widths = [];
+  for (const el of [compactRow, chip, sessionsEl]) {
+    if (!el || el.hidden) continue;
+    const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
+    const rectWidth = rect && Number(rect.width);
+    const scrollWidth = Number(el.scrollWidth);
+    if (Number.isFinite(rectWidth) && rectWidth > 0) widths.push(rectWidth);
+    if (Number.isFinite(scrollWidth) && scrollWidth > 0) widths.push(scrollWidth);
+  }
+  return widths.length ? Math.max(...widths) : CAPSULE_FRAME_MIN_W;
+}
+
+function desiredRestingWidth() {
+  return Math.min(CAPSULE_FRAME_MAX_W,
+    Math.max(CAPSULE_FRAME_MIN_W, Math.ceil(measuredRestingWidth() + CAPSULE_FRAME_GUTTER)));
+}
+
+function fitRestingFrame(force = false, allowOverlays = false) {
+  if (restingFitFrame) cancelAnimationFrame(restingFitFrame);
+  restingFitFrame = requestAnimationFrame(() => {
+    restingFitFrame = null;
+    if (window.AgentPawCompanion && window.AgentPawCompanion.isOpen()) {
+      if (force || allowOverlays) fitPopup(document.getElementById('rest-reminder'));
+      return;
+    }
+    if (!allowOverlays && (askActive || actionPopOpen || peekOpen || quotaPopoverOpen || radialOpen)) return;
+    const width = desiredRestingWidth();
+    const current = Number(window.innerWidth) || CAPSULE_FRAME_MIN_W;
+    if (!force && Math.abs(current - width) <= 2) return;
+    setRequestedPetSize(width, BASE_PET_FRAME_H);
+  });
+}
+
+function fitPopup(el) {
+  if (!el) return;
+  const seq = ++fitPopupSeq;
+  requestAnimationFrame(() => {
+    const measure = () => {
+      if (seq !== fitPopupSeq) return;
+      const popupW = POPUP_W;
+      // 关键：先临时去掉 max-height 再量，否则 scrollHeight 会被「当前小窗口算出的
+      // max-height」钳住（鸡生蛋问题）→ 窗口永远只长一点点、列表只剩 1 行+滚动条。
+      const prev = el.style.maxHeight;
+      el.style.maxHeight = 'none';
+      const contentH = el.scrollHeight;
+      el.style.maxHeight = prev;
+      const viewportH = el === askEl || el === actionPop ? Math.min(contentH, ASK_VIEWPORT_MAX_H) : contentH;
+      const popupBottom = el === actionPop ? positionActionPop() : POPUP_BOTTOM;
+      const winH = Math.max(340, popupBottom + viewportH + 24);
+      setRequestedPetSize(popupW, winH, { popup: true, popupHeight: viewportH });
+    };
+
+    const targetW = POPUP_W;
+    if (Math.abs((window.innerWidth || 0) - targetW) > 2) {
+      // 第一拍只扩宽，第二拍在正确的横向排版下测真实高度。
+      setRequestedPetSize(targetW, Math.max(340, window.innerHeight || 340), { popup: true });
+      requestAnimationFrame(() => requestAnimationFrame(measure));
+    } else {
+      measure();
+    }
+  });
+}
+function resetPetSize() {
+  fitPopupSeq++;
+  fitRestingFrame(true);
+  requestAnimationFrame(() => { if (window.AgentPawCompanion) window.AgentPawCompanion.refresh(); });
+}
+
+function settleEdgeLayout() {
+  // No screen coordinates in the headless renderer tests; the real Electron
+  // window always has them. This also avoids inventing a desktop in Node.
+  if (!petGeometrySnapshot()) return;
+  // Keep the intrinsic capsule width while re-evaluating the edge anchor.
+  // Resetting to the old 320px base here would briefly reintroduce clipping
+  // after a drag or immediately before the radial menu is laid out.
+  fitRestingFrame(true, true);
+}
+
+// Switch the internal top/bottom anchor *during* a drag, just before the
+// transparent BrowserWindow reaches the work-area boundary. The visible pet
+// is kept on the same screen pixel and the gesture is rebased, so the next
+// pointer frame continues from there instead of producing edge -> pause ->
+// jump. Returning from the top probes the normal layout first and restores it
+// as soon as the whole frame can fit on-screen again.
+function movePetDuringDrag(gesture, e, targetX, targetY) {
+  const dragMeta = () => ({
+    x: gesture.grabX,
+    y: gesture.grabY,
+    id: gesture.id,
+    seq: ++gesture.moveSeq,
+  });
+  const el = curSkinEl();
+  if (!el) {
+    window.pet.setWinPos(targetX, targetY, dragMeta());
+    return;
+  }
+  const before = el.getBoundingClientRect();
+  const petScreenX = targetX + before.left;
+  const petScreenY = targetY + before.top;
+  const wa = browserWorkArea();
+  let nextVertical = edgeLayout.vertical;
+
+  if (edgeLayout.vertical === 'above') {
+    nextVertical = window.PetGeometry
+      ? window.PetGeometry.chooseDragVerticalLayout({
+        current: 'above', workArea: wa, targetWindowY: targetY,
+        petScreenY, abovePetOffset: before.top,
+      })
+      : (targetY <= wa.y + 2 ? 'below' : 'above');
+  } else if (edgeLayout.vertical === 'below') {
+    const candidate = { ...edgeLayout, vertical: 'above' };
+    setStageEdgeLayout(candidate);
+    const normalRect = el.getBoundingClientRect();
+    const probed = window.PetGeometry
+      ? window.PetGeometry.chooseDragVerticalLayout({
+        current: 'below', workArea: wa, targetWindowY: targetY,
+        petScreenY, abovePetOffset: normalRect.top,
+      })
+      : (petScreenY - normalRect.top >= wa.y + 2 ? 'above' : 'below');
+    if (probed === 'above') {
+      nextVertical = 'above';
+    } else {
+      setStageEdgeLayout({ ...edgeLayout, vertical: 'below' });
+      nextVertical = 'below';
+    }
+  }
+
+  if (nextVertical !== edgeLayout.vertical) {
+    setStageEdgeLayout({ ...edgeLayout, vertical: nextVertical });
+  }
+  const after = el.getBoundingClientRect();
+  const anchoredX = petScreenX - after.left;
+  const anchoredY = petScreenY - after.top;
+  // When the cat changes its internal edge anchor, the grabbed pixel moves
+  // inside the window. Shift the local grab point by the same amount so the OS
+  // cursor remains attached to that exact pixel without a visible jump.
+  gesture.grabX += after.left - before.left;
+  gesture.grabY += after.top - before.top;
+
+  if (Math.abs(anchoredX - targetX) > 0.5 || Math.abs(anchoredY - targetY) > 0.5) {
+    gesture.win = [anchoredX, anchoredY];
+    gesture.sx = pointerScreenX(e);
+    gesture.sy = pointerScreenY(e);
+  }
+  window.pet.setWinPos(anchoredX, anchoredY, dragMeta());
+}
+
+// 从快照重建队列（多任务都在、且标明项目）
+function refreshAsk(stats) {
+  // 记事本行动中心开着时，事项在那里处理，别再另弹选项面板抢窗口
+  if (actionPopOpen) { hideAsk(); return; }
+  const actionSource = Array.isArray(stats.actions)
+    ? stats.actions
+    : (stats.sessions || []).filter((x) => (x.state === 'waiting' || x.state === 'needsinput') && x.choice);
+  const items = actionSource
+    .filter((x) => !x.notificationsMuted)
+    .map((x) => x.choice)
+    .filter(Boolean)
+    .filter((c) => (c.options && c.options.length) || c.allowInput);
+  const present = new Set(items.map(choiceKey));
+  for (const k of [...answered]) if (!present.has(k)) answered.delete(k); // 已消失=已答完，清理
+  const fresh = items.filter((c) => !answered.has(choiceKey(c)));
+
+  // 你正在答当前卡片、且它后端仍然有效 → 不重渲(保住勾选/输入)，但仍静默对账队列其余项，
+  // 这样已解决的卡片不会残留、新卡片不会被你的“交互中”状态永久挡在外面。
+  const cur = askActive ? askQueue[askIdx] : null;
+  if (isInteracting() && cur && present.has(choiceKey(cur))) {
+    askQueue = fresh;
+    const i = fresh.findIndex((c) => choiceKey(c) === choiceKey(cur));
+    askIdx = i >= 0 ? i : 0;
+    return;
+  }
+
+  askQueue = fresh;
+  if (!askQueue.length) { hideAsk(); return; }
+  if (askIdx >= askQueue.length) askIdx = 0;
+  const sig = askQueue.map(choiceKey).join(',');
+  if (askActive && sig === lastAskSig) return; // 内容没变，别重渲（保住正在输入/勾选的）
+  lastAskSig = sig;
+  showAskPanel();
+}
+
+function enqueueChoice(c) {
+  if (!c || (!(c.options && c.options.length) && !c.allowInput)) return;
+  answered.delete(choiceKey(c));
+  const i = askQueue.findIndex((x) => choiceKey(x) === choiceKey(c));
+  if (i < 0) askQueue.push(c);
+  // 记事本行动中心开着 → 新事项在那里显示，不另弹面板
+  if (actionPopOpen) { renderActionPop(); return; }
+  // 你正在答当前面板时，新任务先进队列、不抢面板（等你答完再显示），避免打断
+  if (isInteracting() && askActive) return;
+  askIdx = askQueue.findIndex((x) => choiceKey(x) === choiceKey(c));
+  showAskPanel();
+}
+
+function showAskPanel() {
+  if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
+  const c = askQueue[askIdx];
+  if (!c) { hideAsk(); return; }
+  if (quotaPopoverOpen) closeQuotaPopover();
+  if (peekOpen) closePeek();
+  const sess = c.sessionId ? ' · #' + String(c.sessionId).slice(-3) : '';
+  const queue = askQueue.length > 1 ? `${askIdx + 1}/${askQueue.length} · ` : '';
+  askSess.textContent = queue + (c.project || '?') + sess;
+  askEl.dataset.kind = c.kind;
+
+  if (c.kind === 'ask') {
+    if (!elic || elic.key !== choiceKey(c)) {
+      elic = { key: choiceKey(c), questions: Array.isArray(c.questions) ? c.questions : [], qIdx: 0, answers: {}, selected: null, selSet: [], multi: false, otherOn: false };
+    }
+    renderElicitation(c);
+  } else {
+    elic = null;
+    if (c.kind === 'perm' && c.permId) renderPerm(c);
+    else if (c.kind === 'plan' && c.permId) renderPlan(c);
+    else renderContinue(c);
+  }
+
+  bubble.classList.add('hidden');
+  askEl.classList.remove('hidden');
+  lastAskSig = askQueue.map(choiceKey).join(',');
+  askActive = true;
+  fitPopup(askEl); // 富卡片：固定头尾、中部滚动，动态定高 + 520 宽
+}
+
+function clearAskBody() {
+  askScroll.scrollTop = 0;
+  askOpts.innerHTML = '';
+  askOpts.classList.remove('perm-row');
+  askQhead.textContent = '';
+  askHint.textContent = '';
+  askPage.textContent = '';
+  askInputRow.classList.add('hidden');
+  askText.value = '';
+  askText.placeholder = t('ask.placeholder');
+  askTerm.textContent = t('ask.goTerminal');
+}
+
+// ① elicitation（AskUserQuestion）：多选项卡 + Other + 分页 + Submit/Back
+function renderElicitation(c) {
+  clearAskBody();
+  askLabel.textContent = t('ask.needsInput');
+  const qs = elic.questions;
+  const q = qs[elic.qIdx] ||
+    { question: c.question || t('ask.needAnswer'), options: (c.options || []).map((o) => ({ label: o.label, description: o.desc })) };
+  askQhead.textContent = q.header || '';
+  askQ.textContent = q.question || '';
+  const multi = !!q.multiSelect;
+  elic.multi = multi;
+  askHint.textContent = multi ? t('ask.multiHint') : t('ask.singleHint');
+
+  const prior = elic.answers[q.question];
+  const opts = q.options || [];
+  const known = (v) => opts.some((o) => o.label === v);
+  if (multi) {
+    const parts = prior ? String(prior).split(/,\s*/).filter(Boolean) : [];
+    elic.selSet = parts.filter(known);
+    const otherText = parts.find((p) => !known(p));
+    elic.otherOn = !!otherText;
+    elic.selected = null;
+    if (otherText) askText.value = otherText;
+  } else {
+    elic.selSet = [];
+    elic.otherOn = false;
+    elic.selected = prior != null ? (known(prior) ? prior : '__other__') : null;
+  }
+
+  for (const o of opts) askOpts.appendChild(buildRadioCard(o.label, o.description, o.label, q));
+  askOpts.appendChild(buildRadioCard(t('ask.other'), '', '__other__', q));
+  if (elic.selected === '__other__' || (multi && elic.otherOn)) {
+    askInputRow.classList.remove('hidden');
+    if (!multi && prior && !known(prior)) askText.value = prior;
+  }
+
+  askPage.textContent = `${elic.qIdx + 1} / ${qs.length || 1}`;
+  askFoot.classList.remove('hidden');
+  const last = elic.qIdx >= (qs.length || 1) - 1;
+  askSubmit.textContent = last ? t('ask.submit') : t('ask.next');
+  askBack.classList.toggle('hidden', elic.qIdx === 0);
+  askTerm.classList.remove('hidden');
+  updateSubmitEnabled(q);
+  fitPopup(askEl); // 题目切换后内容高度变了，重新定高
+}
+
+function buildRadioCard(label, desc, value, q) {
+  const multi = elic.multi;
+  const isSel = multi ? (value === '__other__' ? elic.otherOn : elic.selSet.includes(value)) : elic.selected === value;
+  const card = document.createElement('button');
+  card.className = 'ask-opt' + (multi ? ' multi' : '') + (isSel ? ' sel' : '');
+  card.innerHTML =
+    '<span class="ask-radio"></span><span class="ask-ot">' +
+    `<span class="ask-ol">${esc(label)}</span>` + (desc ? `<span class="ask-od">${esc(desc)}</span>` : '') +
+    '</span>';
+  card.addEventListener('click', () => {
+    if (multi) {
+      if (value === '__other__') {
+        elic.otherOn = !elic.otherOn;
+        card.classList.toggle('sel', elic.otherOn);
+        askInputRow.classList.toggle('hidden', !elic.otherOn);
+        if (elic.otherOn) setTimeout(() => askText.focus(), 0);
+      } else {
+        const i = elic.selSet.indexOf(value);
+        if (i >= 0) elic.selSet.splice(i, 1); else elic.selSet.push(value);
+        card.classList.toggle('sel');
+      }
+    } else {
+      elic.selected = value;
+      askInputRow.classList.toggle('hidden', value !== '__other__');
+      if (value === '__other__') setTimeout(() => askText.focus(), 0);
+      [...askOpts.children].forEach((el) => el.classList.remove('sel'));
+      card.classList.add('sel');
+    }
+    updateSubmitEnabled(q);
+    fitPopup(askEl);
+  });
+  return card;
+}
+
+function updateSubmitEnabled() {
+  let ok;
+  if (elic && elic.multi) ok = elic.selSet.length > 0 || (elic.otherOn && (askText.value || '').trim());
+  else ok = elic && elic.selected && (elic.selected !== '__other__' || (askText.value || '').trim());
+  askSubmit.classList.toggle('disabled', !ok);
+}
+
+// 自定义输入为空时按回车：不发送，抖一下 + 提示别忘了填（2.6s 后复原 placeholder）
+let emptyWarnTimer = null;
+function warnEmptyInput() {
+  askText.focus();
+  askText.classList.add('warn');
+  if (!askText.dataset.ph) askText.dataset.ph = askText.placeholder || t('ask.placeholder');
+  askText.placeholder = t('ask.emptyWarn');
+  clearTimeout(emptyWarnTimer);
+  emptyWarnTimer = setTimeout(() => {
+    askText.classList.remove('warn');
+    if (askText.dataset.ph) { askText.placeholder = askText.dataset.ph; delete askText.dataset.ph; }
+  }, 2600);
+}
+
+function elicNextOrSubmit(c) {
+  const qs = elic.questions;
+  const q = qs[elic.qIdx];
+  let val;
+  if (elic.multi) {
+    const parts = [...elic.selSet];
+    if (elic.otherOn && (askText.value || '').trim()) parts.push((askText.value).trim());
+    val = parts.join(', ');
+  } else {
+    val = elic.selected === '__other__' ? (askText.value || '').trim() : elic.selected;
+  }
+  if (!val) return; // 必须先选/填
+  if (q && q.question) elic.answers[q.question] = val;
+  else elic.answers[c.question || '_'] = val;
+  if (elic.qIdx < (qs.length || 1) - 1) { elic.qIdx++; renderElicitation(c); return; }
+  decideChoice(c, { type: 'elicitation-submit', answers: { ...elic.answers } }, t('ask.submitted'));
+}
+
+function elicBack(c) {
+  if (elic && elic.qIdx > 0) { elic.qIdx--; renderElicitation(c); }
+}
+
+// ② 授权：允许(绿)/拒绝(红) + 可选「始终允许」建议按钮(中性)
+function renderPerm(c) {
+  clearAskBody();
+  askLabel.textContent = t('ask.needPerm');
+  askQhead.textContent = c.header || '';
+  askQ.textContent = c.question || t('ask.needPermQ');
+  const opts = c.options || [];
+  if (opts.length === 2) askOpts.classList.add('perm-row'); // 仅允许/拒绝时并排
+  opts.forEach((opt) => {
+    const kind = opt.key === 'allow' ? 'allow' : opt.key === 'deny' ? 'deny' : 'sugg';
+    const card = document.createElement('button');
+    card.className = 'ask-opt act ' + kind;
+    const label = opt.key === 'allow' ? t('perm.allow') : opt.key === 'deny' ? t('perm.deny') : opt.label;
+    card.innerHTML = `<span class="ask-ot"><span class="ask-ol">${esc(label)}</span></span>`;
+    card.addEventListener('click', () => submitPerm(opt.key, c, opt.label));
+    askOpts.appendChild(card);
+  });
+  askFoot.classList.add('hidden');
+  askTerm.classList.remove('hidden');
+}
+
+// ③ 纯回复（无选项）：只读问题 + Go to Terminal
+function renderContinue(c) {
+  clearAskBody();
+  askLabel.textContent = t('ask.needsInput');
+  askQ.textContent = c.question || t('ask.waitingReply');
+  askFoot.classList.add('hidden');
+  askTerm.classList.remove('hidden');
+}
+
+// ④ ExitPlanMode 方案评审：展示方案 + 批准 / 打回并反馈
+function renderPlan(c) {
+  clearAskBody();
+  askLabel.textContent = t('ask.planLabel');
+  askQhead.textContent = c.project ? '📂 ' + c.project : '';
+  askQ.textContent = c.question || t('ask.planQ');
+  const approve = document.createElement('button');
+  approve.className = 'ask-opt act allow';
+  approve.innerHTML = '<span class="ask-ot"><span class="ask-ol">' + esc(t('ask.approve')) + '</span></span>';
+  approve.addEventListener('click', () => submitPerm('allow', c, t('ask.approved')));
+  askOpts.appendChild(approve);
+  const reject = document.createElement('button');
+  reject.className = 'ask-opt act deny';
+  reject.innerHTML = '<span class="ask-ot"><span class="ask-ol">' + esc(t('ask.reject')) + '</span></span>';
+  reject.addEventListener('click', () => {
+    decideChoice(c, { type: 'plan-feedback', feedback: (askText.value || '').trim() }, t('ask.rejected'));
+  });
+  askOpts.appendChild(reject);
+  askInputRow.classList.remove('hidden');
+  askText.placeholder = t('ask.rejectPlaceholder');
+  askFoot.classList.add('hidden');
+  askTerm.classList.remove('hidden');
+}
+
+function finishChoice(choice, bubbleMsg) {
+  answered.add(choiceKey(choice));
+  elic = null;
+  askQueue = askQueue.filter((c) => choiceKey(c) !== choiceKey(choice));
+  if (askQueue.length) {
+    // 还有下一题：直接展示，不弹确认气泡盖住选项面板
+    askIdx = 0; showAskPanel();
+  } else {
+    // 先关面板（置 askActive=false），确认气泡才不会被 showBubble 的 askActive 早退拦掉
+    hideAsk();
+    showBubble(bubbleMsg, 2600);
+  }
+}
+const decisionsInFlight = new Set();
+async function decideChoice(choice, behavior, successMsg) {
+  const key = choiceKey(choice);
+  if (!choice || !choice.permId || decisionsInFlight.has(key)) return false;
+  decisionsInFlight.add(key);
+  try {
+    const accepted = await window.pet.decidePermission(choice.permId, behavior);
+    if (accepted === true) {
+      finishChoice(choice, successMsg);
+      return true;
+    }
+    // The held request disconnected/expired before the click. Remove the stale
+    // local card, but explicitly say that no authorization was applied.
+    finishChoice(choice, t('ask.expired'));
+    return false;
+  } catch {
+    showBubble(t('ask.decisionFailed'), 4200, true);
+    return false;
+  } finally {
+    decisionsInFlight.delete(key);
+  }
+}
+function submitPerm(key, choice, label) {
+  const msg = key === 'allow' ? t('ask.allowed') : key === 'deny' ? t('ask.denied') : t('ask.remembered');
+  decideChoice(choice, key, msg);
+}
+// Go to Terminal：去会话终端自己答（授权/elicitation 都回 deny，让 CC 在终端重问）
+async function gotoSession(choice) {
+  if (choice.permId) await decideChoice(choice, 'deny', t('ask.toTerminal'));
+  else finishChoice(choice, t('ask.toTerminal'));
+  requestSessionFocus(choice.sessionId || '');
+}
+
+function hideAsk({ keepFocus = false } = {}) {
+  lastAskSig = '';
+  elic = null;
+  askEl.classList.add('hidden');
+  askHover = false;
+  if (askText) askText.value = ''; // 清掉草稿，避免关闭后仍被判为「交互中」冻住状态
+  if (askActive) {
+    askActive = false;
+    resetPetSize();
+    if (!keepFocus) window.pet.blurPet();
+  }
+}
+
+// ---------- 记事本 / 行动中心 ----------
+let curSessions = [];
+let curActions = [];
+let actionPopOpen = false;
+let actionCards = new Map();
+
+// 当前需要你处理的事项：有 choice、还没答过的 waiting/needsinput 会话
+function actionableItems() {
+  const source = curActions.length
+    ? curActions
+    : curSessions.filter((x) => x.state === 'waiting' || x.state === 'needsinput');
+  return source
+    .filter((x) => x.choice && !answered.has(choiceKey(x.choice)))
+    .map((x) => x.choice)
+    .filter((c) => (c.options && c.options.length) || c.allowInput);
+}
+
+function updateNotepad(s) {
+  curSessions = s.sessions || [];
+  curActions = Array.isArray(s.actions) ? s.actions : [];
+  const acts = actionableItems();
+  const pendingCount = Math.max(acts.length, (s.waitingCount || 0) + (s.needsinputCount || 0));
+  const unread = (s.recent || []).filter(row => !row.read).length;
+  if (!pendingCount && !unread) {
+    notepad.classList.add('hidden');
+  } else {
+    notepad.classList.remove('hidden');
+    npBadge.textContent = pendingCount || unread;
+    npBadge.classList.toggle('urgent', pendingCount > 0);
+    notepad.setAttribute('aria-label', window.AgentPawI18n.text("行动中心：{0}", [pendingCount ? window.AgentPawI18n.text("{0} 项待处理", [pendingCount]) : window.AgentPawI18n.text("{0} 条未读记录", [unread])]));
+  }
+  if (actionPopOpen) { renderActionPop(); fitPopup(actionPop); }
+}
+
+function renderActionPop() {
+  const acts = actionableItems();
+  acActSec.classList.toggle('hidden', !acts.length);
+  // Reconcile by request, preserving focused buttons while unrelated tasks
+  // change. Resolved requests still disappear immediately.
+  const next = new Map();
+  acts.forEach((choice) => {
+    const key = choiceKey(choice);
+    const signature = JSON.stringify(choice);
+    const previous = actionCards.get(key);
+    const card = previous?.signature === signature ? previous.card : buildActCard(choice);
+    next.set(key, { signature, card });
+  });
+  for (const [key, previous] of actionCards) {
+    if (next.get(key)?.card !== previous.card) previous.card.remove();
+  }
+  [...next.values()].forEach(({ card }, index) => {
+    if (acActs.children[index] !== card) acActs.insertBefore(card, acActs.children[index] || null);
+  });
+  actionCards = next;
+  if (window.AgentPawTaskCenter) window.AgentPawTaskCenter.render(lastStats);
+}
+
+// 一张「需要你处理」卡片：问题 + 选项按钮(可点即答) + 自定义输入
+function buildActCard(c) {
+  const card = document.createElement('div');
+  card.className = 'ac-act';
+  const kindTag = c.kind === 'perm' ? t('ask.kindPerm')
+    : c.kind === 'continue' ? t('ask.kindContinue')
+      : c.kind === 'plan' ? t('ask.kindPlan') : t('ask.kindChoice');
+  const head = document.createElement('div');
+  head.className = 'ac-act-proj';
+  head.textContent = `📂 ${c.project || '?'} · ${kindTag}`;
+  card.appendChild(head);
+  const q = document.createElement('div');
+  q.className = 'ac-act-q';
+  q.textContent = (c.header ? '【' + c.header + '】 ' : '') + (c.question || t('ask.needHandling'));
+  card.appendChild(q);
+
+  const opts = document.createElement('div');
+  opts.className = 'ac-act-opts';
+  if (c.kind === 'perm' && c.permId) {
+    // 授权：允许/拒绝 → HTTP 原生通道回 CC
+    (c.options || []).forEach((opt) => {
+      const b = document.createElement('button');
+      b.textContent = opt.label;
+      if (opt.desc) b.title = opt.desc;
+      b.addEventListener('click', (e) => { e.stopPropagation(); popPerm(c, opt.key); });
+      opts.appendChild(b);
+    });
+  } else {
+    // 对话类：选项只读展示 + 「去回复」按钮（桌宠不替你打字）
+    (c.options || []).forEach((opt) => {
+      const label = typeof opt === 'string' ? opt : opt.label;
+      const desc = typeof opt === 'string' ? '' : opt.desc || '';
+      const d = document.createElement('div');
+      d.className = 'ac-act-ro';
+      d.textContent = label;
+      if (desc) d.title = desc;
+      opts.appendChild(d);
+    });
+    const go = document.createElement('button');
+    go.className = 'ac-act-go';
+    go.textContent = t('ask.goReply');
+    go.addEventListener('click', (e) => { e.stopPropagation(); popGoto(c); });
+    opts.appendChild(go);
+  }
+  card.appendChild(opts);
+  return card;
+}
+
+// 授权：回 CC 决策
+async function popPerm(choice, key) {
+  const msg = key === 'allow' ? t('ask.allowed') : key === 'deny' ? t('ask.denied') : t('ask.remembered');
+  await decideChoice(choice, key, msg);
+  renderActionPop();
+  maybeCloseEmptyPop();
+}
+// 对话类：定位并唤起该会话窗口
+async function popGoto(choice) {
+  // AskUserQuestion and ExitPlanMode also hold a PermissionRequest connection.
+  // Deny it before handing control to the terminal so the request cannot stay
+  // parked invisibly behind the action-center acknowledgement.
+  if (choice.permId) await decideChoice(choice, 'deny', t('ask.toTerminal'));
+  else answered.add(choiceKey(choice));
+  requestSessionFocus(choice.sessionId || '');
+  renderActionPop();
+  maybeCloseEmptyPop();
+}
+function maybeCloseEmptyPop() {
+  if (!actionableItems().length) closeActionPop();
+}
+
+function openActionPop() {
+  clearTimeout(bubbleTimer);
+  bubbleTimer = null;
+  bubble.classList.add('hidden');
+  if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
+  // Switching panels keeps focus so the old panel's async blur cannot dismiss
+  // the action center immediately after it opens.
+  if (askActive) hideAsk({ keepFocus: true });
+  if (peekOpen) closePeek({ keepFocus: true });
+  if (quotaPopoverOpen) closeQuotaPopover({ keepFocus: true });
+  renderActionPop();
+  actionPop.classList.remove('hidden');
+  actionPopOpen = true;
+  if (window.AgentPawTaskCenter) window.AgentPawTaskCenter.opened();
+  fitPopup(actionPop);
+}
+function closeActionPop() {
+  actionPop.classList.add('hidden');
+  actionPopOpen = false;
+  if (window.AgentPawTaskCenter) window.AgentPawTaskCenter.closed();
+  window.pet.blurPet();
+  resetPetSize();
+}
+
+// 状态标签仅用于猫猫头顶的状态点。
+const SESS_META_ICON = {
+  waiting: '✋ ', needsinput: '💬 ', working: '⚙️ ', juggling: '🤹 ',
+  sweeping: '🧹 ', thinking: '💭 ', loafing: '🍦 ', error: '😵 ',
+  idle: '', sleeping: '💤 ',
+};
+const SESS_META_KEY = {
+  waiting: 'state.waiting', needsinput: 'state.needsinput', working: 'state.working',
+  juggling: 'state.juggling', sweeping: 'state.sweeping', thinking: 'state.thinking',
+  loafing: 'state.loafingLong', error: 'state.error', idle: 'state.idle',
+  sleeping: 'state.sleeping',
+};
+function sessMeta(state) {
+  const key = SESS_META_KEY[state];
+  return key ? (SESS_META_ICON[state] || '') + t(key) : null;
+}
+const SESS_SORT = { waiting: 0, needsinput: 0, error: 1, working: 2, juggling: 2, sweeping: 2, thinking: 2, loafing: 3, idle: 4, sleeping: 5 };
+
+const isBaseVisibleSession = (s) => !!s && !s.headless && s.state !== 'sleeping';
+// 单一配色：完成→绿、中断→红，否则按状态。
+function sessionDotClass(s) {
+  if (s.state === 'idle' && s.badge === 'done') return 'done';
+  if (s.state === 'idle' && s.badge === 'interrupted') return 'error';
+  return s.state || 'idle';
+}
+
+// ---------- 左键工作速览 ----------
+const PEEK_AUTO_CLOSE_MS = 8000;
+const PEEK_BUSY_STATES = new Set(['waiting', 'needsinput', 'error', 'working', 'juggling', 'sweeping', 'thinking', 'loafing']);
+let peekOpen = false;
+let peekTimer = null;
+let peekLayoutSig = '';
+let peekPrimarySessionId = '';
+
+function peekAgentLabel(agent) {
+  try {
+    if (window.AgentPawAgents && typeof window.AgentPawAgents.shortLabel === 'function') {
+      return window.AgentPawAgents.shortLabel(agent);
+    }
+  } catch {}
+  return ({ claude: 'Claude', codex: 'Codex', workbuddy: 'WorkBuddy', opencode: 'opencode' })[agent] || 'AI';
+}
+
+function peekTime(ms) {
+  const value = Math.max(0, Number(ms) || 0);
+  if (value < 1000) return t('peek.justNow');
+  if (value < 60 * 1000) return t('peek.seconds', { count: Math.max(1, Math.floor(value / 1000)) });
+  if (value < 60 * 60 * 1000) return t('peek.minutes', { count: Math.max(1, Math.floor(value / 60000)) });
+  return t('peek.hours', { count: Math.max(1, Math.floor(value / 3600000)) });
+}
+
+function peekSessionState(s) {
+  if (s && s.state === 'idle' && s.badge === 'done') return 'done';
+  if (s && s.state === 'idle' && s.badge === 'interrupted') return 'error';
+  return (s && s.state) || 'idle';
+}
+
+function peekSessionDetail(s) {
+  const effective = peekSessionState(s);
+  if (effective === 'done') return t('peek.done');
+  if (s && s.state === 'idle' && s.badge === 'interrupted') return t('peek.interrupted');
+  if (effective === 'waiting') return waitPhrase(s.reason);
+  if (effective === 'needsinput') return (s.choice && s.choice.question) || t('state.needsinput');
+  if (effective === 'error') return t('peek.errorDetail');
+  const background = backgroundStatus(s);
+  if (background) return background;
+  if (s.op) return s.op;
+  const key = SESS_META_KEY[effective];
+  return key ? t(key) : t('state.idle');
+}
+
+function peekSessionTime(s) {
+  const effective = peekSessionState(s);
+  const turnStartedAt = Number(s && s.turnStartedAt) || 0;
+  if (turnStartedAt > 0 && PEEK_BUSY_STATES.has(effective)) {
+    return t('peek.elapsed', { time: peekTime(Date.now() - turnStartedAt) });
+  }
+  return t('peek.updated', { time: peekTime(s && s.idleMs) });
+}
+
+function peekSessions(stats) {
+  const visible = (stats.sessions || []).filter((s) => s && !s.headless && (s.pinned || s.state !== 'sleeping'));
+  const active = visible.filter((s) => PEEK_BUSY_STATES.has(s.state));
+  const pinned = visible.filter((s) => s.pinned);
+  const list = active.length || pinned.length
+    ? [...new Set([...active, ...pinned])]
+    : visible
+      .filter((s) => s.badge === 'done' || s.badge === 'interrupted')
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      .slice(0, 1);
+  return list.slice().sort((a, b) => {
+    const urgent = s => ['waiting', 'needsinput', 'error'].includes(s.state);
+    if (urgent(a) !== urgent(b)) return urgent(a) ? -1 : 1;
+    if (PEEK_BUSY_STATES.has(a.state) !== PEEK_BUSY_STATES.has(b.state)) return PEEK_BUSY_STATES.has(a.state) ? -1 : 1;
+    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
+    const pa = SESS_SORT[a.state] != null ? SESS_SORT[a.state] : 4;
+    const pb = SESS_SORT[b.state] != null ? SESS_SORT[b.state] : 4;
+    return pa !== pb ? pa - pb : (a.idleMs || 0) - (b.idleMs || 0);
+  });
+}
+
+function makePeekRow(s) {
+  const effective = peekSessionState(s);
+  const focusable = s.focusable !== false;
+  const row = document.createElement('button');
+  row.type = 'button';
+  row.className = 'peek-row' + (focusable ? '' : ' not-focusable');
+  row.title = focusable ? t('peek.focus') : t('peek.viewOnly');
+
+  const dot = document.createElement('span');
+  dot.className = 'peek-row-dot ' + effective;
+  dot.setAttribute('aria-hidden', 'true');
+
+  const main = document.createElement('span');
+  main.className = 'peek-row-main';
+  const project = document.createElement('span');
+  project.className = 'peek-row-project';
+  project.textContent = `${s.pinned ? '★ ' : ''}${peekAgentLabel(s.agent)} · ${s.alias || s.project || t('peek.unknownProject')}`;
+  project.title = project.textContent;
+  const detail = document.createElement('span');
+  detail.className = 'peek-row-detail';
+  detail.textContent = s.archived ? window.AgentPawI18n.text("已结束 · 仍在关注") : peekSessionDetail(s);
+  main.appendChild(project);
+  main.appendChild(detail);
+
+  const time = document.createElement('span');
+  time.className = 'peek-row-time';
+  time.textContent = s.archived ? '' : peekSessionTime(s);
+
+  row.appendChild(dot);
+  row.appendChild(main);
+  row.appendChild(time);
+  row.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const sessionId = s.sessionId || '';
+    closePeek();
+    if (focusable && sessionId) requestSessionFocus(sessionId);
+    else window.pet.openPanel(AGENT);
+  });
+  return row;
+}
+
+function renderPeek(stats) {
+  if (!stats) return;
+  const restingState = stats.idleMs == null || stats.idleMs > IDLE_SLEEP_MS ? 'sleeping' : 'idle';
+  const rows = peekSessions(stats);
+  const attention = (stats.sessions || []).filter((s) => !s.headless && (s.state === 'waiting' || s.state === 'needsinput'));
+  const errors = (stats.sessions || []).filter((s) => !s.headless && s.state === 'error');
+  const running = (stats.sessions || []).filter((s) => !s.headless && ['working', 'juggling', 'sweeping', 'thinking', 'loafing'].includes(s.state));
+  const primary = rows[0] || null;
+  const headlineState = attention.length ? attention[0].state
+      : errors.length ? 'error'
+      : primary ? peekSessionState(primary)
+        : restingState;
+
+  if (attention.length) peekTitle.textContent = t('peek.attentionTitle', { count: attention.length });
+  else if (errors.length) peekTitle.textContent = t('peek.errorTitle', { count: errors.length });
+  else if (running.length > 1) peekTitle.textContent = t('peek.multiTitle', { count: running.length });
+  else if (primary && PEEK_BUSY_STATES.has(primary.state)) peekTitle.textContent = t(SESS_META_KEY[primary.state] || 'state.working');
+  else peekTitle.textContent = t('peek.idleTitle');
+
+  if (rows.length > 1) {
+    peekSubtitle.textContent = rows.some((s) => s.focusable === false)
+      ? t('peek.multiSubDetails')
+      : t('peek.multiSub');
+  }
+  else if (primary && PEEK_BUSY_STATES.has(primary.state)) {
+    peekSubtitle.textContent = t('peek.sessionSub', {
+      agent: peekAgentLabel(primary.agent),
+      project: primary.alias || primary.project || t('peek.unknownProject'),
+    });
+  } else {
+    peekSubtitle.textContent = restingState === 'sleeping' ? t('peek.sleepingSub') : t('peek.idleSub');
+  }
+
+  peekState.className = 'peek-state ' + headlineState;
+  peekList.innerHTML = '';
+  rows.slice(0, 3).forEach((s) => peekList.appendChild(makePeekRow(s)));
+
+  const today = stats.today || {};
+  const rounds = Number(today.messages != null ? today.messages : today.msgs) || 0;
+  if (running.length || attention.length || errors.length) {
+    let summary = t('peek.running', { running: running.length, waiting: attention.length, rounds });
+    if (rows.length > 3) summary += ' · ' + t('peek.more', { count: rows.length - 3 });
+    peekSummary.textContent = summary;
+  } else {
+    peekSummary.textContent = t('peek.today', {
+      rounds,
+      tokens: compactTokens(today.tokens || 0),
+      cost: '$' + (Number(today.cost) || 0).toFixed(3),
+    });
+  }
+
+  const showPurrHint = !running.length && !attention.length && !errors.length;
+  peekHint.hidden = !showPurrHint;
+  if (showPurrHint) peekHint.textContent = t('purr.hint');
+
+  peekPrimarySessionId = primary && primary.focusable !== false && primary.sessionId ? primary.sessionId : '';
+  peekFocus.classList.toggle('hidden', !peekPrimarySessionId);
+  peekPanel.style.flex = peekPrimarySessionId ? '' : '1';
+
+  const layoutSig = [attention.length ? 'attention' : errors.length ? 'error' : running.length ? 'running' : 'idle', Math.min(rows.length, 3), !!peekPrimarySessionId, showPurrHint].join(':');
+  if (peekOpen && layoutSig !== peekLayoutSig) fitPopup(peekEl);
+  peekLayoutSig = layoutSig;
+}
+
+function clearPeekTimer() {
+  if (peekTimer) clearTimeout(peekTimer);
+  peekTimer = null;
+}
+
+function armPeekTimer() {
+  clearPeekTimer();
+  if (peekOpen) peekTimer = setTimeout(closePeek, PEEK_AUTO_CLOSE_MS);
+}
+
+function openPeek() {
+  if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
+  if (!lastStats || askActive || actionPopOpen || radialOpen) return;
+  if (quotaPopoverOpen) closeQuotaPopover();
+  clearTimeout(bubbleTimer);
+  bubbleTimer = null;
+  bubble.classList.add('hidden');
+  renderPeek(lastStats);
+  peekEl.classList.remove('hidden');
+  peekOpen = true;
+  fitPopup(peekEl);
+  armPeekTimer();
+}
+
+function closePeek({ keepFocus = false } = {}) {
+  if (!peekOpen) return;
+  clearPeekTimer();
+  peekEl.classList.add('hidden');
+  peekOpen = false;
+  peekLayoutSig = '';
+  peekPrimarySessionId = '';
+  if (!keepFocus) window.pet.blurPet();
+  if (!askActive && !actionPopOpen) resetPetSize();
+}
+
+function handleCatClick() {
+  if (radialOpen) { closeRadial(); return; }
+  if (askActive) { hideAsk(); return; }
+  if (actionPopOpen) { closeActionPop(); return; }
+  if (quotaPopoverOpen) { closeQuotaPopover(); return; }
+  if (peekOpen) { closePeek(); return; }
+
+  const acts = actionableItems();
+  if (acts.length > 1) { openActionPop(); return; }
+  if (acts.length === 1) {
+    const i = askQueue.findIndex((c) => choiceKey(c) === choiceKey(acts[0]));
+    if (i >= 0) askIdx = i;
+    else { askQueue = [acts[0]]; askIdx = 0; }
+    showAskPanel();
+    return;
+  }
+  openPeek();
+}
+
+// 工具 -> 干活动作；道具 emoji 的运动变体
+const TOOL_ACT = {
+  Edit: 'type', MultiEdit: 'type', Write: 'type', NotebookEdit: 'type',
+  Read: 'read',
+  Bash: 'crank',
+  Grep: 'search', Glob: 'search',
+  WebSearch: 'web', WebFetch: 'web',
+  Task: 'summon', Agent: 'summon',
+  TodoWrite: 'check',
+};
+const ACT_CLASSES = ['act-type', 'act-read', 'act-search', 'act-crank', 'act-web', 'act-summon', 'act-check', 'act-work'];
+const PROP_MOTION = { crank: 'spin', web: 'spin', search: 'hunt', type: 'jit' };
+let actTimer = null;
+
+let state = 'idle';
+let bubbleTimer = null;
+let transientUntil = 0;   // 短暂状态（happy/error）持续到的时间
+let transientState = null;
+let radialOpen = false;
+
+const IDLE_SLEEP_MS = 6 * 60 * 1000;
+const PURR_HOLD_MS = 1100;
+const PURR_DISPLAY_MS = 6200;
+const PURR_DAY_STORAGE_KEY = 'agentpaw.purr-payday-day';
+// 额度详情采用显式点击，而不是原生 title。离开触发区/详情卡后留一点缓冲，
+// 让鼠标可以从胶囊移动到卡片；卡片打开期间每 30 秒刷新一次倒计时文案。
+const QUOTA_POPOVER_LEAVE_MS = 900;
+const QUOTA_POPOVER_REFRESH_MS = 30 * 1000;
+let catVisible = true;
+let purrPaydayUntil = 0;
+let purrPaydaySummary = null;
+let purrPaydayTimer = null;
+let quotaPopoverOpen = false;
+let quotaPopoverCloseTimer = null;
+let quotaPopoverRefreshTimer = null;
+let quotaPopoverPointerInside = false;
+const stateEls = [cat];
+// ---------- 状态机（固定使用打工伙伴形象） ----------
+// 前端会 setState 的全部状态词（聚合态 + 短暂态 + 情绪态）——统一取自
+// shared/states.js（pet.html 以 <script> 在 pet.js 之前加载它）。classList.remove
+// 必须覆盖此全集，漏一个就会 class 残留在皮肤元素上。
+const STATE_WORDS = (window.AgentPawStates && window.AgentPawStates.RENDER_STATE_WORDS) || [];
+function setState(s) {
+  if (state === s) {
+    // 语义状态没变，限时视觉层仍可能刚刚到期；同状态快照也要让猫
+    // 重新选图，否则 30s 的高压工作姿态会一直拖到下一次状态切换。
+    updateCat(s);
+    return;
+  }
+  for (const el of stateEls) {
+    el.classList.remove(...STATE_WORDS);
+    el.classList.add(s);
+  }
+  state = s;
+  thinkEl.classList.toggle('on', s === 'thinking');
+  sleepEl.classList.toggle('on', s === 'sleeping');
+  if (s === 'thinking' || s === 'sleeping') bubble.classList.add('hidden');
+  if (s === 'working') {
+    // 进入干活态 → 立刻挂上「持续忙碌」基线动作，不等具体 tool 事件，
+    // 任何时刻都显得在忙（具体 tool 动作会在它之上叠加，结束后回落到这里）。
+    for (const el of stateEls) el.classList.add('act-work');
+  } else {
+    clearAction(); // 离开干活态才清掉动作
+  }
+  // 注意：不要在这里 hideAsk()！面板显隐只由 refreshAsk(按是否有待答事项) 管。
+  // 之前「s!=='waiting' 就 hideAsk」会在聚合态变 working/thinking 时把 needsinput 的面板闪掉。
+  updateCat(s);
+}
+
+function positionProp() {
+  const el = curSkinEl();
+  if (!el || !propEl) return;
+  const stageRect = stage.getBoundingClientRect();
+  const petRect = el.getBoundingClientRect();
+  const sessionRect = !catVisible && sessionsEl && sessionsEl.children.length
+    ? sessionsEl.getBoundingClientRect()
+    : null;
+  const size = 28;
+  const gap = 7;
+  const viewportW = Math.max(1, stageRect.width || window.innerWidth || 320);
+  const viewportH = Math.max(1, stageRect.height || window.innerHeight || 340);
+  const petLeft = petRect.left - stageRect.left;
+  const petTop = petRect.top - stageRect.top;
+  const petRight = petLeft + petRect.width;
+  const preferRight = edgeLayout.horizontal === 'left'
+    || (edgeLayout.horizontal === 'center' && petLeft + petRect.width / 2 < viewportW / 2);
+  // In compact mode the row is [session dots][capsule]. The tool prop must
+  // sit before that whole cluster, not between the dots and the capsule.
+  // Read the live dots rect each time so a changing parallel-session count
+  // moves the prop with the first dot instead of covering it.
+  const insideViewport = (value) => value >= 4 && value + size <= viewportW - 4;
+  let left;
+  if (sessionRect && sessionRect.width > 0) {
+    const beforeDots = sessionRect.left - stageRect.left - size - gap;
+    const afterCapsule = petRight + gap;
+    const beforeCapsule = petLeft - size - gap;
+    // The first candidate is the requested position. The fallbacks keep the
+    // prop away from the dots when there is no outside room at an edge.
+    left = [beforeDots, afterCapsule, beforeCapsule].find(insideViewport) ?? beforeDots;
+  } else {
+    left = preferRight ? petRight + gap : petLeft - size - gap;
+  }
+  if (!insideViewport(left)) {
+    left = preferRight ? petLeft - size - gap : petRight + gap;
+  }
+  const top = Math.max(4, Math.min(viewportH - size - 4, petTop + petRect.height * 0.18));
+  propEl.style.left = Math.round(Math.max(4, Math.min(viewportW - size - 4, left))) + 'px';
+  propEl.style.top = Math.round(top) + 'px';
+  propEl.style.right = 'auto';
+  propEl.style.bottom = 'auto';
+}
+
+// 按工具播放专属动作 + 头顶道具
+function playAction(toolName, icon) {
+  if (state === 'waiting' || state === 'sleeping') return;
+  const act = TOOL_ACT[toolName] || 'work';
+  for (const el of stateEls) {
+    el.classList.remove(...ACT_CLASSES);
+    el.classList.add('act-' + act); // 通用 work 也有身体动作（不再只闪图标）
+  }
+  if (icon) {
+    positionProp();
+    propEl.textContent = icon;
+    propEl.className = 'prop';
+    void propEl.offsetWidth; // 重启动画
+    const pm = PROP_MOTION[act];
+    propEl.className = 'prop on' + (pm ? ' ' + pm : '');
+  }
+  if (act === 'summon') {
+    sidekickEl.classList.remove('on');
+    void sidekickEl.offsetWidth;
+    sidekickEl.classList.add('on');
+  }
+  clearTimeout(actTimer);
+  actTimer = setTimeout(clearAction, 2200);
+}
+function clearAction() {
+  for (const el of stateEls) el.classList.remove(...ACT_CLASSES);
+  propEl.classList.remove('on');
+  // 具体 tool 动作结束后，仍在干活 → 回落到「持续忙碌」基线，别安静下来
+  if (state === 'working') for (const el of stateEls) el.classList.add('act-work');
+}
+
+// 短暂状态：happy/error/greet…，到点后由 applyStats 接管。
+// 到期不再干等下一个快照（周期推送最坏 ~4s，短暂态会拖尾）——
+// 定时用最近一次快照主动重算聚合态，到点即回落。
+let transientTimer = null;
+function transient(s, ms, text, holdMs) {
+  if (state === 'waiting') return; // 等用户优先
+  transientState = s;
+  transientUntil = perfNow() + ms;
+  setState(s);
+  clearTimeout(transientTimer);
+  transientTimer = setTimeout(() => { if (lastStats) applyStats(lastStats); }, ms + 30);
+  if (text) showBubble(text, holdMs || ms);
+}
+// 高优先级稳态（waiting/needsinput/error）接管时清掉残留短暂态，
+// 否则 talking/thinking 会在下个快照借 transientUntil 复活盖回来。
+function clearTransient() {
+  transientUntil = 0;
+  clearTimeout(transientTimer);
+}
+
+// 用户主动互动时的彩带，不用于自动任务提醒。
+function confetti() {
+  const el = curSkinEl();
+  const sr = stage.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const cx = r.left - sr.left + r.width / 2;
+  const cy = r.top - sr.top + r.height * 0.35;
+  const emojis = ['🎉', '✨', '⭐', '🧡', '🎊'];
+  for (let i = 0; i < 12; i++) {
+    const s = document.createElement('span');
+    s.className = 'confetti';
+    s.textContent = emojis[i % emojis.length];
+    const ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.8; // 向上扇形
+    const dist = 45 + Math.random() * 70;
+    s.style.left = cx + 'px';
+    s.style.top = cy + 'px';
+    s.style.fontSize = 12 + Math.random() * 12 + 'px';
+    s.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+    s.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+    s.style.animationDelay = Math.random() * 0.12 + 's';
+    stage.appendChild(s);
+    setTimeout(() => s.remove(), 1300);
+  }
+}
+
+function positionBubbleTip() {
+  if (!bubble || bubble.classList.contains('hidden')) return;
+  const el = curSkinEl();
+  if (!el) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (bubble.classList.contains('hidden')) return;
+      const sr = stage.getBoundingClientRect();
+      const petRect = el.getBoundingClientRect();
+      const bubRect = bubble.getBoundingClientRect();
+      const petCenterX = petRect.left - sr.left + petRect.width / 2;
+      const bubLeft = bubRect.left - sr.left;
+      const relX = petCenterX - bubLeft;
+      // Keep the triangle inside the bubble's rounded corners.
+      const minX = 14;
+      const maxX = Math.max(minX + 1, bubRect.width - 14);
+      const tipX = Math.min(Math.max(relX, minX), maxX);
+      bubble.style.setProperty('--tip-x', tipX + 'px');
+    });
+  });
+}
+
+function positionQuotaPopoverTip() {
+  if (!quotaPopover || quotaPopover.classList.contains('hidden') || !quotaEl) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (quotaPopover.classList.contains('hidden')) return;
+      const sr = stage.getBoundingClientRect();
+      const triggerRect = quotaEl.getBoundingClientRect();
+      const popRect = quotaPopover.getBoundingClientRect();
+      const triggerCenterX = triggerRect.left - sr.left + triggerRect.width / 2;
+      const popLeft = popRect.left - sr.left;
+      const relX = triggerCenterX - popLeft;
+      const minX = 14;
+      const maxX = Math.max(minX + 1, popRect.width - 14);
+      quotaPopover.style.setProperty('--quota-tip-x', Math.min(Math.max(relX, minX), maxX) + 'px');
+    });
+  });
+}
+
+function showBubble(text, holdMs = 3200, force = false) {
+  if (force && window.AgentPawCompanion) window.AgentPawCompanion.defer(holdMs);
+  if (window.AgentPawCompanion && window.AgentPawCompanion.isOpen()) {
+    if (!force) return;
+    window.AgentPawCompanion.hide();
+  }
+  if (!force && (radialOpen || askActive || actionPopOpen || peekOpen || quotaPopoverOpen)) return; // 弹层开着时不用普通气泡盖住它
+  // emoji → 内联 SVG（AgentPawIcons 在 emoji 字符与 SVG 之间做安全替换；不可识别字符原样保留）
+  if (window.AgentPawIcons && window.AgentPawIcons.hasMappedEmoji(text)) {
+    window.AgentPawIcons.setTextWithIcons(bubbleText, text);
+  } else {
+    bubbleText.textContent = text;
+  }
+  bubble.classList.remove('hidden');
+  bubble.scrollTop = 0; // 重置滚动到顶（上次长气泡可能滚到了下边）
+  // 大段文字：把窗口按实际高度撑开（fitPopup 已按屏幕封顶，永远不顶出屏幕；
+  // 实在超屏时由 #bubble 自身 overflow-y:auto 内滚动兜底）。
+  fitPopup(bubble);
+  positionBubbleTip();
+  clearTimeout(bubbleTimer);
+  bubbleTimer = setTimeout(hideBubble, holdMs);
+}
+
+const pendingQuotaAlerts = new Map();
+let quotaAlertRetryTimer = null;
+let quotaAlertDisplaying = false;
+function quotaAlertUiBusy() {
+  return document.hidden === true || radialOpen || askActive || actionPopOpen || peekOpen || quotaPopoverOpen
+    || (window.AgentPawCompanion && window.AgentPawCompanion.isOpen())
+    || !bubble.classList.contains('hidden');
+}
+function scheduleQuotaAlertRetry() {
+  if (!quotaAlertRetryTimer) quotaAlertRetryTimer = setTimeout(flushQuotaAlerts, 250);
+}
+function flushQuotaAlerts() {
+  quotaAlertRetryTimer = null;
+  if (!pendingQuotaAlerts.size || quotaAlertDisplaying) return;
+  if (quotaAlertUiBusy()) {
+    scheduleQuotaAlertRetry();
+    return;
+  }
+  const entries = [...pendingQuotaAlerts.entries()];
+  const text = entries.map(([, alert]) => alert.text).join('\n');
+  quotaAlertDisplaying = true;
+  showBubble(text, 6500);
+  // Do not claim on a synchronous DOM mutation alone. Wait until a paint can
+  // happen, then verify the window stayed visible and the bubble was not
+  // replaced by a higher-priority event.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    quotaAlertDisplaying = false;
+    const visible = document.hidden !== true && !bubble.classList.contains('hidden')
+      && bubbleText.textContent === text;
+    if (!visible) {
+      scheduleQuotaAlertRetry();
+      return;
+    }
+    const alertIds = [];
+    for (const [key, alert] of entries) {
+      pendingQuotaAlerts.delete(key);
+      if (alert.id) alertIds.push(alert.id);
+    }
+    if (alertIds.length) window.pet.quotaAlertShown(alertIds);
+    if (pendingQuotaAlerts.size) scheduleQuotaAlertRetry();
+  }));
+}
+function enqueueQuotaAlert(ev) {
+  const alerts = Array.isArray(ev && ev.quotaAlerts) ? ev.quotaAlerts : [];
+  for (const alert of alerts) {
+    if (!alert || typeof alert.id !== 'string' || !alert.id || typeof alert.text !== 'string') continue;
+    pendingQuotaAlerts.set(alert.id, alert);
+  }
+  if (!pendingQuotaAlerts.size && ev && ev.text) {
+    // Compatibility with an in-flight event from an older main process.
+    pendingQuotaAlerts.set(`legacy:${ev.ts || Date.now()}`, { id: null, text: ev.text });
+  }
+  if (!quotaAlertRetryTimer && !quotaAlertDisplaying) flushQuotaAlerts();
+}
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && pendingQuotaAlerts.size && !quotaAlertRetryTimer) flushQuotaAlerts();
+});
+
+function requestSessionFocus(sessionId) {
+  if (!sessionId) return;
+  Promise.resolve(window.pet.focusSession(sessionId))
+    .then((focused) => {
+      if (focused === false) showBubble(t('peek.focusFailed'), 4200, true);
+    })
+    .catch(() => showBubble(t('peek.focusFailed'), 4200, true));
+}
+function hideBubble() {
+  bubble.classList.add('hidden');
+  // 若没有其它弹层占用大窗口尺寸，恢复原始尺寸（避免 pet 一直停在加大窗口里）
+  if (!askActive && !actionPopOpen && !peekOpen) resetPetSize();
+}
+
+const curSkinEl = () => catVisible ? cat : chip;
+
+window.pet.onEvent((ev) => {
+  requestAnimationFrame(() => { if (window.AgentPawCompanion) window.AgentPawCompanion.refresh(); });
+  if (ev.kind === 'quota-alert') {
+    // Queue first: hidden windows and active popups must defer the bubble, not
+    // consume the only alert for this reset cycle.
+    enqueueQuotaAlert(ev);
+    return;
+  }
+  // 需要人处理或出错时，优先让出工作速览，保持原有卡片/气泡路径。
+  if (peekOpen && (ev.kind === 'waiting' || ev.kind === 'needsinput' || ev.kind === 'error')) closePeek();
+  if (quotaPopoverOpen && (ev.kind === 'waiting' || ev.kind === 'needsinput' || ev.kind === 'error')) closeQuotaPopover();
+  // 你正在答面板/打字时：新的待答任务只悄悄进队列(不抢面板)，其余动画/彩带/气泡/状态变化一律不打断
+  if (isInteracting()) {
+    if ((ev.kind === 'waiting' || ev.kind === 'needsinput') && ev.choice) enqueueChoice(ev.choice);
+    return;
+  }
+  switch (ev.kind) {
+    case 'operation': {
+      // 高优先级稳态（等授权/等回复/出错/清理）不被工具事件降级成 working——
+      // 之前 error 期间其它会话干活会导致 working↔error 持续闪烁。
+      const hold = state === 'waiting' || state === 'needsinput' || state === 'error' || state === 'sweeping';
+      // “收到任务”产生的 thinking 只是等待首个动作的过渡态；真实工具一开始就应
+      // 立刻切到 working。庆祝/说话/情绪等其它 transient 仍完整播放。
+      const startingWork = transientState === 'thinking' && perfNow() < transientUntil;
+      if (!hold && (startingWork || perfNow() >= transientUntil)) {
+        if (startingWork) clearTransient();
+        setState('working');
+        playAction(ev.tool, ev.icon);
+      }
+      if (!ev.silent) showBubble(`${ev.icon || '🔧'} ${ev.detail}`);
+      break;
+    }
+    case 'say':
+      if (ev.text && ev.text.length > 2 && state !== 'waiting') {
+        const dur = Math.min(6000, Math.max(2200, ev.text.length * 80));
+        // Preserve an in-progress completion animation before the speech pose.
+        // Notification policy can retain the pose without a second bubble.
+        if (transientState === 'happy' && perfNow() < transientUntil) {
+          if (!ev.silent) showBubble(`💬 ${ev.text}`, Math.min(4200, dur));
+          const token = ++sayToken;
+          setTimeout(() => {
+            if (token === sayToken && state !== 'waiting') transient(ev.emotion || 'talking', dur);
+          }, Math.max(0, transientUntil - perfNow()));
+        } else if (ev.emotion) {
+          // Claude 的话里带情绪（sorry/puzzled/excited）→ 短暂表情替代 talking
+          transient(ev.emotion, 2800, ev.silent ? null : `💬 ${ev.text}`, Math.min(4200, ev.text.length * 80));
+        } else {
+          transient('talking', dur, ev.silent ? null : `💬 ${ev.text}`, Math.min(4200, dur));
+        }
+      }
+      break;
+    case 'user-turn':
+      // 你的输入里带情绪（loved/sad/excited）→ 打工伙伴即时反应；否则像以前一样进 thinking
+      if (ev.emotion && state !== 'waiting') {
+        const tip = ev.emotion === 'loved' ? t('bub.loved') : ev.emotion === 'sad' ? t('bub.sad') : t('bub.ack');
+        transient(ev.emotion, 2800, ev.silent ? null : tip, 2600);
+      } else {
+        // 多会话时聚合里 working > thinking，直接 setState 会在下个快照被盖掉
+        // （只闪 ~150ms）。用 transient 保证「刚提交任务」的思考表情至少停留一会。
+        if (state !== 'waiting') transient('thinking', 3500);
+        if (!ev.silent) showBubble(t('bub.newTask'), 2600);
+      }
+      break;
+    case 'completion-summary':
+      if (['waiting', 'needsinput', 'error'].includes(state)) break;
+      transient('happy', 1800, ev.count > 1 ? window.AgentPawI18n.text("{0} 个任务已完成，点击行动中心回看", [ev.count]) : window.AgentPawI18n.text("{0} · 这一轮已完成", [ev.project || window.AgentPawI18n.text("任务")]), 3800);
+      break;
+    case 'error':
+      transient('error', 2600, ev.text || t('bub.error'), 3000);
+      break;
+    case 'waiting':
+      clearTransient(); // 残留的 talking/thinking 短暂态不得盖过等授权
+      setState('waiting');
+      if (ev.choice && ((ev.choice.options && ev.choice.options.length) || ev.choice.allowInput)) {
+        enqueueChoice(ev.choice); // 直接弹出选项/输入
+      } else {
+        showBubble(t('bub.waitYou', { project: ev.project || '', wait: waitPhrase(ev.reason) }), 6000);
+      }
+      break;
+    case 'needsinput':
+      // Claude 在末尾问「要不要继续」之类，等你回复 → 黄点 + 可在桌宠上继续/回复
+      if (state !== 'waiting') { clearTransient(); setState('needsinput'); }
+      if (ev.choice && ((ev.choice.options && ev.choice.options.length) || ev.choice.allowInput)) {
+        enqueueChoice(ev.choice);
+      } else {
+        showBubble(t('bub.needReply', { project: ev.project || '' }), 6000);
+      }
+      break;
+    case 'greet':
+      transient('greet', 2000, ev.silent ? null : t('bub.greet', { project: ev.project || '' }), 2600);
+      break;
+    case 'longcmd':
+      if (state !== 'waiting') showBubble(t('bub.slowCmd'), 3000);
+      break;
+  }
+});
+
+function perfNow() {
+  return Date.now();
+}
+
+// ---------- 统计 + 聚合状态 ----------
+let lastStats = null; // 最近一次快照：transient 到期时用它立即重算聚合态
+let privacyModeCache = false;
+let sayToken = 0;     // say 接棒 happy 的排队令牌（新事件作废旧排队）
+function compactTokens(value) {
+  const n = Number(value) || 0;
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+  return String(Math.round(n));
+}
+
+const petInsights = window.AgentPawPetInsights;
+function capsuleElapsed(ms) {
+  const value = Math.max(0, Number(ms) || 0);
+  if (value < 1000) return '';
+  if (value < 60 * 1000) return window.AgentPawI18n.text("{0}秒", [Math.max(1, Math.floor(value / 1000))]);
+  if (value < 60 * 60 * 1000) return window.AgentPawI18n.text("{0}分", [Math.max(1, Math.floor(value / 60000))]);
+  return window.AgentPawI18n.text("{0}小时", [Math.max(1, Math.floor(value / 3600000))]);
+}
+
+function localPurrDay(now = Date.now()) {
+  const date = new Date(now);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function purrAlreadyAnnounced(day) {
+  try { return window.localStorage && window.localStorage.getItem(PURR_DAY_STORAGE_KEY) === day; }
+  catch { return false; }
+}
+
+function markPurrAnnounced(day) {
+  try { if (window.localStorage) window.localStorage.setItem(PURR_DAY_STORAGE_KEY, day); }
+  catch {}
+}
+
+function purrCanRun(stats) {
+  if (!stats || !petInsights || typeof petInsights.hasActiveWork !== 'function') return false;
+  if (askActive || actionPopOpen || radialOpen || peekOpen || quotaPopoverOpen) return false;
+  // Do not cut across a real completion/error/reply animation.
+  if (perfNow() < transientUntil) return false;
+  return !petInsights.hasActiveWork(stats, { sleepMs: IDLE_SLEEP_MS });
+}
+
+function purrEnvironmentClear(stats) {
+  if (!stats || !petInsights || typeof petInsights.hasActiveWork !== 'function') return false;
+  if (askActive || actionPopOpen || radialOpen || peekOpen || quotaPopoverOpen) return false;
+  return !petInsights.hasActiveWork(stats, { sleepMs: IDLE_SLEEP_MS });
+}
+
+function clearPurrPayday() {
+  purrPaydayUntil = 0;
+  purrPaydaySummary = null;
+  clearTimeout(purrPaydayTimer);
+  purrPaydayTimer = null;
+}
+
+function quotaRemainingPercent(w) {
+  if (!w || typeof w !== 'object') return null;
+  if (Number.isFinite(w.remainingPercent)) {
+    return Math.max(0, Math.min(100, Number(w.remainingPercent)));
+  }
+  return Number.isFinite(w.usedPercent)
+    ? Math.max(0, Math.min(100, 100 - Number(w.usedPercent)))
+    : null;
+}
+
+function quotaLevel(remaining) {
+  return remaining === null ? 'unknown' : remaining <= 5 ? 'red' : remaining <= 20 ? 'amber' : 'normal';
+}
+
+function quotaDurationText(ms) {
+  const minutes = Math.max(1, Math.ceil(Math.max(0, ms) / 60000));
+  if (minutes < 60) return t('quota.durationMinutes', { count: minutes });
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+  if (hours < 24) {
+    return restMinutes
+      ? t('quota.durationHoursMinutes', { hours, minutes: restMinutes })
+      : t('quota.durationHours', { count: hours });
+  }
+  const days = Math.floor(hours / 24);
+  const restHours = hours % 24;
+  return restHours
+    ? t('quota.durationDaysHours', { days, hours: restHours })
+    : t('quota.durationDays', { count: days });
+}
+
+function quotaDateText(timestamp) {
+  const date = new Date(Number(timestamp) * 1000);
+  if (!Number.isFinite(date.getTime())) return '--';
+  return date.toLocaleString(window.AgentPawI18n.getLanguage(), {
+    month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function quotaResetText(w, now = Date.now()) {
+  if (!w || !Number.isFinite(w.resetsAt)) return t('quota.resetUnknown');
+  const resetAt = Number(w.resetsAt) * 1000;
+  if (!Number.isFinite(resetAt)) return t('quota.resetUnknown');
+  const remainingMs = resetAt - now;
+  if (remainingMs <= 0) return t('quota.resetSoon');
+  return `${t('quota.resetIn', { time: quotaDurationText(remainingMs) })} · ${quotaDateText(w.resetsAt)}`;
+}
+
+function quotaUpdatedText(updatedAt) {
+  const date = new Date(Number(updatedAt));
+  if (!Number.isFinite(date.getTime())) return '--';
+  return date.toLocaleString(window.AgentPawI18n.getLanguage(), {
+    month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
+
+function quotaWindowEntries(quota) {
+  const windows = quota && quota.windows && typeof quota.windows === 'object' ? quota.windows : {};
+  const fiveHour = windows.fiveHour;
+  const hasFiveHour = quotaRemainingPercent(fiveHour) !== null;
+  const observed = Array.isArray(quota && quota.observedWindows) ? quota.observedWindows : [];
+  // A missing response says nothing about which windows this account has.
+  // Keep 5h only after it was observed; cold/weekly-only accounts show just 7d.
+  return [
+    ['fiveHour', 'quota.fiveHour'],
+    ['weekly', 'quota.weekly'],
+  ].filter(([key]) => key !== 'fiveHour' || hasFiveHour || observed.includes('fiveHour'));
+}
+
+function quotaCostText(value) {
+  if (value === null || value === undefined) return '--';
+  const n = Number(value);
+  return Number.isFinite(n) ? '$' + n.toFixed(3) : '--';
+}
+
+function quotaPlanText(quota) {
+  const plan = quota && quota.account && typeof quota.account.planType === 'string'
+    ? quota.account.planType.trim()
+    : '';
+  return plan ? ` · ${plan.slice(0, 1).toUpperCase()}${plan.slice(1)}` : '';
+}
+
+function renderQuotaEstimate(quota) {
+  if (!quotaPopoverInsight) return;
+  const estimate = quota && quota.estimate;
+  quotaPopoverInsight.innerHTML = '';
+  quotaPopoverInsight.hidden = !estimate;
+  if (!estimate) return;
+  const add = (parent, tag, className, text) => {
+    const el = document.createElement(tag);
+    el.className = className;
+    el.textContent = text;
+    parent.appendChild(el);
+    return el;
+  };
+  const ready = Number.isFinite(estimate.estimatedTotalCost) && estimate.estimatedTotalCost > 0;
+  const head = add(quotaPopoverInsight, 'div', 'quota-estimate-head', '');
+  add(head, 'span', '', t('quota.estimateTitle'));
+  add(head, 'span', 'quota-estimate-badge', t(ready
+    ? (estimate.confidence === 'early' ? 'quota.estimateEarly' : 'quota.estimateDynamic') : 'quota.estimateCollecting'));
+  if (ready) {
+    const grid = add(quotaPopoverInsight, 'div', 'quota-estimate-grid', '');
+    for (const [label, value] of [
+      ['quota.estimateFull', estimate.estimatedTotalCost],
+      ['quota.estimateRemaining', estimate.estimatedRemainingCost],
+    ]) {
+      const card = add(grid, 'div', 'quota-estimate-card', '');
+      add(card, 'div', 'quota-estimate-label', t(label));
+      add(card, 'div', 'quota-estimate-number', Number.isFinite(value) ? '≈ $' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '--');
+      add(card, 'div', 'quota-estimate-unit', t('quota.estimateUnit'));
+    }
+    add(quotaPopoverInsight, 'div', 'quota-estimate-detail', t(estimate.basis === 'cycle' ? 'quota.estimateCycleEvidence' : 'quota.estimateEvidence', {
+      percent: Number.isFinite(estimate.samplePercent) ? +estimate.samplePercent.toFixed(1) : '--',
+      cost: quotaCostText(estimate.cost),
+    }));
+    if (Number.isFinite(estimate.rangeLow) && Number.isFinite(estimate.rangeHigh)) {
+      add(quotaPopoverInsight, 'div', 'quota-estimate-detail', t('quota.estimateRange', {
+        low: '$' + estimate.rangeLow.toFixed(2), high: '$' + estimate.rangeHigh.toFixed(2),
+      }));
+    } else if (estimate.confidence === 'early') {
+      add(quotaPopoverInsight, 'div', 'quota-estimate-detail', t('quota.estimateEarlyHint'));
+    }
+  } else {
+    const pending = add(quotaPopoverInsight, 'div', 'quota-estimate-pending', t('quota.estimateObserved', {
+      cost: quotaCostText(estimate.cost),
+      used: Number.isFinite(estimate.usedPercent) ? +estimate.usedPercent.toFixed(1) : '--',
+    }));
+    add(pending, 'div', 'quota-estimate-detail', t(estimate.reason === 'no-percent'
+      ? 'quota.estimateAwaitPercent' : 'quota.estimateAwaitCost'));
+  }
+  add(quotaPopoverInsight, 'div', 'quota-estimate-note', t('quota.estimateNote'));
+}
+
+function renderQuotaPopover(s) {
+  if (!quotaPopoverRows || !quotaPopoverStatus || !s) return;
+  const quota = s.codexQuota || {};
+  quotaPopoverTitle.textContent = t('quota.title');
+  quotaPopoverStatus.textContent = quota.status === 'ready'
+    ? t('quota.synced') + quotaPlanText(quota)
+    : (quota.statusText || t('quota.unavailable'));
+  quotaPopoverRows.innerHTML = '';
+
+  const windows = quotaWindowEntries(quota);
+  for (const [key, labelKey] of windows) {
+    const w = quota.windows && quota.windows[key];
+    const remaining = quotaRemainingPercent(w);
+    const row = document.createElement('div');
+    row.className = 'quota-pop-row';
+    row.dataset.level = quotaLevel(remaining);
+
+    const period = document.createElement('div');
+    period.className = 'quota-pop-period';
+    period.textContent = t(labelKey);
+
+    const main = document.createElement('div');
+    main.className = 'quota-pop-main';
+    const value = document.createElement('div');
+    value.className = 'quota-pop-value';
+    value.textContent = t('quota.remaining', {
+      percent: remaining === null ? '--' : Math.round(remaining) + '%',
+    });
+    const reset = document.createElement('div');
+    reset.className = 'quota-pop-reset';
+    reset.textContent = quotaResetText(w);
+    main.appendChild(value);
+    main.appendChild(reset);
+
+    const bar = document.createElement('div');
+    bar.className = 'quota-pop-bar';
+    const fill = document.createElement('div');
+    fill.className = 'quota-pop-bar-fill';
+    fill.style.setProperty('--quota-remaining', `${remaining === null ? 0 : remaining}%`);
+    bar.appendChild(fill);
+
+    row.appendChild(period);
+    row.appendChild(main);
+    row.appendChild(bar);
+    quotaPopoverRows.appendChild(row);
+  }
+
+  renderQuotaEstimate(quota);
+  quotaPopoverUpdated.textContent = Number.isFinite(quota.updatedAt)
+    ? t('quota.updatedAt', { time: quotaUpdatedText(quota.updatedAt) })
+    : (quota.statusText || t('quota.unavailable'));
+  quotaPopoverHint.textContent = t('quota.dismissHint');
+}
+
+function clearQuotaPopoverCloseTimer() {
+  if (quotaPopoverCloseTimer) clearTimeout(quotaPopoverCloseTimer);
+  quotaPopoverCloseTimer = null;
+}
+
+function keepQuotaPopoverOpen() {
+  quotaPopoverPointerInside = true;
+  clearQuotaPopoverCloseTimer();
+}
+
+function scheduleQuotaPopoverClose() {
+  clearQuotaPopoverCloseTimer();
+  if (!quotaPopoverOpen || quotaPopoverPointerInside) return;
+  quotaPopoverCloseTimer = setTimeout(() => {
+    const focused = document.activeElement;
+    const focusInside = focused === quotaEl || (quotaPopover && quotaPopover.contains(focused));
+    if (!quotaPopoverPointerInside && !focusInside) closeQuotaPopover();
+  }, QUOTA_POPOVER_LEAVE_MS);
+}
+
+function startQuotaPopoverClock() {
+  if (quotaPopoverRefreshTimer) clearInterval(quotaPopoverRefreshTimer);
+  quotaPopoverRefreshTimer = setInterval(() => {
+    if (quotaPopoverOpen && lastStats) renderQuotaPopover(lastStats);
+  }, QUOTA_POPOVER_REFRESH_MS);
+  if (quotaPopoverRefreshTimer && typeof quotaPopoverRefreshTimer.unref === 'function') quotaPopoverRefreshTimer.unref();
+}
+
+function closeQuotaPopover({ keepFocus = false } = {}) {
+  clearQuotaPopoverCloseTimer();
+  if (quotaPopoverRefreshTimer) clearInterval(quotaPopoverRefreshTimer);
+  quotaPopoverRefreshTimer = null;
+  quotaPopoverPointerInside = false;
+  if (quotaPopover) quotaPopover.classList.add('hidden');
+  quotaPopoverOpen = false;
+  if (quotaEl) quotaEl.setAttribute('aria-expanded', 'false');
+  if (!keepFocus) window.pet.blurPet();
+  resetPetSize();
+}
+
+function openQuotaPopover() {
+  if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
+  if (!lastStats || !quotaEl || quotaEl.hidden || askActive) return false;
+  if (quotaPopoverOpen) return true;
+  if (radialOpen) closeRadial();
+  if (actionPopOpen) closeActionPop();
+  if (peekOpen) closePeek();
+  clearTimeout(bubbleTimer);
+  bubbleTimer = null;
+  bubble.classList.add('hidden');
+  renderQuotaPopover(lastStats);
+  quotaPopover.classList.remove('hidden');
+  quotaPopoverOpen = true;
+  quotaPopoverPointerInside = true;
+  quotaEl.setAttribute('aria-expanded', 'true');
+  startQuotaPopoverClock();
+  fitPopup(quotaPopover);
+  positionQuotaPopoverTip();
+  return true;
+}
+
+function toggleQuotaPopover() {
+  if (quotaPopoverOpen) closeQuotaPopover();
+  else openQuotaPopover();
+}
+
+function updateCapsuleState(context, label) {
+  const changed = chip.dataset.context !== context;
+  chip.dataset.context = context;
+  chipContext.textContent = label;
+  // Animate only an actual state change, never the timer or the window bounds.
+  if (changed && !chipContext.hidden && typeof chipContext.animate === 'function'
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    chipContext.animate([
+      { opacity: .35, transform: 'translateY(3px)' },
+      { opacity: 1, transform: 'translateY(0)' },
+    ], { duration: 280, easing: 'cubic-bezier(.22, 1, .36, 1)' });
+  }
+}
+
+function renderContextCapsule(s) {
+  if (!chip || !chipContext || !s || !petInsights || typeof petInsights.context !== 'function') return;
+  const display = s.chipDisplay || { showCat: true, showStatus: true, showQuota: true, showTokens: false, showCost: true };
+  const showCat = display.showCat !== false;
+  catVisible = showCat;
+  stage.classList.toggle('cat-hidden', !showCat);
+  cat.setAttribute('aria-hidden', String(!showCat));
+  const showStatus = display.showStatus !== false;
+  const showQuota = display.showQuota !== false;
+  const showTokens = display.showTokens === true;
+  const showCost = display.showCost === true;
+  chipContext.hidden = !showStatus;
+  chipTokens.hidden = !showTokens;
+  chipCost.hidden = !showCost;
+  quotaEl.hidden = !showQuota;
+  if (!showQuota && quotaPopoverOpen) closeQuotaPopover();
+  // Separators belong to the item that follows them. This keeps the capsule
+  // clean when the user hides the state and/or quota while retaining tokens
+  // or cost on their own.
+  document.getElementById('chip-tokens-sep').hidden = !showTokens || !(showStatus || showQuota);
+  document.getElementById('chip-cost-sep').hidden = !showCost || !(showStatus || showQuota || showTokens);
+  const quota = s.codexQuota || {};
+  quotaEl.innerHTML = '';
+  for (const [key, labelKey] of quotaWindowEntries(quota)) {
+    const label = labelKey === 'quota.fiveHour' ? '5h' : '7d';
+    const w = quota.windows && quota.windows[key];
+    const remaining = quotaRemainingPercent(w);
+    const badge = document.createElement('span');
+    badge.className = 'quota-badge';
+    badge.dataset.level = quotaLevel(remaining);
+    badge.dataset.period = label;
+    badge.textContent = remaining === null ? '--' : Math.round(remaining) + '%';
+    badge.style.setProperty('--quota-remaining', `${remaining === null ? 0 : remaining}%`);
+    badge.setAttribute('aria-label', window.AgentPawI18n.text("{0} 剩余 {1}", [label, badge.textContent]));
+    quotaEl.appendChild(badge);
+  }
+  quotaEl.setAttribute('aria-label', t('quota.open'));
+  chip.removeAttribute('title');
+  if (quotaPopoverOpen) {
+    renderQuotaPopover(s);
+    fitPopup(quotaPopover);
+    positionQuotaPopoverTip();
+  }
+  const now = perfNow();
+  const purrVisible = purrPaydaySummary && purrPaydayUntil > now && purrEnvironmentClear(s);
+  if (purrVisible) {
+    const purr = purrPaydaySummary;
+    updateCapsuleState('purr', t('purr.title'));
+    chipTokens.textContent = `${compactTokens(purr.tokens)} tokens`;
+    chipCost.textContent = '$' + (Number(purr.cost) || 0).toFixed(3);
+    chip.setAttribute('aria-label', purr.copy || t('purr.ariaLabel'));
+    fitRestingFrame();
+    return;
+  }
+  if (purrPaydayUntil && !purrEnvironmentClear(s)) clearPurrPayday();
+
+  const info = petInsights.context(s, { sleepMs: IDLE_SLEEP_MS });
+  const usage = typeof petInsights.usage === 'function' ? petInsights.usage(s) : {
+    rounds: Number(s.today && (s.today.messages || s.today.msgs)) || 0,
+    tokens: Number(s.today && s.today.tokens) || 0,
+    cost: Number(s.today && s.today.cost) || 0,
+  };
+  const detail = [showTokens ? `${compactTokens(usage.tokens)} tokens` : '',
+    showCost ? window.AgentPawI18n.text("API 等价估算 ${0}", [usage.cost.toFixed(3)]) : ''].filter(Boolean).join(' · ');
+  let label = '';
+  let title = '';
+  // A done badge is only the primary capsule state when no higher-priority
+  // attention/active state is present. It can coexist with another session's
+  // work, so do not let the badge leak into the data-state styling there.
+  const showDone = info.recentDone && (info.kind === 'idle' || info.kind === 'sleeping');
+
+  if (info.kind === 'waiting') {
+    const total = info.count + (info.needsinput || 0);
+    label = window.AgentPawI18n.text("✋ {0} 件等你", [total]);
+    title = window.AgentPawI18n.text("等你处理：{0} 项授权{1}", [info.count, info.needsinput ? window.AgentPawI18n.text(" · {0} 项回复", [info.needsinput]) : '']);
+  } else if (info.kind === 'needsinput') {
+    label = window.AgentPawI18n.text("💬 {0} 件待回复", [info.count]);
+    title = window.AgentPawI18n.text("等你回复：{0} 项", [info.count]);
+  } else if (info.kind === 'error') {
+    label = window.AgentPawI18n.text("😵 {0} 项异常", [info.count]);
+    title = window.AgentPawI18n.text("任务异常：{0} 项", [info.count]);
+  } else if (info.kind === 'active') {
+    const icon = SESS_META_ICON[info.state] || '⚙️';
+    const stateText = backgroundStatus(info.primary) || t(SESS_META_KEY[info.state] || 'state.working');
+    const elapsed = info.primary && info.primary.turnStartedAt
+      ? capsuleElapsed(now - Number(info.primary.turnStartedAt))
+      : '';
+    label = info.activeCount > 1
+      ? window.AgentPawI18n.text("{0}{1} 个任务", [icon, info.activeCount])
+      : `${icon}${stateText}${elapsed ? ` · ${elapsed}` : ''}`;
+    title = info.activeCount > 1 ? window.AgentPawI18n.text("{0} 个任务正在进行", [info.activeCount]) : stateText;
+  } else if (showDone) {
+    label = window.AgentPawI18n.text("✅ 刚刚完成");
+    title = window.AgentPawI18n.text("最近一轮任务已完成");
+  } else if (info.kind === 'sleeping') {
+    label = window.AgentPawI18n.text("💤 休息中");
+    title = window.AgentPawI18n.text("没有活动任务，伙伴正在休息");
+  } else {
+    label = window.AgentPawI18n.text("🌿 待命");
+    title = window.AgentPawI18n.text("当前没有活动任务");
+  }
+
+  if (s.privacyMode) {
+    label = `🔒 ${label}`;
+    title = `${t('privacy.enabled')} · ${title}`;
+  }
+
+  const capsuleState = showDone
+    ? 'done'
+    : (info.kind === 'active' ? `active-${info.state}` : info.kind);
+  updateCapsuleState(capsuleState, label);
+  chipTokens.textContent = compactTokens(usage.tokens) + ' tokens';
+  chipCost.textContent = '$' + usage.cost.toFixed(3);
+  chip.setAttribute('aria-label', `${title}${detail ? window.AgentPawI18n.text(" · 今日 {0}", [detail]) : ''}`);
+  fitRestingFrame();
+}
+
+function triggerPurrPayday() {
+  if (!purrCanRun(lastStats)) return false;
+  const usage = petInsights.usage(lastStats);
+  const day = localPurrDay();
+  const firstToday = !purrAlreadyAnnounced(day);
+  if (firstToday) markPurrAnnounced(day);
+  const copy = firstToday
+    ? (usage.rounds || usage.tokens
+      ? t('purr.first', {
+        rounds: usage.rounds,
+        tokens: compactTokens(usage.tokens),
+        cacheRate: usage.cacheRate == null ? '—' : usage.cacheRate.toFixed(0),
+      })
+      : t('purr.empty'))
+    : t('purr.repeat');
+  purrPaydaySummary = { ...usage, copy };
+  purrPaydayUntil = perfNow() + PURR_DISPLAY_MS;
+  clearTimeout(purrPaydayTimer);
+  purrPaydayTimer = setTimeout(() => {
+    clearPurrPayday();
+    if (lastStats) renderContextCapsule(lastStats);
+  }, PURR_DISPLAY_MS + 50);
+  if (purrPaydayTimer && typeof purrPaydayTimer.unref === 'function') purrPaydayTimer.unref();
+  renderContextCapsule(lastStats);
+  transient('loved', 2500, copy, 5200);
+  if (firstToday) confetti();
+  return true;
+}
+
+function applyStats(s) {
+  if (!s) return;
+  privacyModeCache = s.privacyMode === true;
+  const enteringPrivacy = s.privacyMode === true && !(lastStats && lastStats.privacyMode === true);
+  if (enteringPrivacy) {
+    clearPurrPayday();
+    clearTransient();
+    hideBubble();
+    if (askActive) hideAsk();
+    if (actionPopOpen) closeActionPop();
+  }
+  lastStats = s;
+  renderContextCapsule(s);
+  renderSessions(s.sessions || []);
+  // The status dots and the capsule are siblings in the same intrinsic-width
+  // stack. Measure after both have been refreshed so a long amount or a new
+  // parallel task is included in the next BrowserWindow size.
+  fitRestingFrame();
+  updateNotepad(s); // 记事本：行动中心
+
+  // 选项面板：按快照重建队列（多任务都在、标明项目；防漏事件/启动时已在等待）
+  refreshAsk(s);
+  // 速览不冻结状态机：快照到来时就地更新文字，不关闭/重开。
+  if (peekOpen) renderPeek(s);
+  if (window.AgentPawCompanion) window.AgentPawCompanion.refresh();
+
+  // 你正在看面板/打字 → 不再改打工伙伴状态(别动来动去打断你)，安静等你答完
+  if (isInteracting()) return;
+
+  // 聚合梯子，对齐 STATES.md 的优先级表：
+  //   waiting > 短暂态 > error(8) > needsinput/notification(7) > sweeping(6)
+  //   > juggling(4) > working(3) > thinking(2) > idle(1) > sleeping(0)
+  // 之前 working 排在 needsinput 前面，多会话时「等你回复」被干活态彻底盖住。
+  if (s.waitingCount > 0) {
+    setState('waiting');
+  } else if (perfNow() < transientUntil) {
+    setState(transientState);
+  } else if (s.errorCount > 0) {
+    setState('error'); // 有会话卡在 API 错误 → 瘫倒，直到该会话恢复或 oneshot 衰减
+  } else if (s.needsinputCount > 0) {
+    setState('needsinput');
+  } else if (s.sweepingCount > 0) {
+    setState('sweeping');
+  } else if (s.jugglingCount > 0) {
+    setState('juggling');
+  } else if (s.workingCount > 0) {
+    setState('working');
+  } else if (s.thinkingCount > 0) {
+    setState('thinking');
+  } else if (s.loafingCount > 0) {
+    setState('loafing'); // 工具间隙：上一步干完等下一步 → 摸鱼
+  } else if (s.idleMs == null || s.idleMs > IDLE_SLEEP_MS) {
+    // idleMs=null 表示已无任何活跃会话——什么都没发生就该睡觉；
+    // 之前 null 落到 idle，桌宠永不入睡，睡着后会话被回收还会凭空惊醒。
+    setState('sleeping');
+  } else {
+    setState('idle');
+  }
+}
+window.pet.onXiabanSchedule((schedule) => applyXiabanSchedule(schedule));
+if (window.pet.onPetAssets) window.pet.onPetAssets((catalog) => applyPetAssetCatalog(catalog));
+window.pet.onStats(applyStats);
+
+function renderSessions(sessions) {
+  sessionsEl.innerHTML = '';
+  // 头顶状态点只展示可见会话，并按状态优先级排列。
+  const list = (sessions || []).filter(isBaseVisibleSession).sort((a, b) => {
+    const pa = SESS_SORT[a.state] != null ? SESS_SORT[a.state] : 3;
+    const pb = SESS_SORT[b.state] != null ? SESS_SORT[b.state] : 3;
+    return pa !== pb ? pa - pb : (a.idleMs || 0) - (b.idleMs || 0);
+  });
+  for (const s of list) {
+    const d = document.createElement('div');
+    d.className = 'sess-dot ' + sessionDotClass(s);
+    const label = s.state === 'waiting' ? waitPhrase(s.reason) : (sessMeta(s.state) || s.state);
+    d.title = `${s.project} · ${label}`;
+    d.setAttribute('aria-hidden', 'true');
+    sessionsEl.appendChild(d);
+  }
+  if (propEl && propEl.classList.contains('on')) positionProp();
+}
+
+// Static markup carries Chinese text inline; data-i18n keeps the shared wording
+// consistent across the pet and detail panel.
+function applyStaticI18n() {
+  window.AgentPawI18n.localizeDocument(document);
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll('[data-i18n-title]')) el.title = t(el.dataset.i18nTitle);
+  for (const el of document.querySelectorAll('[data-i18n-aria]')) el.setAttribute('aria-label', t(el.dataset.i18nAria));
+  for (const el of document.querySelectorAll('[data-i18n-ph]')) {
+    el.placeholder = t(el.dataset.i18nPh);
+    delete el.dataset.ph; // drop the cached original so the warn/restore pair re-seeds
+  }
+}
+
+// ====================================================================
+// 拖动 + 右键菜单（拖动=移动窗口）
+// ====================================================================
+let g = null; // 当前手势（同步建立，保证快速点击也能识别）
+let dragGestureSeq = 0;
+function pointerScreenX(e) {
+  const value = Number(e && e.screenX);
+  if (Number.isFinite(value)) return value;
+  return (Number(window.screenX) || 0) + (Number(e && e.clientX) || 0);
+}
+function pointerScreenY(e) {
+  const value = Number(e && e.screenY);
+  if (Number.isFinite(value)) return value;
+  return (Number(window.screenY) || 0) + (Number(e && e.clientY) || 0);
+}
+function currentWindowScreenPosition() {
+  const x = Number(window.screenX);
+  const y = Number(window.screenY);
+  return Number.isFinite(x) && Number.isFinite(y) ? [x, y] : null;
+}
+function pointerClientX(e) {
+  const value = Number(e && e.clientX);
+  if (Number.isFinite(value)) return value;
+  return pointerScreenX(e) - (Number(window.screenX) || 0);
+}
+function pointerClientY(e) {
+  const value = Number(e && e.clientY);
+  if (Number.isFinite(value)) return value;
+  return pointerScreenY(e) - (Number(window.screenY) || 0);
+}
+
+function cancelQueuedDragMove(gesture) {
+  if (!gesture) return;
+  if (gesture.moveFrame !== null) cancelAnimationFrame(gesture.moveFrame);
+  gesture.moveFrame = null;
+  gesture.pendingMove = null;
+}
+
+function flushQueuedDragMove(gesture) {
+  if (!gesture) return;
+  if (gesture.moveFrame !== null) cancelAnimationFrame(gesture.moveFrame);
+  gesture.moveFrame = null;
+  const pending = gesture.pendingMove;
+  gesture.pendingMove = null;
+  if (!pending || g !== gesture || !gesture.moved) return;
+  movePetDuringDrag(gesture, pending, pending.targetX, pending.targetY);
+}
+
+function queueDragMove(gesture, e, targetX, targetY) {
+  // BrowserWindow movement can produce a burst of pointermove events itself.
+  // Keep only the newest physical-cursor sample per paint frame; together with
+  // main's same-position guard this makes the feedback chain terminate.
+  gesture.pendingMove = {
+    screenX: pointerScreenX(e),
+    screenY: pointerScreenY(e),
+    targetX,
+    targetY,
+  };
+  if (gesture.moveFrame !== null) return;
+  gesture.moveFrame = requestAnimationFrame(() => flushQueuedDragMove(gesture));
+}
+
+function finishDrag(el, e, cancelled) {
+  if (!g || g.el !== el) return;
+  if (e && Number.isFinite(e.pointerId) && e.pointerId !== g.pid) return;
+  const gesture = g;
+  const wasMove = gesture.moved;
+  const wasPurr = gesture.purrTriggered;
+  clearTimeout(gesture.holdTimer);
+  if (wasMove && !cancelled) flushQueuedDragMove(gesture);
+  else cancelQueuedDragMove(gesture);
+  el.classList.remove('dragging');
+  g = null;
+  try { el.releasePointerCapture(gesture.pid); } catch {}
+  try { window.pet.endWinDrag(gesture.id); } catch {}
+  if (wasMove) {
+    if (peekOpen) closePeek();
+    // END_WIN_DRAG is sent after the final position, so the queued size/anchor
+    // settlement cannot revive an already released movement gesture.
+    setTimeout(() => {
+      settleEdgeLayout();
+      requestAnimationFrame(() => { if (window.AgentPawCompanion) window.AgentPawCompanion.refresh(); });
+    }, 0);
+  } else if (!wasPurr && !cancelled) {
+    // 左键短按 = 按当前优先级打开待处理卡/行动中心/工作速览；
+    // 拖动仍由上面的 4px 阈值独立裁决，不会误触点击。
+    handleCatClick();
+  } else if (cancelled) {
+    requestAnimationFrame(() => { if (window.AgentPawCompanion) window.AgentPawCompanion.refresh(); });
+  }
+}
+
+function attachDrag(el, options = {}) {
+  el.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    if (options.hiddenOnly && catVisible) return;
+    // Inline controls keep their own click/keyboard actions when the capsule
+    // becomes the drag handle; pressing one must not capture its pointer.
+    if (el === chip && e.target && e.target.closest
+      && e.target.closest('#chip-quota, #rest-pending, #notepad')) return;
+    if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
+    try { el.setPointerCapture(e.pointerId); } catch {}
+    el.classList.add('dragging');
+    const gesture = {
+      el,
+      pid: e.pointerId,
+      sx: pointerScreenX(e),
+      sy: pointerScreenY(e),
+      moved: false,
+      purrTriggered: false,
+      holdTimer: null,
+      id: `${Date.now().toString(36)}-${++dragGestureSeq}`,
+      moveSeq: 0,
+      moveFrame: null,
+      pendingMove: null,
+      // Main combines this stable in-window grab point with the authoritative
+      // OS cursor. Window-generated pointer events cannot accumulate movement.
+      grabX: pointerClientX(e),
+      grabY: pointerClientY(e),
+      // Prefer the synchronous BrowserWindow coordinates. The IPC result is
+      // only a fallback and is ignored once this gesture has a window origin.
+      win: currentWindowScreenPosition(),
+    };
+    g = gesture;
+    gesture.holdTimer = setTimeout(() => {
+      if (g !== gesture || gesture.moved) return;
+      gesture.purrTriggered = triggerPurrPayday();
+    }, PURR_HOLD_MS);
+    window.pet.getWinPos().then(([wx, wy]) => {
+      if (g !== gesture || gesture.win) return;
+      if (Number.isFinite(wx) && Number.isFinite(wy)) gesture.win = [wx, wy];
+    }).catch(() => {});
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!g) return;
+    if (Number.isFinite(e.pointerId) && e.pointerId !== g.pid) return;
+    const dx = pointerScreenX(e) - g.sx;
+    const dy = pointerScreenY(e) - g.sy;
+    if (!g.moved && Math.abs(dx) + Math.abs(dy) > 4) g.moved = true;
+    if (g.moved && g.holdTimer) {
+      clearTimeout(g.holdTimer);
+      g.holdTimer = null;
+    }
+    if (g.moved && !g.win) g.win = currentWindowScreenPosition();
+    if (g.moved && g.win) {
+      if (radialOpen) closeRadial();
+      queueDragMove(g, e, g.win[0] + dx, g.win[1] + dy);
+    }
+  });
+  el.addEventListener('pointerup', (e) => finishDrag(el, e, false));
+  el.addEventListener('pointercancel', (e) => finishDrag(el, e, true));
+  el.addEventListener('lostpointercapture', (e) => finishDrag(el, e, true));
+  // 右键 = 泡泡菜单
+  el.addEventListener('contextmenu', (e) => {
+    if (options.hiddenOnly && catVisible) return;
+    e.preventDefault();
+    toggleRadial();
+  });
+}
+stateEls.forEach(attachDrag);
+// When the cat is hidden the capsule becomes the visible drag handle. It uses
+// the exact same gesture, edge anchoring, click and context-menu behaviour.
+attachDrag(chip, { hiddenOnly: true });
+cat.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    handleCatClick();
+  } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
+    e.preventDefault();
+    toggleRadial();
+  }
+});
+
+// 卡片按钮：Submit/Next、Back、Go to Terminal、Other 输入
+askSubmit.addEventListener('click', () => { const c = askQueue[askIdx]; if (c && c.kind === 'ask') elicNextOrSubmit(c); });
+askBack.addEventListener('click', () => { const c = askQueue[askIdx]; if (c && c.kind === 'ask') elicBack(c); });
+askTerm.addEventListener('click', () => { const c = askQueue[askIdx]; if (c) gotoSession(c); });
+askText.addEventListener('input', () => updateSubmitEnabled());
+// 自定义输入里按回车直接发送（仅 elicitation）；空内容不发、提示别忘了填
+askText.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const c = askQueue[askIdx];
+  if (!c || !elic) return;
+  if (!(askText.value || '').trim()) { warnEmptyInput(); return; }
+  if (askSubmit.classList.contains('disabled')) { warnEmptyInput(); return; }
+  elicNextOrSubmit(c);
+});
+// 鼠标在面板上 = 交互中（配合 isInteracting 冻结轮询）
+askEl.addEventListener('pointerenter', () => { askHover = true; });
+askEl.addEventListener('pointerleave', () => { askHover = false; });
+
+// 记事本：点击开/关 行动中心弹层
+notepad.addEventListener('click', (e) => { e.stopPropagation(); actionPopOpen ? closeActionPop() : openActionPop(); });
+notepad.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault(); e.stopPropagation();
+  actionPopOpen ? closeActionPop() : openActionPop();
+});
+notepad.addEventListener('contextmenu', (e) => e.stopPropagation());
+document.getElementById('ac-close').addEventListener('click', (e) => { e.stopPropagation(); closeActionPop(); });
+
+actionPop.querySelectorAll('.ac-ops button').forEach((b) => {
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const op = b.dataset.op;
+    if (op === 'panel') window.pet.openPanel(AGENT);
+    closeActionPop();
+  });
+});
+
+function openPetSettings() {
+  if (radialOpen) closeRadial();
+  if (peekOpen) closePeek();
+  if (actionPopOpen) closeActionPop();
+  window.pet.openSettings();
+}
+for (const id of ['peek-settings', 'ac-settings']) {
+  const button = document.getElementById(id);
+  button.innerHTML = window.AgentPawIcons?.icon('settings') || '';
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    openPetSettings();
+  });
+}
+
+peekClose.addEventListener('click', (e) => { e.stopPropagation(); closePeek(); });
+peekFocus.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const sessionId = peekPrimarySessionId;
+  closePeek();
+  requestSessionFocus(sessionId);
+});
+peekPanel.addEventListener('click', (e) => {
+  e.stopPropagation();
+  closePeek();
+  window.pet.openPanel(AGENT);
+});
+peekEl.addEventListener('pointerenter', clearPeekTimer);
+peekEl.addEventListener('pointerleave', armPeekTimer);
+peekEl.addEventListener('contextmenu', (e) => e.stopPropagation());
+quotaEl.addEventListener('click', (e) => { e.stopPropagation(); toggleQuotaPopover(); });
+quotaEl.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault();
+  e.stopPropagation();
+  toggleQuotaPopover();
+});
+quotaEl.addEventListener('pointerenter', keepQuotaPopoverOpen);
+quotaEl.addEventListener('pointerleave', () => {
+  quotaPopoverPointerInside = false;
+  scheduleQuotaPopoverClose();
+});
+quotaEl.addEventListener('focus', keepQuotaPopoverOpen);
+quotaPopover.addEventListener('pointerenter', keepQuotaPopoverOpen);
+quotaPopover.addEventListener('pointerleave', () => {
+  quotaPopoverPointerInside = false;
+  scheduleQuotaPopoverClose();
+});
+quotaPopover.addEventListener('focusin', keepQuotaPopoverOpen);
+quotaPopover.addEventListener('focusout', scheduleQuotaPopoverClose);
+quotaPopoverClose.addEventListener('click', (e) => { e.stopPropagation(); closeQuotaPopover(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && actionPopOpen) {
+    e.preventDefault();
+    closeActionPop();
+    return;
+  }
+  if (e.key === 'Escape' && quotaPopoverOpen) {
+    e.preventDefault();
+    closeQuotaPopover();
+    return;
+  }
+  if (e.key === 'Escape' && peekOpen) {
+    e.preventDefault();
+    closePeek();
+  }
+});
+
+// ---------- 泡泡菜单 ----------
+let radialOpenSeq = 0;
+let radialRelayoutSeq = 0;
+
+function privacyModeEnabled() {
+  return privacyModeCache;
+}
+
+async function readPrivacyMode() {
+  const result = await window.pet.getPrivacyMode();
+  if (result && result.ok && typeof result.enabled === 'boolean') privacyModeCache = result.enabled;
+  return privacyModeCache;
+}
+
+async function togglePrivacyMode() {
+  try {
+    const current = await readPrivacyMode();
+    const result = await window.pet.setPrivacyMode(!current);
+    if (result && result.ok && typeof result.enabled === 'boolean') privacyModeCache = result.enabled;
+  } catch {}
+}
+
+// labelKey (not label): buildRadial resolves Chinese labels at render time.
+const MENU = [
+  { ic: 'chart',  labelKey: 'menu.panel', act: () => window.pet.openPanel(AGENT) },
+  // 收起只隐藏桌宠（托盘可重新显示）；应用退出保留在托盘中。
+  { ic: 'minus',  labelKey: 'menu.collapse', act: () => window.pet.openHideMenu ? window.pet.openHideMenu() : window.pet.closePet() },
+  { labelKey: 'menu.privacy', status: () => privacyModeEnabled() ? 'ON' : 'OFF', act: togglePrivacyMode },
+  { ic: 'settings', labelKey: 'menu.settings', act: openPetSettings },
+];
+// The compact toolbar groups privacy, detail and settings before hide.
+// Keep the cat-facing radial menu's original MENU order unchanged.
+const COMPACT_MENU = [MENU[2], MENU[0], MENU[3], MENU[1]];
+
+function usableRadialMetrics(metrics) {
+  if (!metrics || !metrics.window || !metrics.workArea) return null;
+  const wr = metrics.window;
+  const wa = metrics.workArea;
+  if (![wr.x, wr.y, wr.width, wr.height, wa.x, wa.y, wa.width, wa.height].every(Number.isFinite)) return null;
+  if (wr.width <= 0 || wr.height <= 0 || wa.width <= 0 || wa.height <= 0) return null;
+  return metrics;
+}
+
+function radialFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+async function settledRadialMetrics(resting = false) {
+  if (!window.pet || typeof window.pet.getWindowMetrics !== 'function') return null;
+  let metrics = null;
+  try { metrics = usableRadialMetrics(await window.pet.getWindowMetrics()); } catch { return null; }
+  // setPetSize/resetPetSize 在主进程同步落 bounds，但 renderer 的 resize 与
+  // flex 重排会晚一拍。等到 DOM viewport 也追上主进程尺寸后再取 pet rect。
+  for (let i = 0; metrics && i < (resting ? 12 : 6); i++) {
+    const wr = metrics.window;
+    const expectedW = resting ? Math.min(metrics.workArea.width, desiredRestingWidth()) : wr.width;
+    const expectedH = resting ? Math.min(metrics.workArea.height, BASE_PET_FRAME_H) : wr.height;
+    const settled = Math.abs((window.innerWidth || 0) - wr.width) <= 1
+      && Math.abs((window.innerHeight || 0) - wr.height) <= 1;
+    if (settled && Math.abs(wr.width - expectedW) <= 1 && Math.abs(wr.height - expectedH) <= 1) break;
+    await radialFrame();
+    try { metrics = usableRadialMetrics(await window.pet.getWindowMetrics()) || metrics; } catch {}
+  }
+  await radialFrame();
+  return metrics;
+}
+
+function makeRadialItem(it, i, compact = false) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'radial-item';
+  b.style.transitionDelay = i * 0.03 + 's';
+  const status = typeof it.status === 'function' ? it.status() : '';
+  if (status) {
+    const enabled = status === 'ON';
+    b.classList.add('radial-toggle');
+    b.dataset.enabled = String(enabled);
+    b.setAttribute('aria-pressed', String(enabled));
+    b.setAttribute('aria-label', `${t(it.labelKey)} ${status}`);
+    b.innerHTML = compact
+      ? `<span class="ri-lb">${esc(t(it.labelKey))}</span><span class="ri-state">${esc(status)}</span>`
+      : `<span class="ri-state">${esc(status)}</span><span class="ri-lb">${esc(t(it.labelKey))}</span>`;
+  } else {
+    const icHtml = (window.AgentPawIcons && window.AgentPawIcons.icon(it.ic)) || '';
+    b.innerHTML = `<span class="ri-ic oi">${icHtml}</span><span class="ri-lb">${esc(t(it.labelKey))}</span>`;
+  }
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeRadial();
+    it.act();
+  });
+  return b;
+}
+
+function positionCompactRadial() {
+  if (!radial || !chip || catVisible) return;
+  const bar = radial.children && [...radial.children].find((child) =>
+    child.classList && child.classList.contains('radial-compact'));
+  if (!bar) return;
+  const sr = stage.getBoundingClientRect();
+  const chipRect = chip.getBoundingClientRect();
+  const barRect = bar.getBoundingClientRect();
+  const viewportW = Math.max(1, sr.width || window.innerWidth || 320);
+  const barWidth = Math.max(0, Number(barRect.width) || 0);
+  const halfBar = barWidth / 2;
+  const desiredCenter = chipRect.left - sr.left + chipRect.width / 2;
+  const minCenter = 8 + halfBar;
+  const maxCenter = viewportW - 8 - halfBar;
+  const center = minCenter <= maxCenter
+    ? Math.max(minCenter, Math.min(maxCenter, desiredCenter))
+    : viewportW / 2;
+  const chipTop = chipRect.top - sr.top;
+  const chipBottom = chipTop + chipRect.height;
+  bar.style.left = Math.round(center) + 'px';
+  bar.style.top = Math.round(edgeLayout.vertical === 'below' ? chipBottom + 8 : chipTop - 8) + 'px';
+  bar.style.transform = edgeLayout.vertical === 'below'
+    ? 'translateX(-50%)'
+    : 'translate(-50%, -100%)';
+}
+
+function buildCompactRadial() {
+  radial.dataset.layout = 'compact';
+  radial.dataset.direction = edgeLayout.vertical === 'below' ? 'below' : 'above';
+  const bar = document.createElement('div');
+  bar.className = 'radial-compact';
+  bar.setAttribute('role', 'toolbar');
+  bar.setAttribute('aria-label', window.AgentPawI18n.text("桌宠操作"));
+  COMPACT_MENU.forEach((it, i) => bar.appendChild(makeRadialItem(it, i, true)));
+  radial.appendChild(bar);
+  // Set a useful first position before the browser has measured the toolbar;
+  // the open step and the next paint both refine it against the chip bounds.
+  const sr = stage.getBoundingClientRect();
+  const r = chip.getBoundingClientRect();
+  bar.style.left = Math.round(r.left - sr.left + r.width / 2) + 'px';
+  bar.style.top = Math.round(edgeLayout.vertical === 'below'
+    ? r.top - sr.top + r.height + 8
+    : r.top - sr.top - 8) + 'px';
+  bar.style.transform = edgeLayout.vertical === 'below'
+    ? 'translateX(-50%)'
+    : 'translate(-50%, -100%)';
+}
+
+function buildRadial(metrics = null) {
+  radial.innerHTML = '';
+  const exact = usableRadialMetrics(metrics);
+  if (!catVisible) {
+    buildCompactRadial();
+    return;
+  }
+  radial.dataset.layout = 'radial';
+  const el = curSkinEl();
+  const sr = stage.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  const cx = r.left - sr.left + r.width / 2;
+  const cy = r.top - sr.top + r.height / 2;
+  const items = MENU;
+  const n = items.length;
+  const frame = exact && exact.window;
+  // DOM geometry and BrowserWindow bounds can briefly disagree while a popup
+  // shrinks. Buttons must always fit the viewport that actually clips them.
+  const viewportW = Math.max(1, window.innerWidth || (frame ? frame.width : 320));
+  const viewportH = Math.max(1, window.innerHeight || (frame ? frame.height : 340));
+  const wa = exact ? exact.workArea : browserWorkArea();
+  const winX = Number.isFinite(window.screenX) ? window.screenX : (frame ? frame.x : wa.x);
+  const winY = Number.isFinite(window.screenY) ? window.screenY : (frame ? frame.y : wa.y);
+  const pad = 5;
+  // Intersect the BrowserWindow viewport with the actually visible work area.
+  // This protects old saved positions that may still have part of the
+  // transparent window off-screen before the first drag normalises them.
+  const safeRect = {
+    x: Math.max(pad, wa.x - winX + pad),
+    y: Math.max(pad, wa.y - winY + pad),
+    width: Math.max(46, Math.min(viewportW - pad, wa.x + wa.width - winX - pad) - Math.max(pad, wa.x - winX + pad)),
+    height: Math.max(46, Math.min(viewportH - pad, wa.y + wa.height - winY - pad) - Math.max(pad, wa.y - winY + pad)),
+  };
+  const preferred = [];
+  if (edgeLayout.horizontal === 'left') preferred.push('right');
+  else if (edgeLayout.horizontal === 'right') preferred.push('left');
+  if (edgeLayout.vertical === 'below') preferred.push('below');
+  else preferred.push('above');
+  preferred.push(edgeLayout.vertical === 'below' ? 'above' : 'below');
+  const petLocalRect = { x: r.left - sr.left, y: r.top - sr.top, width: r.width, height: r.height };
+  const stack = compactRow.getBoundingClientRect();
+  const layout = window.PetGeometry
+    ? window.PetGeometry.cornerMenuLayout({
+      count: n,
+      center: { x: cx, y: cy },
+      petRect: petLocalRect,
+      stackRect: { x: stack.left - sr.left, y: stack.top - sr.top, width: stack.width, height: stack.height },
+      safeRect,
+      preferred,
+      itemRadius: 26,
+      gap: 10,
+    })
+    : { direction: 'top-right', points: [] };
+  radial.dataset.direction = layout.direction || 'top-right';
+  items.forEach((it, i) => {
+    const point = layout.points[i] || { x: cx, y: cy };
+    const b = makeRadialItem(it, i);
+    b.style.left = point.x + 'px';
+    b.style.top = point.y + 'px';
+    radial.appendChild(b);
+  });
+}
+
+async function openRadial() {
+  if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
+  const seq = ++radialOpenSeq;
+  if (actionPopOpen) closeActionPop();
+  if (peekOpen) closePeek();
+  if (quotaPopoverOpen) closeQuotaPopover();
+  radialOpen = true;
+  bubble.classList.add('hidden');
+  try { await readPrivacyMode(); } catch {}
+  if (seq !== radialOpenSeq || !radialOpen) return;
+  // closeActionPop 会异步把 BrowserWindow 从弹层尺寸缩回基础
+  // 尺寸。必须等窗口和 DOM 都归位后再布局，否则菜单会按旧大窗坐标生成，
+  // 随后的缩窗会把按钮直接裁出可见区域。
+  let metrics = await settledRadialMetrics();
+  if (seq !== radialOpenSeq || !radialOpen) return;
+  settleEdgeLayout();
+  metrics = await settledRadialMetrics(true) || metrics;
+  if (seq !== radialOpenSeq || !radialOpen) return;
+  buildRadial(metrics);
+  radial.classList.remove('hidden');
+  if (!catVisible) {
+    positionCompactRadial();
+    requestAnimationFrame(() => {
+      if (seq === radialOpenSeq && radialOpen) positionCompactRadial();
+    });
+  }
+}
+function scheduleRadialRelayout() {
+  if (!radialOpen || !catVisible || radial.classList.contains('hidden')) return;
+  const openSeq = radialOpenSeq;
+  const layoutSeq = ++radialRelayoutSeq;
+  settledRadialMetrics().then((metrics) => {
+    if (openSeq === radialOpenSeq && layoutSeq === radialRelayoutSeq
+      && radialOpen && catVisible) buildRadial(metrics);
+  }).catch(() => {});
+}
+function closeRadial() {
+  radialOpenSeq++;
+  radialRelayoutSeq++;
+  radial.classList.add('hidden');
+  radial.removeAttribute('data-layout');
+  radial.removeAttribute('data-direction');
+  radialOpen = false;
+  requestAnimationFrame(() => { if (window.AgentPawCompanion) window.AgentPawCompanion.refresh(); });
+}
+function toggleRadial() {
+  if (radialOpen) closeRadial();
+  else openRadial().catch(() => closeRadial());
+}
+// 点遮罩空白处关闭
+radial.addEventListener('click', () => closeRadial());
+window.addEventListener('blur', () => {
+  if (actionPopOpen) closeActionPop();
+  if (radialOpen) closeRadial();
+  if (peekOpen) closePeek();
+  if (quotaPopoverOpen) closeQuotaPopover();
+});
+
+// ---------- 初始化 ----------
+(async () => {
+  // 单宠：无名牌、无按工具切换的唤起按钮（打工伙伴一只盯全部）。
+  // Convert positions saved by older builds that anchored the transparent
+  // window rather than the visible pet.
+  requestAnimationFrame(settleEdgeLayout);
+  applyStaticI18n();
+  if (window.pet.getPetAssets) {
+    try { applyPetAssetCatalog(await window.pet.getPetAssets()); } catch {}
+  }
+  const s = await window.pet.getStats();
+  // 有快照就按真实聚合态亮相；之前无条件 setState('idle') 会把刚算出的
+  // working/waiting 盖掉，启动瞬间总是先闪一下空闲。getStats 落空但推送
+  // 已先到时（lastStats 已有值）同样不能清。
+  if (s) applyStats(s);
+  else if (!lastStats) setState('idle');
+  // 启动正好落在下班窗口时，保留更有时效性的干饭播报，
+  // 不再立刻用“上线”气泡覆盖它。
+  if (!(XIABAN_STATES.has(state) && xiabanWindow())) showBubble(t('bub.online'), 3000);
+})();
+
+// ---------- 透明区域点击穿透（命中测试）----------
+// 桌宠窗口是透明矩形，空白处不该拦住后面的应用。光标在内容(打工伙伴/卡片/菜单/记事本)
+// 上 → 接收点击；在透明区 → 让窗口穿透。forward:true 使穿透时 mousemove 仍回传，
+// 因此一旦光标回到内容上即可恢复可点。拖动中(g)始终保持可点。
+// The capsule is still the drag handle when the cat is hidden, while the
+// quota group is a deliberate click target in either layout. The rest of the
+// visible capsule remains click-through so hovering it never creates a popup.
+const HIT_SEL = '#cat,#stage.cat-hidden #chip,#chip-quota,#quota-popover,#radial,#notepad,#action-pop,#ask,#peek,#rest-reminder,#rest-pending';
+let mouseIgnoring = false;
+function setMouseIgnore(on) {
+  if (on === mouseIgnoring) return;
+  mouseIgnoring = on;
+  try { window.pet.setIgnoreMouse(on); } catch {}
+}
+function updateMouseHit(x, y) {
+  if (g) { setMouseIgnore(false); return; } // 拖动中保持可点
+  const el = document.elementFromPoint(x, y);
+  // 命中测试权威同步悬停态：穿透切换时 pointerleave 可能漏发，会把 askHover 卡在 true，
+  // 进而让 isInteracting() 永远为真、refreshAsk 永不对账（旧卡片冻结、新卡片进不来）。
+  askHover = !!(el && el.closest('#ask'));
+  if (quotaPopoverOpen) {
+    const quotaHit = !!(el && (el.closest('#chip-quota') || el.closest('#quota-popover')));
+    if (quotaHit) keepQuotaPopoverOpen();
+    else {
+      quotaPopoverPointerInside = false;
+      scheduleQuotaPopoverClose();
+    }
+  }
+  setMouseIgnore(!(el && el.closest(HIT_SEL)));
+}
+window.addEventListener('mousemove', (e) => updateMouseHit(e.clientX, e.clientY), true);
+// Windows can stop forwarding mousemove after another app changes z-order.
+// The main process samples the OS cursor so a visible pet never stays stuck
+// in click-through mode (or leaves a transparent rectangle blocking clicks).
+window.pet.onPointerCheck((point) => {
+  if (point && Number.isFinite(point.x) && Number.isFinite(point.y)) updateMouseHit(point.x, point.y);
+});
+// 启动即默认穿透（透明区不挡），光标移到内容上时由上面的命中测试恢复
+setMouseIgnore(true);
+
+// 气泡和窗口自适应都可能改变本体在透明窗里的局部位置。
+window.addEventListener('resize', () => requestAnimationFrame(() => {
+  positionBubbleTip();
+  positionQuotaPopoverTip();
+  if (actionPopOpen) positionActionPop();
+  if (propEl && propEl.classList.contains('on')) positionProp();
+  if (radialOpen && !catVisible) positionCompactRadial();
+  if (radialOpen && catVisible) scheduleRadialRelayout();
+  if (!askActive && !actionPopOpen && !peekOpen && !quotaPopoverOpen && !radialOpen) fitRestingFrame();
+}));
+
+
+
+function refreshAskLanguage() {
+  if (!askActive || !askQueue[askIdx]) return;
+  const draft = askText.value;
+  const selection = [askText.selectionStart, askText.selectionEnd];
+  const focused = document.activeElement === askText;
+  const scroll = askScroll.scrollTop;
+  const saved = elic ? { ...elic, answers: { ...elic.answers }, selSet: [...elic.selSet] } : null;
+  showAskPanel();
+  if (saved) {
+    elic = saved;
+    const question = saved.questions[saved.qIdx];
+    [...askOpts.children].forEach((card, index) => {
+      const value = question?.options?.[index]?.label || '__other__';
+      const selected = saved.multi ? (value === '__other__' ? saved.otherOn : saved.selSet.includes(value)) : saved.selected === value;
+      card.classList.toggle('sel', selected);
+    });
+    askInputRow.classList.toggle('hidden', !(saved.otherOn || saved.selected === '__other__'));
+  }
+  askText.value = draft;
+  if (saved) updateSubmitEnabled();
+  if (focused) {
+    askText.focus({ preventScroll: true });
+    if (typeof askText.setSelectionRange === 'function') askText.setSelectionRange(...selection);
+  }
+  askScroll.scrollTop = scroll;
+}
+
+window.addEventListener('agentpaw:language', () => {
+  applyStaticI18n();
+  refreshAskLanguage();
+  if (lastStats) applyStats(lastStats);
+  if (peekOpen) renderPeek(lastStats);
+  if (radialOpen) buildRadial();
+  if (quotaPopoverOpen) renderQuotaPopover(lastStats);
+});

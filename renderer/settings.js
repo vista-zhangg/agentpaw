@@ -1,0 +1,1006 @@
+'use strict';
+
+const { t } = window.AgentPawI18n;
+const ASSETS = window.AgentPawPetAssets;
+const $ = (id) => document.getElementById(id);
+
+async function initializeChipDisplay() {
+  const keys = ['showCat', 'showStatus', 'showQuota', 'showTokens', 'showCost'];
+  const status = $('chip-display-status');
+  const render = (value) => {
+    keys.forEach(key => $(key + '-toggle').setAttribute('aria-checked', String(value[key] === true)));
+    renderChipPreview(value);
+  };
+  keys.forEach(key => { $(key + '-toggle').disabled = true; });
+  try {
+    render(await window.pet.getChipDisplay());
+    keys.forEach(key => {
+      const button = $(key + '-toggle');
+      button.disabled = false;
+      button.addEventListener('click', async () => {
+        keys.forEach(key => { $(key + '-toggle').disabled = true; });
+        try {
+          const result = await window.pet.setChipDisplay({ [key]: button.getAttribute('aria-checked') !== 'true' });
+          if (!result || !result.ok) throw new Error('save failed');
+          render(result);
+          status.textContent = window.AgentPawI18n.text("已保存，桌面胶囊已更新");
+        } catch { status.textContent = window.AgentPawI18n.text("保存失败，请重试"); }
+        finally { keys.forEach(key => { $(key + '-toggle').disabled = false; }); }
+      });
+    });
+  } catch { status.textContent = window.AgentPawI18n.text("展示设置加载失败，请重新打开设置"); }
+}
+initializeChipDisplay();
+
+// Rest preferences are saved together, so changing an interval never races a
+// switch update or a background fullscreen notification.
+(function initializeCompanionSettings() {
+  if (!window.pet.getCompanionState || !$('rest-enabled')) return;
+  const kinds = ['water', 'stretch', 'eyes'];
+  const master = $('rest-enabled');
+  const save = $('rest-save');
+  const status = $('rest-settings-status');
+  const fullscreen = $('fullscreen-toggle');
+  let saving = false;
+  let dirty = false;
+  let loaded = false;
+  let companionValue = null;
+  const checked = (el) => el.getAttribute('aria-checked') === 'true';
+  window.addEventListener('agentpaw:language', () => { if (companionValue) render(companionValue); });
+  function refreshControls() {
+    master.disabled = saving || !loaded;
+    save.disabled = saving || !loaded;
+    $('rest-snooze-minutes').disabled = saving || !loaded || !checked(master);
+    for (const kind of kinds) {
+      const toggle = $('rest-' + kind + '-enabled');
+      toggle.disabled = saving || !loaded || !checked(master);
+      $('rest-' + kind + '-minutes').disabled = toggle.disabled || !checked(toggle);
+    }
+  }
+  function render(value, force = false) {
+    if (!value || !value.rest || !value.visibility) return;
+    companionValue = value;
+    const prefs = value.rest.preferences;
+    loaded = true;
+    if (!dirty || force) {
+      master.setAttribute('aria-checked', String(prefs.enabled));
+      $('rest-snooze-minutes').value = prefs.snoozeMinutes || 10;
+      for (const kind of kinds) {
+        $('rest-' + kind + '-enabled').setAttribute('aria-checked', String(prefs[kind + 'Enabled']));
+        $('rest-' + kind + '-minutes').value = prefs[kind + 'Minutes'];
+      }
+    }
+    fullscreen.setAttribute('aria-checked', String(value.visibility.autoHideFullscreen !== false));
+    if (document.activeElement !== $('quiet-minutes')) $('quiet-minutes').value = value.quietMinutes || 30;
+    const until = Number(value.visibility.quietUntil) || 0;
+    $('quiet-description').textContent = until > Date.now()
+      ? window.AgentPawI18n.text("安静至 {0}，点击托盘可提前回来。", [new Date(until).toLocaleTimeString(window.AgentPawI18n.getLanguage(), { hour: '2-digit', minute: '2-digit' })])
+      : value.visibility.manualHidden ? window.AgentPawI18n.text("已藏起，点击托盘图标即可回来。")
+        : window.AgentPawI18n.text("藏起 15、30 或 60 分钟，时间到后自动回来。");
+    refreshControls();
+  }
+  for (const button of [master, ...kinds.map(kind => $('rest-' + kind + '-enabled'))]) {
+    button.addEventListener('click', () => {
+      if (button.disabled) return;
+      dirty = true;
+      button.setAttribute('aria-checked', String(!checked(button)));
+      status.textContent = window.AgentPawI18n.text("调整后点击“保存提醒”生效");
+      refreshControls();
+    });
+  }
+  kinds.forEach(kind => $('rest-' + kind + '-minutes').addEventListener('input', () => { dirty = true; }));
+  $('rest-snooze-minutes').addEventListener('input', () => { dirty = true; });
+  save.addEventListener('click', async () => {
+    if (saving || !loaded) return;
+    const prefs = { enabled: checked(master), snoozeMinutes: Number($('rest-snooze-minutes').value) };
+    if (!Number.isInteger(prefs.snoozeMinutes) || prefs.snoozeMinutes < 1 || prefs.snoozeMinutes > 240) {
+      status.textContent = window.AgentPawI18n.text("稍后提醒请填写 1–240 分钟的整数"); status.classList.add('error'); return;
+    }
+    for (const kind of kinds) {
+      const minutes = Number($('rest-' + kind + '-minutes').value);
+      if (!Number.isInteger(minutes) || minutes < 5 || minutes > 240) {
+        status.textContent = window.AgentPawI18n.text("提醒间隔请填写 5–240 分钟的整数");
+        status.classList.add('error');
+        return;
+      }
+      prefs[kind + 'Minutes'] = minutes;
+      prefs[kind + 'Enabled'] = checked($('rest-' + kind + '-enabled'));
+    }
+    saving = true;
+    refreshControls();
+    try {
+      const value = await window.pet.setCompanionPreferences({ restReminders: prefs });
+      if (!value || !value.ok) throw new Error('save');
+      dirty = false;
+      render(value, true);
+      status.classList.remove('error');
+      status.textContent = prefs.enabled ? window.AgentPawI18n.text("已保存，提醒会跟随你的电脑使用时间") : window.AgentPawI18n.text("休息提醒已关闭");
+    } catch { status.textContent = window.AgentPawI18n.text("保存失败，请重试"); status.classList.add('error'); }
+    finally { saving = false; refreshControls(); }
+  });
+  fullscreen.addEventListener('click', async () => {
+    fullscreen.disabled = true;
+    try {
+      const value = await window.pet.setCompanionPreferences({ autoHideFullscreen: !checked(fullscreen) });
+      if (!value || !value.ok) throw new Error('save');
+      render(value);
+      $('fullscreen-status').textContent = window.AgentPawI18n.text("全屏免打扰设置已保存");
+    } catch { $('fullscreen-status').textContent = window.AgentPawI18n.text("保存失败，请重试"); }
+    finally { fullscreen.disabled = false; }
+  });
+  $('quiet-menu').addEventListener('click', () => window.pet.openHideMenu());
+  $('quiet-minutes').addEventListener('change', async () => {
+    const minutes = Number($('quiet-minutes').value);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
+      $('fullscreen-status').textContent = window.AgentPawI18n.text("安静时长请填写 1–1440 分钟的整数"); return;
+    }
+    $('quiet-menu').disabled = true;
+    try {
+      const result = await window.pet.setCompanionPreferences({ quietMinutes: minutes });
+      if (!result || !result.ok) throw new Error('save');
+      render(result);
+      $('fullscreen-status').textContent = window.AgentPawI18n.text("已保存：我的安静时长 {0} 分钟", [minutes]);
+    } catch { $('fullscreen-status').textContent = window.AgentPawI18n.text("安静时长保存失败，请重试"); }
+    finally { $('quiet-menu').disabled = false; }
+  });
+  if (window.pet.onCompanionState) window.pet.onCompanionState(value => render(value));
+  refreshControls();
+  window.pet.getCompanionState().then(value => render(value, true)).catch(() => { status.textContent = window.AgentPawI18n.text("陪伴设置加载失败，请重新打开设置"); });
+})();
+
+function renderChipPreview(value) {
+  const fields = { showCat: 'cat', showStatus: 'status', showQuota: 'quota', showTokens: 'tokens', showCost: 'cost' };
+  for (const [key, name] of Object.entries(fields)) $('preview-' + name).hidden = value[key] !== true;
+  $('preview-dot').hidden = value.showCat === true;
+  $('preview-tokens-sep').hidden = !value.showTokens || !(value.showStatus || value.showQuota);
+  $('preview-cost-sep').hidden = !value.showCost || !(value.showStatus || value.showQuota || value.showTokens);
+  $('preview-empty').hidden = !!(value.showStatus || value.showQuota || value.showTokens || value.showCost);
+}
+
+const toggle = $('auto-launch-toggle');
+const statusEl = $('setting-status');
+const privacyToggle = $('privacy-toggle');
+const privacyStatusEl = $('privacy-status');
+const updateToggle = $('auto-update-toggle');
+const updateModeDescription = $('update-mode-description');
+const currentVersionEl = $('current-version');
+const latestVersionEl = $('latest-version');
+const updateStatusEl = $('update-status');
+const updateCheck = $('update-check');
+const updateAction = $('update-action');
+const updateProgress = $('update-progress');
+const updateProgressBar = $('update-progress-bar');
+const updateHint = $('update-hint');
+const integrationSummary = $('integration-summary');
+const integrationList = $('integration-list');
+const integrationStatusEl = $('integration-status');
+const integrationRefresh = $('integration-refresh');
+const integrationRepair = $('integration-repair');
+const integrationUninstall = $('integration-uninstall');
+const lunchTime = $('xiaban-lunch-time');
+const eveningTime = $('xiaban-evening-time');
+const xiabanStatusEl = $('xiaban-status');
+const xiabanSave = $('xiaban-save');
+const xiabanReset = $('xiaban-reset');
+const assetGallery = $('asset-gallery');
+const assetStatus = $('asset-status');
+const assetAdd = $('asset-add');
+const assetReplace = $('asset-replace');
+const assetRemove = $('asset-remove');
+const assetReset = $('asset-reset');
+const removeBackground = $('remove-bg-toggle');
+const DEFAULT_XIABAN_TIMES = Object.freeze({ lunch: '10:55', evening: '16:55' });
+
+let enabled = false;
+let supported = true;
+let busy = false;
+let privacyEnabled = false;
+let privacyBusy = false;
+let updateBusy = false;
+let updateState = null;
+let integrationBusy = false;
+let integrationHealth = null;
+let xiabanBusy = false;
+let assetBusy = false;
+let selectedSlotId = 'working';
+let selectedAssetId = null;
+let assetCatalog = ASSETS.defaultCatalog();
+let renderedCharacterId = null;
+let assetStatusTimer = null;
+
+function applyStaticI18n() {
+  window.AgentPawI18n.localizeDocument(document);
+  document.title = t('settings.title');
+  for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = t(el.dataset.i18n);
+  for (const el of document.querySelectorAll('[data-i18n-title]')) {
+    const label = t(el.dataset.i18nTitle);
+    el.title = label;
+    if (el.hasAttribute('aria-label')) el.setAttribute('aria-label', label);
+  }
+}
+
+function setTab(tabId) {
+  for (const tab of document.querySelectorAll('.settings-tab')) {
+    const active = tab.dataset.tab === tabId;
+    tab.classList.toggle('active', active);
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+  }
+  for (const panel of document.querySelectorAll('.settings-panel')) {
+    const active = panel.dataset.panel === tabId;
+    panel.classList.toggle('active', active);
+    panel.hidden = !active;
+  }
+  if (tabId === 'expressions') renderAssets();
+  $('settings-content').scrollTop = 0;
+}
+
+function renderStatus(messageKey = null, kind = '') {
+  toggle.setAttribute('aria-checked', String(enabled));
+  toggle.disabled = !supported || busy;
+  statusEl.className = `setting-status${kind ? ` ${kind}` : ''}`;
+  statusEl.textContent = messageKey ? t(messageKey) : t(enabled ? 'settings.enabled' : 'settings.disabled');
+}
+
+function applyState(result, messageKey = null, kind = '') {
+  supported = result && result.supported !== false;
+  enabled = !!(result && result.enabled);
+  const hasError = !!(result && result.error);
+  renderStatus(messageKey || (hasError ? 'settings.failed' : supported ? null : 'settings.unsupported'),
+    kind || (hasError ? 'error' : supported ? '' : 'unsupported'));
+}
+
+async function loadSettings() {
+  try { applyState(await window.pet.getAutoLaunch()); }
+  catch { supported = true; renderStatus('settings.failed', 'error'); }
+}
+
+async function toggleAutoLaunch() {
+  if (!supported || toggle.disabled) return;
+  busy = true;
+  renderStatus('settings.saving');
+  try {
+    const result = await window.pet.setAutoLaunch(!enabled);
+    if (result && result.ok) applyState(result, 'settings.saved');
+    else applyState(result, 'settings.failed', 'error');
+  } catch { renderStatus('settings.failed', 'error'); }
+  finally { busy = false; toggle.disabled = !supported; }
+}
+
+function renderPrivacyStatus(messageKey = null, kind = '') {
+  privacyToggle.setAttribute('aria-checked', String(privacyEnabled));
+  privacyToggle.disabled = privacyBusy;
+  privacyStatusEl.className = `setting-status${kind ? ` ${kind}` : ''}`;
+  privacyStatusEl.textContent = messageKey
+    ? t(messageKey)
+    : t(privacyEnabled ? 'settings.privacyEnabled' : 'settings.privacyDisabled');
+}
+
+function applyPrivacyState(result, messageKey = null, kind = '') {
+  if (result && typeof result.enabled === 'boolean') privacyEnabled = result.enabled;
+  const failed = !result || result.ok === false;
+  renderPrivacyStatus(messageKey || (failed ? 'settings.privacyFailed' : null), kind || (failed ? 'error' : ''));
+}
+
+async function loadPrivacyMode() {
+  try { applyPrivacyState(await window.pet.getPrivacyMode()); }
+  catch { renderPrivacyStatus('settings.privacyFailed', 'error'); }
+}
+
+async function togglePrivacyMode() {
+  if (privacyBusy) return;
+  privacyBusy = true;
+  renderPrivacyStatus('settings.privacySaving');
+  try {
+    const result = await window.pet.setPrivacyMode(!privacyEnabled);
+    applyPrivacyState(result, result && result.ok ? null : 'settings.privacyFailed', result && result.ok ? '' : 'error');
+  } catch { renderPrivacyStatus('settings.privacyFailed', 'error'); }
+  finally { privacyBusy = false; privacyToggle.disabled = false; }
+}
+
+function integrationModeLabel(mode) {
+  if (mode === 'watcher') return t('settings.integrationsWatcher');
+  if (mode === 'plugin') return t('settings.integrationsPlugin');
+  return t('settings.integrationsHook');
+}
+
+function integrationStateLabel(state) {
+  if (state === 'ready') return t('settings.integrationsReady');
+  if (state === 'needs-repair') return t('settings.integrationsRepair');
+  if (state === 'disabled') return t('settings.integrationsDisabled');
+  return t('settings.integrationsMissing');
+}
+
+function integrationEventLabel(row) {
+  if (!row.detected) return integrationModeLabel(row.mode);
+  if (!row.lastEventAt) return `${integrationModeLabel(row.mode)} · ${t('settings.integrationsNoEvent')}`;
+  const time = new Date(row.lastEventAt).toLocaleString(window.AgentPawI18n.getLanguage(), {
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
+  return `${integrationModeLabel(row.mode)} · ${t('settings.integrationsLastEvent', { time })}`;
+}
+
+function canUninstallIntegrations(report = integrationHealth) {
+  const enabledOrRetryable = report && (report.hooksEnabled !== false || report.uninstallRetryable === true);
+  return !!(enabledOrRetryable && report.integrations.some((row) =>
+    row.detected && (row.mode === 'hook' || row.mode === 'plugin')));
+}
+
+function renderIntegrationHealth(report, messageKey = null, kind = '') {
+  integrationHealth = report && Array.isArray(report.integrations) ? report : null;
+  integrationList.replaceChildren();
+  if (!integrationHealth) {
+    integrationSummary.textContent = t('settings.integrationsCheckFailed');
+    integrationStatusEl.textContent = messageKey ? t(messageKey) : '';
+    integrationStatusEl.className = `setting-status${kind ? ` ${kind}` : ''}`;
+    integrationRefresh.disabled = integrationBusy;
+    integrationRepair.disabled = true;
+    integrationUninstall.disabled = true;
+    return;
+  }
+
+  const summary = integrationHealth.summary || {};
+  integrationSummary.textContent = summary.detected === 0
+    ? t('settings.integrationsNone')
+    : summary.needsRepair === 0
+      ? t('settings.integrationsHealthy', { detected: summary.detected })
+      : t('settings.integrationsIssues', {
+        ready: summary.ready, detected: summary.detected, issues: summary.needsRepair,
+      });
+  for (const row of integrationHealth.integrations) {
+    const item = document.createElement('div');
+    item.className = 'integration-row';
+    const name = document.createElement('span');
+    name.className = 'integration-name';
+    name.textContent = row.label;
+    const detail = document.createElement('span');
+    detail.className = 'integration-detail';
+    detail.textContent = integrationEventLabel(row);
+    detail.title = detail.textContent;
+    const state = document.createElement('span');
+    state.className = `integration-state ${row.state}`;
+    state.textContent = integrationStateLabel(row.state);
+    item.append(name, detail, state);
+    integrationList.appendChild(item);
+  }
+  integrationStatusEl.textContent = messageKey ? t(messageKey) : '';
+  integrationStatusEl.className = `setting-status${kind ? ` ${kind}` : ''}`;
+  integrationRefresh.disabled = integrationBusy;
+  integrationRepair.disabled = integrationBusy || !(summary.repairable > 0);
+  integrationUninstall.disabled = integrationBusy || !canUninstallIntegrations();
+}
+
+async function loadIntegrationHealth(messageKey = null, kind = '') {
+  if (integrationBusy) return;
+  integrationBusy = true;
+  integrationSummary.textContent = t('settings.integrationsChecking');
+  integrationRefresh.disabled = true;
+  integrationRepair.disabled = true;
+  integrationUninstall.disabled = true;
+  try {
+    const report = await window.pet.getIntegrationHealth();
+    if (!report || report.error === 'forbidden') throw new Error('health unavailable');
+    renderIntegrationHealth(report, messageKey, kind);
+  } catch {
+    renderIntegrationHealth(null, 'settings.integrationsCheckFailed', 'error');
+  } finally {
+    integrationBusy = false;
+    if (integrationHealth) renderIntegrationHealth(integrationHealth, messageKey, kind);
+  }
+}
+
+async function repairIntegrations() {
+  if (integrationBusy || !integrationHealth || !(integrationHealth.summary.repairable > 0)) return;
+  integrationBusy = true;
+  integrationStatusEl.textContent = t('settings.integrationsRepairing');
+  integrationStatusEl.className = 'setting-status';
+  integrationRefresh.disabled = true;
+  integrationRepair.disabled = true;
+  try {
+    const report = await window.pet.repairIntegrations();
+    if (!report || report.error === 'forbidden') throw new Error('repair unavailable');
+    const message = report.ok
+      ? 'settings.integrationsRepaired'
+      : report.error === 'disabled-by-environment'
+        ? 'settings.integrationsEnvDisabled'
+        : 'settings.integrationsPartial';
+    renderIntegrationHealth(report, message, report.ok ? '' : 'error');
+  } catch {
+    renderIntegrationHealth(integrationHealth, 'settings.integrationsCheckFailed', 'error');
+  } finally {
+    integrationBusy = false;
+    if (integrationHealth) {
+      integrationRefresh.disabled = false;
+      integrationRepair.disabled = !(integrationHealth.summary.repairable > 0);
+      integrationUninstall.disabled = !canUninstallIntegrations();
+    }
+  }
+}
+
+async function uninstallIntegrations() {
+  if (integrationBusy || !canUninstallIntegrations()) return;
+  if (!window.confirm(t('settings.integrationsUninstallConfirm'))) return;
+  integrationBusy = true;
+  integrationStatusEl.textContent = t('settings.integrationsUninstalling');
+  integrationStatusEl.className = 'setting-status';
+  integrationRefresh.disabled = true;
+  integrationRepair.disabled = true;
+  integrationUninstall.disabled = true;
+  try {
+    const report = await window.pet.uninstallIntegrations();
+    if (!report || report.error === 'forbidden') throw new Error('uninstall unavailable');
+    renderIntegrationHealth(
+      report,
+      report.ok ? 'settings.integrationsUninstalled' : 'settings.integrationsUninstallPartial',
+      report.ok ? '' : 'error',
+    );
+  } catch {
+    renderIntegrationHealth(integrationHealth, 'settings.integrationsUninstallPartial', 'error');
+  } finally {
+    integrationBusy = false;
+    if (integrationHealth) {
+      integrationRefresh.disabled = false;
+      integrationRepair.disabled = !(integrationHealth.summary.repairable > 0);
+      integrationUninstall.disabled = !canUninstallIntegrations();
+    }
+  }
+}
+
+function updateStatusText(state) {
+  const version = state.latestVersion || '--';
+  switch (state.phase) {
+    case 'checking': return t('settings.updateChecking');
+    case 'up-to-date': return t('settings.updateLatest');
+    case 'available': return t('settings.updateAvailable', { version });
+    case 'downloading': return t('settings.updateDownloading', { percent: Math.round(state.progress || 0) });
+    case 'downloaded': return t('settings.updateDownloaded');
+    case 'error': return t('settings.updateFailed', { message: state.error || window.AgentPawI18n.text("未知错误") });
+    case 'development': return t('settings.updateDevelopment');
+    case 'unsupported': return t('settings.updateUnsupported');
+    default: return t('settings.updateIdle');
+  }
+}
+
+function renderUpdateState(next) {
+  updateState = next && typeof next === 'object' ? next : {
+    supported: false, mode: 'unsupported', autoCheck: false,
+    currentVersion: '--', latestVersion: null, phase: 'unsupported', progress: null,
+  };
+  const state = updateState;
+  const active = state.phase === 'checking' || state.phase === 'downloading';
+  updateToggle.setAttribute('aria-checked', String(!!state.autoCheck));
+  updateToggle.disabled = updateBusy || !state.supported;
+  currentVersionEl.textContent = state.currentVersion || '--';
+  latestVersionEl.textContent = state.latestVersion || '--';
+  updateCheck.disabled = updateBusy || !state.supported || active;
+  updateStatusEl.textContent = updateStatusText(state);
+  updateStatusEl.className = `setting-status${state.phase === 'error' ? ' error' : ''}${!state.supported ? ' unsupported' : ''}`;
+
+  const downloading = state.phase === 'downloading';
+  updateProgress.hidden = !downloading;
+  updateProgressBar.style.width = `${downloading ? Math.max(2, Number(state.progress) || 0) : 0}%`;
+
+  updateAction.hidden = true;
+  updateAction.dataset.action = '';
+  if (state.mode === 'portable' && state.phase === 'available') {
+    updateAction.hidden = false;
+    updateAction.dataset.action = 'open';
+    updateAction.textContent = t('settings.openDownload');
+  } else if (state.mode === 'installer' && state.phase === 'available') {
+    updateAction.hidden = false;
+    updateAction.dataset.action = 'download';
+    updateAction.textContent = t('settings.downloadUpdate');
+  } else if (state.mode === 'installer' && state.phase === 'downloaded') {
+    updateAction.hidden = false;
+    updateAction.dataset.action = 'install';
+    updateAction.textContent = t('settings.restartUpdate');
+  }
+  updateAction.disabled = updateBusy || active;
+
+  if (state.mode === 'installer') {
+    updateModeDescription.textContent = t('settings.installerUpdateDescription');
+    updateHint.textContent = t('settings.updateInstallerHint');
+  } else if (state.mode === 'portable') {
+    updateModeDescription.textContent = t('settings.portableUpdateDescription');
+    updateHint.textContent = t('settings.updatePortableHint');
+  } else {
+    updateModeDescription.textContent = t('settings.developmentUpdateDescription');
+    updateHint.textContent = '';
+  }
+}
+
+async function loadUpdateState() {
+  try { renderUpdateState(await window.pet.getUpdateState()); }
+  catch { renderUpdateState(null); }
+}
+
+async function toggleAutoUpdate() {
+  if (!updateState || !updateState.supported || updateBusy) return;
+  updateBusy = true;
+  renderUpdateState(updateState);
+  try {
+    const result = await window.pet.setAutoUpdate(!updateState.autoCheck);
+    renderUpdateState(result && result.ok ? result : { ...updateState, phase: 'error', error: window.AgentPawI18n.text("设置保存失败") });
+  } catch { renderUpdateState({ ...updateState, phase: 'error', error: window.AgentPawI18n.text("设置保存失败") }); }
+  finally { updateBusy = false; renderUpdateState(updateState); }
+}
+
+async function checkUpdatesNow() {
+  if (!updateState || !updateState.supported || updateBusy) return;
+  updateBusy = true;
+  renderUpdateState({ ...updateState, phase: 'checking', error: null });
+  try { renderUpdateState(await window.pet.checkForUpdates()); }
+  catch { renderUpdateState({ ...updateState, phase: 'error', error: window.AgentPawI18n.text("检查更新失败，请稍后重试") }); }
+  finally { updateBusy = false; renderUpdateState(updateState); }
+}
+
+async function runUpdateAction() {
+  if (!updateState || updateBusy) return;
+  updateBusy = true;
+  renderUpdateState(updateState);
+  try {
+    if (updateAction.dataset.action === 'open') await window.pet.openUpdatePage();
+    else if (updateAction.dataset.action === 'download') renderUpdateState(await window.pet.downloadUpdate());
+    else if (updateAction.dataset.action === 'install') await window.pet.installUpdate();
+  } catch { renderUpdateState({ ...updateState, phase: 'error', error: window.AgentPawI18n.text("更新操作失败，请稍后重试") }); }
+  finally { updateBusy = false; renderUpdateState(updateState); }
+}
+
+function isClockTime(value) { return typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value); }
+function scheduleFrom(result) {
+  const schedule = result && result.schedule ? result.schedule : result;
+  if (!schedule || !isClockTime(schedule.lunch) || !isClockTime(schedule.evening)) return null;
+  return { lunch: schedule.lunch, evening: schedule.evening };
+}
+function renderXiabanStatus(messageKey = null, kind = '') {
+  xiabanStatusEl.className = 'setting-status' + (kind ? ' ' + kind : '');
+  xiabanStatusEl.textContent = messageKey ? t(messageKey) : '';
+}
+function applyXiabanInputs(schedule) { lunchTime.value = schedule.lunch; eveningTime.value = schedule.evening; }
+async function loadXiabanSchedule() {
+  try {
+    const schedule = scheduleFrom(await window.pet.getXiabanSchedule());
+    if (!schedule) throw new Error('invalid xiaban schedule');
+    applyXiabanInputs(schedule);
+  } catch {
+    applyXiabanInputs(DEFAULT_XIABAN_TIMES);
+    renderXiabanStatus('settings.timeSaveFailed', 'error');
+  }
+}
+async function saveXiabanSchedule(next = null) {
+  if (xiabanBusy) return false;
+  const schedule = next || { lunch: lunchTime.value, evening: eveningTime.value };
+  if (!isClockTime(schedule.lunch) || !isClockTime(schedule.evening)) {
+    renderXiabanStatus('settings.timeInvalid', 'error');
+    return false;
+  }
+  xiabanBusy = true;
+  xiabanSave.disabled = true;
+  xiabanReset.disabled = true;
+  renderXiabanStatus('settings.timeSaving');
+  try {
+    const result = await window.pet.setXiabanSchedule(schedule);
+    const saved = scheduleFrom(result);
+    if (result && result.ok && saved) {
+      applyXiabanInputs(saved);
+      renderXiabanStatus('settings.timeSaved');
+      return true;
+    }
+    if (saved) applyXiabanInputs(saved);
+    renderXiabanStatus('settings.timeSaveFailed', 'error');
+    return false;
+  } catch {
+    renderXiabanStatus('settings.timeSaveFailed', 'error');
+    return false;
+  } finally {
+    xiabanBusy = false;
+    xiabanSave.disabled = false;
+    xiabanReset.disabled = false;
+  }
+}
+
+function showAssetStatus(message, kind = '', sticky = false) {
+  if (assetStatusTimer) clearTimeout(assetStatusTimer);
+  assetStatusTimer = null;
+  assetStatus.textContent = message || '';
+  assetStatus.className = `asset-status${message ? ' show' : ''}${kind ? ` ${kind}` : ''}`;
+  if (message && !sticky) {
+    assetStatusTimer = setTimeout(() => {
+      assetStatus.className = 'asset-status';
+      assetStatus.textContent = '';
+    }, 6500);
+  }
+}
+
+function currentSlotDefinition() { return ASSETS.SLOT_BY_ID[selectedSlotId] || ASSETS.SLOT_BY_ID.working; }
+function currentSlotData() { return assetCatalog.slots[selectedSlotId] || ASSETS.defaultCatalog().slots[selectedSlotId]; }
+function assetDisplayName(asset) {
+  return asset.kind === 'builtin' ? asset.name.split(' · ').map(part => window.AgentPawI18n.text(part)).join(' · ') : asset.name;
+}
+function assetCountLabel(slot) {
+  if (slot.mode === 'replace') return window.AgentPawI18n.text("{0} 个 · 已替换", [slot.active.length]);
+  if (slot.custom.length) return window.AgentPawI18n.text("{0} 个 · 自定义 {1}", [slot.active.length, slot.custom.length]);
+  if (slot.mode !== 'default') return window.AgentPawI18n.text("{0} 个 · 已调整", [slot.active.length]);
+  return window.AgentPawI18n.text("{0} 个默认表情", [slot.active.length]);
+}
+
+function createImage(asset, alt) {
+  const image = document.createElement('img');
+  image.src = asset.url;
+  image.alt = alt;
+  image.draggable = false;
+  image.loading = 'lazy';
+  return image;
+}
+
+function selectSlot(slotId) {
+  if (!ASSETS.SLOT_BY_ID[slotId]) return;
+  selectedSlotId = slotId;
+  selectedAssetId = null;
+  renderAssets();
+  const inspector = $('asset-inspector');
+  if (inspector && typeof inspector.scrollIntoView === 'function' && window.innerWidth < 760) {
+    inspector.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function createStateCard(definition) {
+  const slot = assetCatalog.slots[definition.id];
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = `asset-card${selectedSlotId === definition.id ? ' selected' : ''}`;
+  button.setAttribute('aria-pressed', String(selectedSlotId === definition.id));
+  button.addEventListener('click', () => selectSlot(definition.id));
+
+  const preview = document.createElement('span');
+  preview.className = 'asset-card-preview checkerboard';
+  preview.appendChild(createImage(slot.active[0], window.AgentPawI18n.text("{0}预览", [window.AgentPawI18n.text(definition.label)])));
+  const copy = document.createElement('span');
+  copy.className = 'asset-card-copy';
+  const title = document.createElement('span');
+  title.className = 'asset-card-title';
+  title.textContent = window.AgentPawI18n.text(definition.label);
+  const count = document.createElement('span');
+  count.className = `asset-card-count${slot.custom.length ? ' asset-card-custom' : ''}`;
+  count.textContent = assetCountLabel(slot);
+  copy.append(title, count);
+  button.append(preview, copy);
+  return button;
+}
+
+function renderGallery() {
+  assetGallery.replaceChildren();
+  for (const group of ASSETS.SLOT_GROUPS) {
+    const section = document.createElement('section');
+    section.className = 'asset-group';
+    const heading = document.createElement('h2');
+    heading.className = 'asset-group-title';
+    heading.textContent = window.AgentPawI18n.text(group.label);
+    const grid = document.createElement('div');
+    grid.className = 'asset-grid';
+    for (const slot of ASSETS.SLOTS.filter((item) => item.group === group.id)) grid.appendChild(createStateCard(slot));
+    section.append(heading, grid);
+    assetGallery.appendChild(section);
+  }
+  const modifiedCount = ASSETS.SLOTS.filter((def) => assetCatalog.slots[def.id].mode !== 'default').length;
+  $('asset-summary').textContent = modifiedCount ? window.AgentPawI18n.text("已调整 {0} 个状态", [modifiedCount]) : window.AgentPawI18n.text("当前全部使用默认表情");
+}
+
+function selectPreview(assetId) {
+  selectedAssetId = assetId;
+  renderInspector();
+}
+
+function describeAsset(asset) {
+  if (asset.kind === 'builtin') return window.AgentPawI18n.text("默认 · {0} · 120×120", [assetDisplayName(asset)]);
+  const meta = asset.meta || {};
+  const frames = Number(meta.frames) || 1;
+  const duration = Number(meta.durationMs) || 0;
+  const background = meta.backgroundMode === 'removed-solid' ? window.AgentPawI18n.text("已清理纯色背景")
+    : meta.backgroundMode === 'preserved-transparency' ? window.AgentPawI18n.text("保留透明背景") : window.AgentPawI18n.text("保留原背景");
+  return window.AgentPawI18n.text("{0} · {1} · {2} 帧{3} · {4}", [asset.kind === 'preset' ? window.AgentPawI18n.text("角色默认") : window.AgentPawI18n.text("自定义"), asset.name, frames, duration ? window.AgentPawI18n.text(" · {0} 秒", [(duration / 1000).toFixed(1)]) : '', background]);
+}
+
+function createVariant(asset) {
+  const card = document.createElement('div');
+  card.className = `variant-card checkerboard${selectedAssetId === asset.id ? ' selected' : ''}`;
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', window.AgentPawI18n.text("预览 {0}", [asset.name]));
+  card.title = asset.name;
+  card.appendChild(createImage(asset, asset.name));
+  const kind = document.createElement('span');
+  kind.className = 'variant-kind';
+  kind.textContent = asset.kind === 'custom' ? window.AgentPawI18n.text("自定义") : window.AgentPawI18n.text("默认");
+  card.appendChild(kind);
+  const choose = () => selectPreview(asset.id);
+  card.addEventListener('click', choose);
+  card.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(); }
+  });
+  return card;
+}
+
+function renderInspector() {
+  const definition = currentSlotDefinition();
+  const slot = currentSlotData();
+  let selected = slot.active.find((asset) => asset.id === selectedAssetId);
+  if (!selected) {
+    selected = slot.active[0];
+    selectedAssetId = selected.id;
+  }
+  $('asset-detail-icon').textContent = definition.icon;
+  $('asset-detail-title').textContent = window.AgentPawI18n.text(definition.label);
+  $('asset-detail-description').textContent = [window.AgentPawI18n.text(definition.description), window.AgentPawI18n.text(slot.note)].filter(Boolean).join(' ');
+  $('asset-detail-preview').src = selected.url;
+  $('asset-detail-preview').alt = `${window.AgentPawI18n.text(definition.label)}：${assetDisplayName(selected)}`;
+  $('asset-detail-meta').textContent = describeAsset(selected);
+  $('asset-detail-meta').title = selected.name;
+  $('asset-mode-badge').textContent = slot.mode === 'replace' ? window.AgentPawI18n.text("仅使用自定义")
+    : slot.custom.length && slot.usingDefaults ? window.AgentPawI18n.text("默认 + 自定义轮换")
+      : slot.custom.length ? window.AgentPawI18n.text("自定义轮换")
+        : slot.mode !== 'default' ? window.AgentPawI18n.text("已隐藏部分默认") : window.AgentPawI18n.text("默认轮换");
+  const variants = $('asset-variants');
+  variants.replaceChildren(...slot.active.map(createVariant));
+  assetReset.disabled = assetBusy || slot.mode === 'default';
+  assetAdd.disabled = assetBusy;
+  assetReplace.disabled = assetBusy;
+  assetRemove.disabled = assetBusy || slot.active.length <= 1;
+  assetRemove.title = slot.active.length <= 1 ? window.AgentPawI18n.text("每个状态至少要保留一个表情") : window.AgentPawI18n.text("从播放列表移出“{0}”", [selected.name]);
+}
+
+function renderAssets() {
+  assetCatalog = ASSETS.normalizeCatalog(assetCatalog);
+  renderCharacters();
+  renderGallery();
+  renderInspector();
+}
+
+function setAssetBusy(next) {
+  assetBusy = next;
+  assetAdd.disabled = next;
+  assetReplace.disabled = next;
+  assetRemove.disabled = next || currentSlotData().active.length <= 1;
+  assetReset.disabled = next || currentSlotData().mode === 'default';
+  removeBackground.disabled = next;
+  renderCharacters();
+}
+
+function renderCharacters() {
+  const character = assetCatalog.character;
+  if (!$('character-list')) return;
+  if (renderedCharacterId !== character.id) {
+    renderedCharacterId = character.id;
+    selectedAssetId = null;
+    removeBackground.checked = character.removeBackground;
+  }
+  const cards = assetCatalog.characters.map((item) => {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'character-card';
+    button.dataset.characterId = item.id;
+    button.setAttribute('aria-pressed', String(item.id === character.id));
+    button.disabled = assetBusy;
+    const img = document.createElement('img'); img.src = item.thumbnail; img.alt = ''; img.draggable = false;
+    const name = document.createElement('span'); name.textContent = item.builtin ? window.AgentPawI18n.text(item.name) : item.name;
+    const kind = document.createElement('small'); kind.textContent = item.id === character.id ? window.AgentPawI18n.text("正在陪伴你") : item.builtin ? window.AgentPawI18n.text("内置角色") : window.AgentPawI18n.text("我的角色");
+    button.append(img, name, kind);
+    button.addEventListener('click', () => runCharacterAction(() => window.pet.selectPetCharacter(item.id), window.AgentPawI18n.text("已切换为“{0}”。", [item.name])));
+    return { builtin: item.builtin, button };
+  });
+  const add = document.createElement('button');
+  add.type = 'button'; add.id = 'character-add'; add.className = 'character-card character-add';
+  add.disabled = assetBusy;
+  add.setAttribute('aria-controls', 'character-name');
+  const plus = document.createElement('span'); plus.className = 'character-add-icon'; plus.textContent = '+';
+  plus.setAttribute('aria-hidden', 'true');
+  const label = document.createElement('span'); label.textContent = window.AgentPawI18n.text("自定义角色");
+  const hint = document.createElement('small'); hint.textContent = window.AgentPawI18n.text("用自己的 GIF 创建");
+  add.append(plus, label, hint);
+  add.addEventListener('click', () => {
+    $('character-name').scrollIntoView({ block: 'center', behavior: 'smooth' });
+    $('character-name').focus({ preventScroll: true });
+  });
+  $('character-list').replaceChildren(...cards.filter(c => c.builtin).map(c => c.button), add,
+    ...cards.filter(c => !c.builtin).map(c => c.button));
+  $('character-current').textContent = window.AgentPawI18n.text("正在编辑：{0}", [character.canDelete ? character.name : window.AgentPawI18n.text(character.name)]);
+  $('character-credit').textContent = character.credit || '';
+  $('character-credit').hidden = !character.credit;
+  $('character-remove').hidden = !character.canDelete;
+  for (const id of ['character-create', 'character-import', 'character-remove', 'character-name']) $(id).disabled = assetBusy;
+  const preview = $('preview-cat');
+  if (preview) { preview.src = assetCatalog.slots.working.active[0].url; preview.alt = character.name; }
+}
+
+async function runCharacterAction(action, success) {
+  if (assetBusy) return;
+  setAssetBusy(true);
+  showAssetStatus(window.AgentPawI18n.text("正在处理角色素材，请稍候…"), '', true);
+  try {
+    const result = await action();
+    if (result?.canceled) { showAssetStatus(window.AgentPawI18n.text("已取消，当前角色保持不变。")); return; }
+    if (!result?.ok) throw new Error(result?.message || window.AgentPawI18n.text("角色操作失败，请重试"));
+    assetCatalog = ASSETS.normalizeCatalog(result.catalog);
+    selectedAssetId = null;
+    renderAssets();
+    showAssetStatus(success, 'success');
+  } catch (error) { showAssetStatus(error.message || window.AgentPawI18n.text("角色操作失败，请重试"), 'error'); }
+  finally { setAssetBusy(false); renderAssets(); }
+}
+
+async function createCharacter() {
+  const name = $('character-name').value.trim();
+  if (!name) { showAssetStatus(window.AgentPawI18n.text("先给新角色起个名字。"), 'error'); $('character-name').focus(); return; }
+  await runCharacterAction(() => window.pet.createPetCharacter(name, { removeBackground: removeBackground.checked }), window.AgentPawI18n.text("已创建“{0}”，可以开始补充各个状态的动作。", [name]));
+}
+
+async function importExpression(mode) {
+  if (assetBusy) return;
+  const definition = currentSlotDefinition();
+  const selected = currentSlotData().active.find((asset) => asset.id === selectedAssetId) || currentSlotData().active[0];
+  if (mode === 'replace-one') {
+    const irreversible = selected.kind === 'custom' ? window.AgentPawI18n.text("\n\n旧的自定义副本会从AgentPaw中删除，原始 GIF 文件不受影响。") : '';
+    const confirmed = window.confirm(window.AgentPawI18n.text("用新的 GIF 替换当前选中的“{0}”吗？{1}", [selected.name, irreversible]));
+    if (!confirmed) return;
+  }
+  setAssetBusy(true);
+  showAssetStatus(window.AgentPawI18n.text("请选择一个 GIF。选中后会自动处理背景、尺寸和动画帧，请稍候…"), '', true);
+  try {
+    const result = await window.pet.importPetGif(selectedSlotId, mode, {
+      removeBackground: removeBackground.checked,
+      assetId: mode === 'replace-one' ? selected.id : undefined,
+    });
+    if (!result || result.canceled) {
+      showAssetStatus(window.AgentPawI18n.text("没有选择文件，当前表情保持不变。"));
+      return;
+    }
+    if (!result.ok) {
+      showAssetStatus(result.message || window.AgentPawI18n.text("GIF 导入失败，请换一个文件重试。"), 'error');
+      return;
+    }
+    assetCatalog = ASSETS.normalizeCatalog(result.catalog);
+    selectedAssetId = result.imported && result.imported.id;
+    renderAssets();
+    const warning = Array.isArray(result.warnings) && result.warnings.length ? ` ${result.warnings.join('；')}。` : '';
+    showAssetStatus(mode === 'replace-one'
+      ? window.AgentPawI18n.text("已替换“{0}”中选中的表情。{1}", [window.AgentPawI18n.text(definition.label), warning])
+      : window.AgentPawI18n.text("已为“{0}”新增一个轮换表情。{1}", [window.AgentPawI18n.text(definition.label), warning]), 'success');
+  } catch {
+    showAssetStatus(window.AgentPawI18n.text("GIF 导入失败，请稍后重试。"), 'error');
+  } finally {
+    setAssetBusy(false);
+  }
+}
+
+async function removeSelectedExpression() {
+  const slot = currentSlotData();
+  const asset = slot.active.find((item) => item.id === selectedAssetId) || slot.active[0];
+  if (assetBusy || !asset || slot.active.length <= 1) return;
+  const definition = currentSlotDefinition();
+  const detail = asset.kind === 'custom'
+    ? window.AgentPawI18n.text("\n\n自定义副本会从AgentPaw中删除，原始 GIF 文件不受影响。")
+    : window.AgentPawI18n.text("\n\n可随时通过“恢复默认”重新启用它。");
+  if (!window.confirm(window.AgentPawI18n.text("从“{0}”的播放列表中移出“{1}”吗？{2}", [window.AgentPawI18n.text(definition.label), asset.name, detail]))) return;
+  setAssetBusy(true);
+  showAssetStatus(window.AgentPawI18n.text("正在移出选中的表情…"), '', true);
+  try {
+    const result = await window.pet.removePetAsset(selectedSlotId, asset.id);
+    if (!result || !result.ok) {
+      if (result && result.error === 'last-asset') {
+        showAssetStatus(window.AgentPawI18n.text("每个状态至少要保留一个表情；请先新增或替换。"), 'error');
+        return;
+      }
+      throw new Error('remove failed');
+    }
+    assetCatalog = ASSETS.normalizeCatalog(result.catalog);
+    selectedAssetId = null;
+    renderAssets();
+    showAssetStatus(window.AgentPawI18n.text("选中的表情已移出；播放列表已立即更新。"), 'success');
+  } catch { showAssetStatus(window.AgentPawI18n.text("移出失败，请重试。"), 'error'); }
+  finally { setAssetBusy(false); }
+}
+
+async function resetSlot() {
+  if (assetBusy || currentSlotData().mode === 'default') return;
+  const definition = currentSlotDefinition();
+  if (!window.confirm(window.AgentPawI18n.text("恢复“{0}”的默认表情吗？\n\n这个状态下添加的所有自定义表情都会从AgentPaw中删除。原始 GIF 文件不会受到影响。", [window.AgentPawI18n.text(definition.label)]))) return;
+  setAssetBusy(true);
+  showAssetStatus(window.AgentPawI18n.text("正在恢复默认表情…"), '', true);
+  try {
+    const result = await window.pet.resetPetSlot(selectedSlotId);
+    if (!result || !result.ok) throw new Error('reset failed');
+    assetCatalog = ASSETS.normalizeCatalog(result.catalog);
+    selectedAssetId = null;
+    renderAssets();
+    showAssetStatus(window.AgentPawI18n.text("“{0}”已恢复默认表情。", [window.AgentPawI18n.text(definition.label)]), 'success');
+  } catch { showAssetStatus(window.AgentPawI18n.text("恢复失败，请重试。"), 'error'); }
+  finally { setAssetBusy(false); }
+}
+
+async function loadAssetCatalog() {
+  try { assetCatalog = ASSETS.normalizeCatalog(await window.pet.getPetAssets()); }
+  catch { showAssetStatus(window.AgentPawI18n.text("自定义表情读取失败，当前显示默认表情。"), 'error'); }
+  renderAssets();
+}
+
+toggle.addEventListener('click', toggleAutoLaunch);
+privacyToggle.addEventListener('click', togglePrivacyMode);
+integrationRefresh.addEventListener('click', () => loadIntegrationHealth());
+integrationRepair.addEventListener('click', repairIntegrations);
+integrationUninstall.addEventListener('click', uninstallIntegrations);
+updateToggle.addEventListener('click', toggleAutoUpdate);
+updateCheck.addEventListener('click', checkUpdatesNow);
+updateAction.addEventListener('click', runUpdateAction);
+xiabanSave.addEventListener('click', () => saveXiabanSchedule());
+xiabanReset.addEventListener('click', () => saveXiabanSchedule(DEFAULT_XIABAN_TIMES));
+assetAdd.addEventListener('click', () => importExpression('append'));
+assetReplace.addEventListener('click', () => importExpression('replace-one'));
+assetRemove.addEventListener('click', removeSelectedExpression);
+assetReset.addEventListener('click', resetSlot);
+$('character-create').addEventListener('click', createCharacter);
+$('character-import').addEventListener('click', () => runCharacterAction(() => window.pet.importPetCharacter(), window.AgentPawI18n.text("角色包已导入，并已切换到新角色。")));
+$('character-remove').addEventListener('click', () => {
+  const character = assetCatalog.character;
+  if (assetBusy || !character.canDelete || !window.confirm(window.AgentPawI18n.text("从角色列表移除“{0}”吗？\n当前会切回打工猫，角色文件将保留在本机归档中。", [character.name]))) return;
+  runCharacterAction(() => window.pet.removePetCharacter(character.id), window.AgentPawI18n.text("角色已移除，已切回打工猫。"));
+});
+const settingsTabs = [...document.querySelectorAll('.settings-tab')];
+for (const tab of settingsTabs) {
+  tab.addEventListener('click', () => setTab(tab.dataset.tab));
+  tab.addEventListener('keydown', (event) => {
+    const index = settingsTabs.indexOf(tab);
+    let next;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') next = (index + 1) % settingsTabs.length;
+    else if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') next = (index - 1 + settingsTabs.length) % settingsTabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = settingsTabs.length - 1;
+    else return;
+    event.preventDefault();
+    setTab(settingsTabs[next].dataset.tab);
+    settingsTabs[next].focus();
+  });
+}
+if (window.pet.onPetAssets) window.pet.onPetAssets((catalog) => {
+  assetCatalog = ASSETS.normalizeCatalog(catalog);
+  renderAssets();
+});
+if (window.pet.onUpdateState) window.pet.onUpdateState(renderUpdateState);
+if (window.pet.onPrivacyMode) window.pet.onPrivacyMode((state) => {
+  if (!state || typeof state.enabled !== 'boolean') return;
+  privacyEnabled = state.enabled;
+  renderPrivacyStatus();
+});
+$('close').addEventListener('click', () => window.pet.closeSettings());
+$('done').addEventListener('click', () => window.pet.closeSettings());
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  event.preventDefault();
+  window.pet.closeSettings();
+});
+
+applyStaticI18n();
+setTab('general');
+loadSettings();
+loadPrivacyMode();
+loadIntegrationHealth();
+loadUpdateState();
+loadXiabanSchedule();
+loadAssetCatalog();
+
+
+const languageSelect = $('language-select');
+languageSelect.value = window.AgentPawI18n.getLanguage();
+languageSelect.addEventListener('change', async () => {
+  languageSelect.disabled = true;
+  try {
+    const result = await window.pet.setLanguage(languageSelect.value);
+    if (!result?.ok) throw new Error('language');
+    $('language-status').textContent = t('settings.saved');
+  } catch {
+    languageSelect.value = window.AgentPawI18n.getLanguage();
+    $('language-status').textContent = t('settings.failed');
+  } finally { languageSelect.disabled = false; }
+});
+window.addEventListener('agentpaw:language', () => {
+  applyStaticI18n(); languageSelect.value = window.AgentPawI18n.getLanguage();
+  renderAssets(); renderPrivacyStatus(); loadSettings(); loadIntegrationHealth(); loadUpdateState();
+});

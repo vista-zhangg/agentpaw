@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    name: Build Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.12'
+          cache: npm
+      - name: Verify tag matches package version
+        run: node -e "const v=require('./package.json').version;if('v'+v!==process.env.GITHUB_REF_NAME)throw new Error('tag/package version mismatch')"
+      - run: npm ci
+      - run: npm test
+      - name: Verify GIF attribution and assets
+        shell: pwsh
+        run: |
+          $credits = Get-Content assets/cat/CREDITS.md -Raw
+          if ($credits -notmatch '@月薪喵' -or $credits -notmatch 'mfuns.net/article/120254') {
+            throw 'GIF attribution is missing or incomplete'
+          }
+          if (-not (git ls-files "assets/cat/*.gif")) { throw 'No attributed GIF assets are tracked' }
+          $mouseCredits = Get-Content assets/characters/milktea-mouse/CREDITS.md -Raw
+          if ($mouseCredits -notmatch '阿翅 Achi' -or $mouseCredits -notmatch 'qizhongjicn.cn/roshow.php') {
+            throw 'Milk Tea Mouse attribution is missing or incomplete'
+          }
+          if (-not (git ls-files "assets/characters/milktea-mouse/*.gif")) { throw 'No Milk Tea Mouse GIF assets are tracked' }
+          $beeCredits = Get-Content assets/characters/mimi-bee/CREDITS.md -Raw
+          if ($beeCredits -notmatch '花栗鼠发发' -or $beeCredits -notmatch 'xinminweekly.com.cn') {
+            throw 'Mimi Bee attribution is missing or incomplete'
+          }
+          if (@(git ls-files "assets/characters/mimi-bee/*.gif").Count -ne 58) { throw 'Expected all 58 selected Mimi Bee GIF assets' }
+          $dogCredits = Get-Content assets/characters/line-dog/CREDITS.md -Raw
+          if ($dogCredits -notmatch 'Moonlab Studio' -or $dogCredits -notmatch 'linktr.ee/moonlab_studio') {
+            throw 'Line Dog attribution is missing or incomplete'
+          }
+          if (@(git ls-files "assets/characters/line-dog/*.gif").Count -ne 58) { throw 'Expected all 58 selected Line Dog GIF assets' }
+      - run: npm run package:win
+      - name: List Windows packages
+        shell: pwsh
+        run: Get-ChildItem dist -File | Format-Table Name, Length
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: agentpaw-windows-x64
+          path: |
+            dist/AgentPaw-*-Windows-x64.exe
+            dist/latest.yml
+          compression-level: 0
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [build-windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.12'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: agentpaw-windows-x64
+          path: dist
+      - name: Verify, upload draft, and publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: npm run release:publish

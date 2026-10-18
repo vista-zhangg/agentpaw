@@ -1,0 +1,114 @@
+{
+  "name": "agentpaw",
+  "version": "1.9.9",
+  "description": "AgentPaw — A Windows desktop companion for Codex, Claude Code, WorkBuddy and opencode, with task notifications, custom GIF characters, usage analytics and break reminders.",
+  "keywords": [
+    "codex",
+    "codex-desktop-pet",
+    "codex-companion",
+    "codex-usage-monitor",
+    "desktop-pet",
+    "ai-coding-assistant",
+    "token-usage",
+    "break-reminder",
+    "windows",
+    "claude-code",
+    "workbuddy",
+    "opencode",
+    "agentpaw",
+    "ai-desktop-pet",
+    "desktop-companion",
+    "claude-code-desktop-pet",
+    "coding-agent",
+    "agent-monitor",
+    "custom-pet",
+    "gif-pet",
+    "codex-quota",
+    "token-monitor"
+  ],
+  "main": "main.js",
+  "license": "MIT",
+  "author": "vista-zhang",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vista-zhangg/codex-desktop-pet.git"
+  },
+  "homepage": "https://github.com/vista-zhangg/codex-desktop-pet#readme",
+  "bugs": {
+    "url": "https://github.com/vista-zhangg/codex-desktop-pet/issues"
+  },
+  "scripts": {
+    "start": "node start-detached.js",
+    "start:console": "electron .",
+    "install:hooks": "node backend/hooks-cli.js",
+    "uninstall:hooks": "node backend/hooks-cli.js --uninstall",
+    "meter:rebuild": "node backend/meter-rebuild.js",
+    "package:win": "electron-builder --win nsis --x64 --publish never && node scripts/finalize-dist.js",
+    "verify:dist": "node scripts/verify-dist.js",
+    "preview:ui": "node scripts/run-ui-preview.js",
+    "test": "node test/run-all.js",
+    "release:publish": "node scripts/publish-release.js"
+  },
+  "devDependencies": {
+    "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
+    "js-yaml": "4.3.2"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "sharp": "^0.35.3"
+  },
+  "build": {
+    "appId": "io.github.vista-zhangg.agentpaw",
+    "productName": "AgentPaw",
+    "executableName": "AgentPaw",
+    "asar": false,
+    "electronDist": "node_modules/electron/dist",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "vista-zhangg",
+        "repo": "codex-desktop-pet",
+        "releaseType": "release"
+      }
+    ],
+    "files": [
+      "main.js",
+      "preload.js",
+      "backend/**",
+      "renderer/**",
+      "assets/**",
+      "shared/**",
+      "hook/**",
+      "LICENSE"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/agentpaw-icon.ico",
+      "signExecutable": false,
+      "artifactName": "AgentPaw-${version}-Windows-${arch}.${ext}",
+      "electronLanguages": [
+        "en-US",
+        "zh-CN",
+        "zh-TW"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "differentialPackage": false,
+      "guid": "8737e7ad-d3e9-5b66-8bd0-f2a73c6219ec",
+      "installerLanguages": [
+        "en_US",
+        "zh_CN",
+        "zh_TW"
+      ],
+      "language": "1033"
+    }
+  }
+}

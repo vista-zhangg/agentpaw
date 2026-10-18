@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: agentpaw-asset:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
+    <link rel="stylesheet" href="ui.css" />
+    <link rel="stylesheet" href="pet.css" />
+    <link rel="stylesheet" href="task-center.css" />
+    <link rel="stylesheet" href="capsule.css" />
+    <title>AgentPaw</title>
+  </head>
+  <body>
+    <div id="stage">
+      <!-- 气泡播报 -->
+      <div id="bubble" class="bubble hidden">
+        <span id="bubble-text"></span>
+      </div>
+
+      <!-- 需要输入 / 授权卡片：Claude 要选择/授权/输入时在这处理 -->
+      <section id="rest-reminder" class="rest-card hidden" role="region" aria-labelledby="rest-title">
+        <div class="rest-card-heading"><span class="rest-card-mark" aria-hidden="true">♡</span><span data-l10n="给自己一点时间">Take a little time for yourself</span></div>
+        <div id="rest-title" class="rest-card-title" aria-live="polite"></div>
+        <p id="rest-message" class="rest-card-message"></p>
+        <div class="rest-card-actions"><button id="rest-done" type="button" class="rest-primary" data-l10n="完成啦">Done</button><button id="rest-snooze" type="button" data-l10n="10 分钟后">In 10 minutes</button><button id="rest-skip" type="button" data-l10n="今天跳过">Skip today</button></div>
+        <p id="rest-action-status" class="rest-action-status" role="status"></p>
+      </section>
+      <div id="ask" class="ask hidden" role="dialog" aria-live="polite" aria-labelledby="ask-label">
+        <div class="ask-head">
+          <div class="ask-label" id="ask-label" data-i18n="ask.needsInput" data-l10n="需要输入">Input required</div>
+          <div class="ask-sess" id="ask-sess"></div>
+        </div>
+        <div class="ask-scroll" id="ask-scroll">
+          <div class="ask-card">
+            <div class="ask-qhead" id="ask-qhead"></div>
+            <div class="ask-q" id="ask-q"></div>
+            <div class="ask-hint" id="ask-hint"></div>
+            <div class="ask-opts" id="ask-opts"></div>
+            <div class="ask-other hidden" id="ask-input-row">
+              <input id="ask-text" type="text" aria-label="Custom answer or feedback" data-l10n-aria-label="自定义回答或修改意见" data-i18n-ph="ask.placeholder" placeholder="Type a custom answer…" data-l10n-placeholder="输入自定义回答…" />
+            </div>
+          </div>
+        </div>
+        <div class="ask-toolbar">
+          <div class="ask-page" id="ask-page"></div>
+          <div class="ask-foot" id="ask-foot">
+            <button class="ask-btn" id="ask-back" data-i18n="ask.back" data-l10n="返回">Back</button>
+            <button class="ask-btn primary" id="ask-submit" data-i18n="ask.submit" data-l10n="提交回答">Submit answer</button>
+          </div>
+          <button class="ask-term" id="ask-term" data-i18n="ask.goTerminal" data-l10n="💬 去终端">💬 Open terminal</button>
+        </div>
+      </div>
+
+      <!-- 左键工作速览：轻量回答“现在发生了什么、我能做什么” -->
+      <div id="peek" class="peek hidden" role="dialog" aria-live="polite" data-i18n-aria="peek.aria" aria-label="Quick view" data-l10n-aria-label="工作速览">
+        <div class="peek-head">
+          <span id="peek-state" class="peek-state idle" aria-hidden="true"></span>
+          <div class="peek-heading">
+            <div id="peek-title" class="peek-title" data-l10n="暂时没有任务">No tasks right now</div>
+            <div id="peek-subtitle" class="peek-subtitle" data-l10n="AgentPaw正在待命">AgentPaw is standing by</div>
+          </div>
+          <button id="peek-settings" class="popup-icon-button" type="button" title="Settings" data-l10n-title="设置" aria-label="Settings" data-l10n-aria-label="设置"></button>
+          <button id="peek-close" class="peek-close popup-icon-button" type="button" data-i18n-aria="peek.close" aria-label="Close" data-l10n-aria-label="关闭">✕</button>
+        </div>
+        <div id="peek-list" class="peek-list"></div>
+        <div id="peek-summary" class="peek-summary"></div>
+        <div id="peek-hint" class="peek-hint hidden"></div>
+        <div class="peek-actions">
+          <button id="peek-focus" class="peek-focus" type="button" data-i18n="peek.focus" data-l10n="打开当前会话">Open current session</button>
+          <button id="peek-panel" class="peek-panel" type="button" data-i18n="peek.panel" data-l10n="查看详情">View details</button>
+          <button id="peek-center" class="peek-panel" type="button" data-l10n="行动中心">Action center</button>
+        </div>
+      </div>
+
+      <!-- 思考指示器（thinking 状态：填补 Claude 在想、没输出的空档） -->
+      <div id="think" class="think">
+        <span class="td">💭</span>
+        <span class="think-label" data-i18n="state.thinking" data-l10n="思考中">Thinking</span>
+        <span class="dots"><i></i><i></i><i></i></span>
+      </div>
+
+      <!-- 睡觉指示器（逐渐变大往上飘的 z z Z，醒目） -->
+      <div id="sleep" class="sleep">
+        <span class="z z1">z</span>
+        <span class="z z2">z</span>
+        <span class="z z3">Z</span>
+      </div>
+
+
+      <!-- 点击打工猫弹出的泡泡菜单（JS 动态摆放在打工猫四周） -->
+      <div id="radial" class="radial hidden"></div>
+
+      <!-- 按工具动作时头顶飘出的道具 emoji -->
+      <div id="prop" class="prop"></div>
+      <div id="sidekick" class="sidekick"><img src="../assets/salary-cat.png" alt="" aria-hidden="true" /></div>
+
+      <!-- 订阅额度详情：点击胶囊上的 5h / 7d 后显示，避免原生 title 遮挡视野 -->
+      <div id="quota-popover" class="quota-popover hidden" role="dialog" aria-labelledby="quota-popover-title" aria-describedby="quota-popover-hint">
+        <div class="quota-popover-head">
+          <div class="quota-popover-heading">
+            <div id="quota-popover-title" class="quota-popover-title" data-l10n="Codex 订阅额度">Codex subscription quota</div>
+            <div id="quota-popover-status" class="quota-popover-status"></div>
+          </div>
+          <button id="quota-popover-close" class="quota-popover-close" type="button" aria-label="Close quota details" data-l10n-aria-label="关闭订阅额度详情">✕</button>
+        </div>
+        <div id="quota-popover-rows" class="quota-popover-rows"></div>
+        <div id="quota-popover-insight" class="quota-popover-insight" hidden></div>
+        <div id="quota-popover-updated" class="quota-popover-updated"></div>
+        <div id="quota-popover-hint" class="quota-popover-hint" data-l10n="鼠标移开后自动收起，也可按 Esc 关闭">Closes when the pointer leaves; press Esc to close</div>
+      </div>
+
+      <div id="compact-row" class="compact-row">
+        <!-- 多会话状态点：每个点 = 一个并行任务，颜色 = 状态 -->
+        <div id="sessions" class="sessions"></div>
+
+        <!-- 唯一形象：打工猫（每个状态一张 GIF，动效由 GIF 自带） -->
+        <div id="cat" class="cat idle" role="button" tabindex="0" aria-label="AgentPaw: open current status; right-click for menu" data-l10n-aria-label="AgentPaw：打开当前状态；右键打开菜单">
+          <img id="cat-img" src="../assets/salary-cat.png" alt="cat" draggable="false" />
+        </div>
+
+        <!-- 常驻今日用量条；额度区域是唯一的订阅详情入口，默认不弹系统 tooltip -->
+        <div id="chip" class="chip" aria-live="polite" aria-label="AgentPaw status" data-l10n-aria-label="AgentPaw状态">
+          <span id="chip-context" class="chip-context" data-l10n="🐾 待命">🐾 Standing by</span>
+          <span id="chip-quota" class="chip-quota" role="button" tabindex="0" aria-controls="quota-popover" aria-expanded="false" aria-label="View quota reset times" data-l10n-aria-label="查看订阅额度刷新时间" hidden></span>
+          <span id="chip-tokens-sep" class="chip-sep">·</span>
+          <span id="chip-tokens" class="chip-tokens">0 tokens</span>
+          <span id="chip-cost-sep" class="chip-sep">·</span>
+          <span id="chip-cost" class="chip-cost">$0.000</span>
+          <button id="rest-pending" class="rest-pending" type="button" hidden data-l10n="♡ 休息一下">♡ Take a break</button>
+          <!-- 行动中心入口随胶囊排版，图标与数量都保留在自己的空间内。 -->
+          <div id="notepad" class="notepad hidden" role="button" tabindex="0" aria-label="Action center" data-l10n-aria-label="行动中心" data-i18n-title="action.notepadTitle" title="Action center" data-l10n-title="行动中心">
+            <span class="np-icon" aria-hidden="true">📋</span>
+            <span id="np-badge" class="np-badge"></span>
+          </div>
+        </div>
+      </div>
+
+      <div id="action-pop" class="action-pop hidden" role="dialog" aria-labelledby="ac-title">
+        <div class="ac-top">
+          <span class="ac-title" id="ac-title" data-i18n="action.title" data-l10n="🗒️ 行动中心">🗒️ Action center</span>
+          <button id="ac-settings" class="popup-icon-button" type="button" title="Settings" data-l10n-title="设置" aria-label="Settings" data-l10n-aria-label="设置"></button>
+          <button class="ac-close popup-icon-button" id="ac-close" type="button" data-i18n-title="action.close" title="Close" data-l10n-title="关闭" aria-label="Close" data-l10n-aria-label="关闭">✕</button>
+        </div>
+        <div class="ac-tabs" role="tablist" aria-label="Action center content" data-l10n-aria-label="行动中心内容">
+          <button id="ac-tab-actions" type="button" role="tab" aria-selected="true" aria-controls="ac-act-sec" data-l10n="待处理">Pending</button>
+          <button id="ac-tab-recent" type="button" role="tab" aria-selected="false" aria-controls="ac-recent-sec" tabindex="-1" data-l10n="最近">Recent</button>
+          <button id="ac-tab-sessions" type="button" role="tab" aria-selected="false" aria-controls="ac-sessions-sec" tabindex="-1" data-l10n="会话">Session</button>
+        </div>
+        <div class="ac-scroll">
+          <div class="ac-sec" id="ac-act-sec" role="tabpanel" aria-labelledby="ac-tab-actions">
+            <div class="ac-sec-h" data-i18n="action.needYou" data-l10n="🔔 需要你处理">🔔 Needs your attention</div>
+            <div id="ac-acts"></div>
+            <p id="ac-empty" class="ac-empty" hidden data-l10n="暂时没有需要处理的事项">Nothing needs your attention right now</p>
+          </div>
+          <div id="ac-recent-sec" role="tabpanel" aria-labelledby="ac-tab-recent" hidden>
+            <div class="ac-toolbar"><span data-l10n="最近 7 天 · 最多 100 条">Last 7 days · Up to 100 events</span><button id="ac-clear-recent" type="button" data-l10n="清空">Clear</button></div>
+            <div id="ac-recent-list"></div>
+          </div>
+          <div id="ac-sessions-sec" role="tabpanel" aria-labelledby="ac-tab-sessions" hidden>
+            <p class="ac-empty" data-l10n="待处理和当前任务优先，同类中关注的排在前面；静音对同项目生效。">Pending and active tasks come first, with followed sessions first among peers. Muting applies to the whole project.</p>
+            <div id="ac-session-list"></div>
+          </div>
+        </div>
+        <div id="ac-status" class="ac-status" role="status" aria-live="polite"></div>
+        <div class="ac-ops">
+          <button data-op="panel" data-i18n="action.panel" data-l10n="📊 详情">📊 Details</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../shared/messages.js"></script>
+    <script src="../shared/i18n.js"></script>
+    <script src="language.js"></script>
+    <script src="../shared/states.js"></script>
+    <script src="../shared/pet-assets.js"></script>
+    <script src="../shared/agents.js"></script>
+    <script src="../shared/pet-insights.js"></script>
+    <script src="icons.js"></script>
+    <script src="../shared/pet-geometry.js"></script>
+    <script src="pet.js"></script>
+    <script src="task-center.js"></script>
+    <script src="companion.js"></script>
+  </body>
+</html>

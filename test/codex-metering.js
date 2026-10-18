@@ -1,0 +1,151 @@
+'use strict';
+
+const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { createCodexMetering, normalizeUsage, deltaUsage } = require('../backend/codex-metering');
+
+const first = normalizeUsage({
+  input_tokens: 100,
+  cached_input_tokens: 60,
+  output_tokens: 20,
+  reasoning_output_tokens: 8,
+  total_tokens: 120,
+});
+const second = normalizeUsage({
+  input_tokens: 250,
+  cached_input_tokens: 150,
+  output_tokens: 50,
+  reasoning_output_tokens: 18,
+  total_tokens: 300,
+});
+assert.deepStrictEqual(deltaUsage(first, second), {
+  tokens: 180, input: 150, output: 30, cachedInput: 90, reasoningOutput: 10, cacheWrite: 0, cost: 0,
+});
+assert.strictEqual(first.tokens, first.input + first.output);
+assert(first.cachedInput <= first.input, 'cached input is a subset, not extra total tokens');
+assert(first.reasoningOutput <= first.output, 'reasoning output is a subset, not extra total tokens');
+
+async function main() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'agentpaw-codex-meter-'));
+  const sessionsDir = path.join(root, 'sessions', '2026', '07', '29');
+  const stateDir = path.join(root, 'state');
+  fs.mkdirSync(sessionsDir, { recursive: true });
+  const rollout = path.join(sessionsDir, 'rollout-test.jsonl');
+  const rows = [
+    { timestamp: new Date().toISOString(), type: 'session_meta', payload: { id: 'codex-session-1' } },
+    { timestamp: new Date().toISOString(), type: 'turn_context', payload: { model: 'gpt-5.6-codex' } },
+    { timestamp: new Date().toISOString(), type: 'event_msg', payload: { type: 'token_count', info: {
+      total_token_usage: {
+        input_tokens: 100, cached_input_tokens: 60, output_tokens: 20, reasoning_output_tokens: 8, total_tokens: 120,
+      },
+      last_token_usage: {
+        input_tokens: 100, cached_input_tokens: 60, output_tokens: 20, reasoning_output_tokens: 8, total_tokens: 120,
+      },
+    } } },
+    { timestamp: new Date().toISOString(), type: 'event_msg', payload: { type: 'token_count', info: {
+      total_token_usage: {
+        input_tokens: 250, cached_input_tokens: 150, output_tokens: 50, reasoning_output_tokens: 18, total_tokens: 300,
+      },
+      last_token_usage: {
+        input_tokens: 150, cached_input_tokens: 90, output_tokens: 30, reasoning_output_tokens: 10, total_tokens: 180,
+      },
+    } } },
+    // Real rollouts can reset total_token_usage after compaction. The ledger
+    // must add only this request (70), not the reset cumulative snapshot as a
+    // new segment on top of the previous 300.
+    { timestamp: new Date().toISOString(), type: 'event_msg', payload: { type: 'token_count', info: {
+      total_token_usage: {
+        input_tokens: 60, cached_input_tokens: 32, output_tokens: 10, reasoning_output_tokens: 4, total_tokens: 70,
+      },
+      last_token_usage: {
+        input_tokens: 60, cached_input_tokens: 32, output_tokens: 10, reasoning_output_tokens: 4, total_tokens: 70,
+      },
+    } } },
+  ];
+  const weeklyReset = Math.floor(Date.now() / 1000) + 604800;
+  rows[2].payload.rate_limits = { limit_id: 'codex', primary: {
+    window_minutes: 10080, used_percent: 7, resets_at: weeklyReset,
+  } };
+  fs.writeFileSync(rollout, rows.map((row) => JSON.stringify(row)).join('\n') + '\n');
+
+  const meter = createCodexMetering({ sessionsDir: path.join(root, 'sessions'), stateDir });
+  await meter.scan();
+  let stats = meter.getStats();
+  assert.strictEqual(stats.today.tokens, 370);
+  assert.strictEqual(stats.today.input, 310);
+  assert.strictEqual(stats.today.output, 60);
+  assert.strictEqual(stats.today.cachedInput, 182);
+  assert.strictEqual(stats.today.reasoningOutput, 22);
+  assert.strictEqual(stats.today.msgs, 3);
+  assert.strictEqual(stats.lifetime.tokens, 370);
+  assert.strictEqual(stats.hourlyTok.reduce((a, b) => a + b, 0), 370);
+  assert.strictEqual(stats.diagnostics.resets, 1);
+  assert.strictEqual(meter.getQuotaHistory().length, 3);
+  assert.strictEqual(meter.getQuotaHistory()[0].resetsAt, weeklyReset);
+  assert.strictEqual(meter.getQuotaHistory()[0].usedPercent, 7);
+  assert.strictEqual(meter.getQuotaHistory()[0].limitId, 'codex');
+  assert(Math.abs(meter.getQuotaHistory().reduce((sum, row) => sum + row.cost, 0) - stats.today.cost) < 1e-10);
+
+  const quotaRefresh = JSON.parse(JSON.stringify(rows[4]));
+  quotaRefresh.payload.rate_limits = { primary: {
+    window_minutes: 10080, used_percent: 8, resets_at: weeklyReset,
+  } };
+  fs.appendFileSync(rollout, JSON.stringify(quotaRefresh) + '\n');
+  await meter.scan();
+  assert.strictEqual(meter.getStats().today.tokens, 370, 'unchanged usage snapshot is not a new request');
+  assert.strictEqual(meter.getStats().today.msgs, 3);
+  assert.strictEqual(meter.getQuotaHistory().at(-1).usedPercent, 8, 'quota refresh is still retained');
+  assert.strictEqual(meter.getQuotaHistory().at(-1).cost, 0, 'quota refresh does not repeat request cost');
+
+  await meter.scan();
+  stats = meter.getStats();
+  assert.strictEqual(stats.today.tokens, 370, 'second scan must not double count');
+  assert.strictEqual(meter.getQuotaHistory().length, 4, 'history is incremental');
+
+  // Upgrade a pre-history cache at EOF without replaying the main ledger.
+  meter.stop();
+  const statePath = path.join(stateDir, 'codex-usage.json');
+  const oldState = JSON.parse(fs.readFileSync(statePath, 'utf8'));
+  for (const file of Object.values(oldState.files)) {
+    delete file.quotaEvents;
+    delete file.quotaModel;
+  }
+  fs.writeFileSync(statePath, JSON.stringify(oldState));
+  const upgraded = createCodexMetering({ sessionsDir: path.join(root, 'sessions'), stateDir });
+  await upgraded.scan();
+  assert.strictEqual(upgraded.getStats().lifetime.tokens, 370, 'backfill does not double count lifetime');
+  assert.deepStrictEqual(upgraded.getQuotaHistory(), meter.getQuotaHistory(), 'upgrade restores timestamped costs');
+  upgraded.stop();
+  const restarted = createCodexMetering({ sessionsDir: path.join(root, 'sessions'), stateDir });
+  await restarted.scan();
+  assert.deepStrictEqual(restarted.getQuotaHistory(), upgraded.getQuotaHistory(), 'restart preserves the full cycle');
+  restarted.stop();
+
+  // A rollout can be truncated/rotated. Replaying the retained prefix must not
+  // double count it, while a newer token event after the old EOF is accepted.
+  const rotated = [
+    rows[0], rows[1],
+    { timestamp: new Date(Date.now() + 1000).toISOString(), type: 'event_msg', payload: { type: 'token_count', info: {
+      total_token_usage: { input_tokens: 20, output_tokens: 5, total_tokens: 25 },
+      last_token_usage: { input_tokens: 20, output_tokens: 5, total_tokens: 25 },
+    } } },
+  ];
+  fs.writeFileSync(rollout, rotated.map((row) => JSON.stringify(row)).join('\n') + '\n');
+  await meter.scan();
+  assert.strictEqual(meter.getStats().today.tokens, 395, 'rotated rollout resumes without replaying the old prefix');
+  const lifetimeBeforeRebuild = meter.getStats().lifetime.tokens;
+  fs.writeFileSync(rollout, JSON.stringify(rotated[0]) + '\n');
+  await meter.rebuild();
+  assert(meter.getStats().lifetime.tokens >= lifetimeBeforeRebuild,
+    'rebuild preserves Codex lifetime when a rotated source is incomplete');
+  meter.stop();
+  fs.rmSync(root, { recursive: true, force: true });
+  console.log('codex metering checks passed');
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

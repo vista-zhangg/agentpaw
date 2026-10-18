@@ -1,0 +1,133 @@
+/* Original capsule appearance, shared by the live pet and settings preview. */
+.chip {
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-weight: 400;
+  line-height: normal;
+  -webkit-font-smoothing: auto;
+  /* The capsule is part of the resting frame, never a flex-space to reclaim
+     when a stale popup leaves the stage temporarily over-constrained. */
+  flex: 0 0 auto;
+  min-height: 21px;
+  margin-top: 2px;
+  padding: 4px 12px;
+  background: rgba(61, 42, 32, 0.82);
+  color: #ffe9dc;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  border-radius: 11px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+  cursor: default;
+  opacity: 0.9;
+  transition: opacity 0.25s ease;
+  width: max-content;
+  max-width: none;
+  overflow: visible;
+}
+#stage:hover .chip { opacity: 1; }
+.chip [hidden] { display: none !important; }
+.chip-quota {
+  display: flex; gap: 5px; flex: 0 0 auto; cursor: pointer; border-radius: 8px;
+  padding: 2px; margin: -2px; transition: background 0.15s ease;
+}
+.chip-quota:hover { background: rgba(255, 255, 255, 0.09); }
+.chip-quota:focus-visible { outline: 2px solid rgba(255, 233, 220, 0.9); outline-offset: 2px; }
+.quota-badge {
+  --quota-accent: #bce8d3;
+  position: relative;
+  display: inline-flex;
+  justify-content: space-between;
+  align-items: baseline;
+  box-sizing: border-box;
+  width: 62px;
+  padding: 3px 6px 5px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 6px;
+  background: rgba(255,255,255,.055);
+  color: var(--quota-accent);
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 11px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.quota-badge::before {
+  content: attr(data-period);
+  color: #dfd3cb;
+  font-size: 9px;
+  font-weight: 500;
+}
+.quota-badge::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  bottom: 1px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--quota-accent) var(--quota-remaining, 0%), rgba(255,255,255,.12) var(--quota-remaining, 0%));
+  opacity: .7;
+}
+.quota-badge[data-level="amber"] { --quota-accent: #ffce83; background: rgba(255,176,32,.09); }
+.quota-badge[data-level="red"] { --quota-accent: #ffaba3; background: rgba(255,90,82,.12); }
+.quota-badge[data-level="unknown"] { --quota-accent: #c9beb8; }
+.quota-badge[data-level="unknown"]::after { opacity: .3; }
+.chip-context {
+  /* The situation label is the primary signal. The frame grows with the
+     capsule, so it no longer needs to yield to a fixed viewport width. */
+  flex: 0 0 auto;
+  min-width: max-content;
+  max-width: none;
+  overflow: visible;
+  font-weight: 700;
+}
+.chip-tokens, .chip-cost {
+  font-size: 11px;
+  line-height: 1;
+  /* The resting BrowserWindow is measured from this intrinsic width. Keep
+     amount/token details intact instead of shrinking them into an ellipsis. */
+  flex: 0 0 auto;
+  min-width: max-content;
+  overflow: visible;
+  text-overflow: clip;
+}
+.chip[data-context="waiting"],
+.chip[data-context="needsinput"] {
+  box-shadow: 0 0 0 2px rgba(255, 176, 32, 0.28), 0 4px 12px rgba(120, 60, 35, 0.28);
+}
+.chip[data-context="error"] {
+  box-shadow: 0 0 0 2px rgba(255, 90, 82, 0.3), 0 4px 12px rgba(120, 60, 35, 0.28);
+}
+.chip[data-context="purr"] {
+  color: #ffe9b5;
+  box-shadow: 0 0 0 2px rgba(255, 208, 102, 0.35), 0 4px 14px rgba(120, 60, 35, 0.3);
+}
+.chip-sep {
+  flex: 0 0 auto;
+  color: rgba(255, 233, 220, 0.5);
+  font-size: 10px;
+  line-height: 1;
+}
+.preview-stage:hover .chip { opacity: 1; }
+.quota-popover { padding: 16px; border: 1px solid #dfe2e9; border-radius: 18px; color: var(--ui-text); background: #fafbfd; box-shadow: 0 6px 20px #1820301f; gap: 12px; animation: quotaPopoverIn .28s var(--ui-ease); }
+.quota-popover::after { border-top-color: #fafbfd; }
+#stage.edge-below .quota-popover::after { border-bottom-color: #fafbfd; }
+.quota-popover-title { font-size: 13px; font-weight: 600; }
+.quota-popover-status, .quota-pop-reset, .quota-popover-updated, .quota-popover-hint { color: var(--ui-secondary); line-height: 1.5; }
+.quota-popover-close { border-radius: 50%; background: #edeef2; color: var(--ui-secondary); }
+.quota-popover-close:hover { background: #e3e5eb; color: var(--ui-text); }
+.quota-pop-row { padding: 10px; background: #f0f2f6; border-radius: 11px; gap: 9px; }
+.quota-pop-period { color: #666d79; font-weight: 500; }
+.quota-pop-value { font-size: 14px; font-weight: 600; }
+.quota-pop-bar { height: 4px; background: #e0e5ec; }
+.quota-pop-bar-fill { background: #69ad91; transition: width .4s var(--ui-ease); }
+.quota-popover-insight { background: #eef3fa; color: #717986; padding: 11px; border-radius: 12px; }
+.quota-estimate-head { color: #4b5667; font-weight: 600; }
+.quota-estimate-badge { background: #e2eaf5; color: #6c7f99; }
+.quota-estimate-label, .quota-estimate-unit, .quota-estimate-note { color: #79818e; }
+.quota-estimate-number { color: #313a49; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .chip, .quota-popover, .quota-pop-bar-fill { animation: none; transition: none; } }
