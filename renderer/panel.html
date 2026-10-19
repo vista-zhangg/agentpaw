@@ -20,181 +20,121 @@
         </div>
         <button id="close" title="Close (Esc)" data-l10n-title="关闭（Esc）" aria-label="Close" data-l10n-aria-label="关闭">✕</button>
       </header>
-      <div class="overview-heading">
-        <h1 data-l10n="用量详情">Usage details</h1>
-        <label class="source-label"><span data-l10n="工具">Tool</span><select id="usage-source" aria-label="Filter tools" data-l10n-aria-label="筛选工具">
-            <option value="all" data-l10n="全部工具">All tools</option>
-          </select>
-        </label>
-      </div>
-      <section class="block" id="activity-block">
-        <div class="block-title">
-          <span data-l10n="Token 活动">Token activity</span>
-          <div class="tabs" aria-label="Activity view" data-l10n-aria-label="活动视图">
-            <button type="button" data-view="daily" aria-pressed="true" data-l10n="每天">Daily</button>
-            <button type="button" data-view="weekly" aria-pressed="false" data-l10n="每周">Weekly</button>
-            <button type="button" data-view="cumulative" aria-pressed="false" data-l10n="窗口累计">Window total</button>
-          </div>
-        </div>
-        <div class="scope-note" id="activity-scope">
-        </div>
-        <div id="chart" aria-label="Token activity over the last 90 days" data-l10n-aria-label="最近 90 天 Token 活动">
-        </div>
-        <div class="heat-legend" id="activity-legend">
-        </div>
-        <div class="readout" id="hours-readout" aria-live="polite">
-        </div>
-        <div class="activity-actions">
-          <button id="activity-prev" type="button" aria-label="Previous period" data-l10n-aria-label="上一个时段">←</button>
-          <button id="activity-next" type="button" aria-label="Next period" data-l10n-aria-label="下一个时段">→</button>
-          <button id="activity-drill" type="button" data-l10n="查看当日明细 ↓">View this day ↓</button>
-        </div>
-      </section>
-      <section class="details-section" aria-label="Usage for the selected period" data-l10n-aria-label="所选周期用量">
-        <div class="details-heading">
-          <h2 data-l10n="用量明细">Usage breakdown</h2>
-          <div class="tabs range-tabs" aria-label="Date range" data-l10n-aria-label="统计周期">
-            <button type="button" data-range="today" aria-pressed="true" data-l10n="今日">Today</button>
-            <button type="button" data-range="7d" aria-pressed="false" data-l10n="近 7 天">Last 7 days</button>
-            <button type="button" data-range="30d" aria-pressed="false" data-l10n="近 30 天">Last 30 days</button>
-          </div>
-        </div>
-        <div class="period-line">
-          <span id="usage-period" class="scope-note">
-          </span>
-          <button type="button" id="clear-day" hidden data-l10n="返回周期统计">Back to period</button>
-        </div>
-        <p id="usage-warning" class="scope-note" hidden>
-        </p>
-        <div id="summary-section" class="grid summary-grid">
-          <div class="stat">
-            <div class="stat-label" data-l10n="已记录 Token">Recorded tokens</div>
-            <div class="stat-value" id="period-tokens">—</div>
-            <div class="stat-foot" id="token-change">
-            </div>
-          </div>
-          <div class="stat">
-            <div class="stat-label" data-l10n="参考金额 · USD · 非账单">Reference amount · USD · Not a bill</div>
-            <div class="stat-value" id="today-cost">—</div>
-            <div class="stat-foot" id="cost-change">
-            </div>
-          </div>
-        </div>
-        <details class="block pricing-block">
-          <summary>
-            <span id="pricing-coverage" data-l10n="计价覆盖待确认">Pricing coverage unconfirmed</span>
-            <span data-l10n="金额说明">About amounts</span>
-          </summary>
-          <p class="scope-note" data-l10n="金额沿用本机台账，可能混合来源上报、匹配价格和近似估算，不代表订阅账单。旧台账未保存完整的逐笔计价状态，因此无法准确计算覆盖率；零金额用量不视为免费。">Amounts come from local ledgers and may combine reported values, matched prices and estimates. They are not subscription bills. Older records lack per-entry pricing status, so coverage cannot be calculated accurately. A zero amount does not imply free usage.</p>
-          <div id="price-src" class="price-src">
-          </div>
-        </details>
-        <section class="block" id="token-block">
+
+      <section class="zone" id="now-zone" aria-label="Now" data-l10n-aria-label="此刻">
+        <h2 class="zone-head"><span class="live-dot" aria-hidden="true"></span><span data-l10n="此刻">Now</span></h2>
+        <section class="block" id="quota-block" hidden>
           <div class="block-title">
-            <span data-l10n="缓存与 Token">Cache & tokens</span>
-            <span id="token-detail-title" class="scope-note">
-            </span>
+            <span data-l10n="Codex 额度">Codex quota</span>
+            <span class="meta" id="quota-meta"></span>
           </div>
-          <div id="cache-stats" class="cache-grid">
-            <div>
-              <div class="stat-label" data-l10n="缓存率 · 读取占输入">Cache reads / Input</div>
-              <div class="stat-value" id="cache-hit-rate">—</div>
-              <div class="stat-foot" id="cache-change">
+          <div class="quota-grid" id="quota-rows">
+          </div>
+        </section>
+        <section class="block" id="sessions-block">
+          <div class="block-title">
+            <span data-l10n="任务">Tasks</span>
+            <span class="meta" id="sess-count"></span>
+          </div>
+          <div id="sess-list">
+          </div>
+          <details class="recent" id="recent-block" hidden>
+            <summary><span id="recent-sum"></span><span class="chev" aria-hidden="true">⌄</span></summary>
+            <ul id="recent-list">
+            </ul>
+          </details>
+        </section>
+      </section>
+
+      <div class="filterbar" id="filterbar">
+        <div class="seg" role="group" aria-label="Date range" data-l10n-aria-label="统计周期">
+          <button type="button" data-range="today" aria-pressed="false" data-l10n="今日">Today</button>
+          <button type="button" data-range="7d" aria-pressed="true" data-l10n="7 天">7 days</button>
+          <button type="button" data-range="30d" aria-pressed="false" data-l10n="30 天">30 days</button>
+          <button type="button" data-range="90d" aria-pressed="false" data-l10n="90 天">90 days</button>
+        </div>
+        <div class="seg" id="source-tabs" role="group" aria-label="Filter tools" data-l10n-aria-label="筛选工具">
+        </div>
+        <div class="chips" id="chips">
+        </div>
+      </div>
+
+      <section class="zone" id="stats-zone" aria-label="Usage" data-l10n-aria-label="统计">
+        <div class="zone-head">
+          <h2 data-l10n="统计">Usage</h2>
+          <span class="meta" id="usage-period"></span>
+          <button type="button" class="linkbtn" id="info-btn" aria-expanded="false" aria-controls="info-pop" data-l10n="ⓘ 口径">ⓘ Definitions</button>
+        </div>
+        <div class="pop" id="info-pop" hidden>
+          <h3 data-l10n="统计口径">How usage is counted</h3>
+          <ul>
+            <li data-l10n="Token＝输入＋输出；输入包含缓存读取和写入，推理计入输出。">Tokens = input + output. Input includes cache reads and writes; reasoning is part of output.</li>
+            <li data-l10n="缓存命中＝缓存读取 ÷ 输入，按 Token 加权计算。">Cache hit = cache reads ÷ input, weighted by tokens.</li>
+            <li data-l10n="请求按各工具的计量记录汇总，部分后台请求只计 Token。">Requests follow each tool's metering records; some background requests count tokens only.</li>
+            <li data-l10n="费用按价目表估算，不等于订阅账单；没有价格的模型显示“—”。">Cost is estimated from price lists and is not a subscription bill. Models without a price show “—”.</li>
+            <li data-l10n="对比按完整日计算，不含今天，每天对应上一周期的同一天。">Comparisons use complete days, leave today out, and match each day with the same day of the previous period.</li>
+            <li data-l10n="明细保留 95 天，累计不受此限。所有数据只在本机统计。">Daily details are kept for 95 days; lifetime totals are not. All data stays on this computer.</li>
+          </ul>
+          <p id="price-src" class="price-src"></p>
+        </div>
+        <p id="usage-warning" class="warn-line" hidden></p>
+        <div class="kpis" id="kpis">
+        </div>
+        <section class="block" id="trend-block">
+          <div class="block-title">
+            <span data-l10n="按天">Daily</span>
+            <div class="view-controls">
+              <div class="seg small" role="group" aria-label="Group by" data-l10n-aria-label="分组方式">
+                <button type="button" data-group="source" aria-pressed="true" data-l10n="按工具">By tool</button>
+                <button type="button" data-group="model" aria-pressed="false" data-l10n="按模型">By model</button>
+              </div>
+              <div class="seg small" role="group" aria-label="Metric" data-l10n-aria-label="指标">
+                <button type="button" data-metric="tokens" aria-pressed="true">Token</button>
+                <button type="button" data-metric="cost" aria-pressed="false" data-l10n="费用">Cost</button>
               </div>
             </div>
-            <div>
-              <div class="stat-label" data-l10n="缓存读取">Cache reads</div>
-              <div class="stat-value" id="cache-tokens">—</div>
-              <div class="stat-foot">Token</div>
-            </div>
-            <div>
-              <div class="stat-label" data-l10n="缓存写入">Cache writes</div>
-              <div class="stat-value" id="cache-write">—</div>
-              <div class="stat-foot">Token</div>
-            </div>
           </div>
-          <div class="rows" id="token-rows">
+          <div class="legend" id="legend">
           </div>
-          <details class="inline-details" id="cache-write-breakdown" hidden>
-            <summary data-l10n="缓存写入明细">Cache-write details</summary>
-            <div id="cache-write-rows">
-            </div>
-          </details>
-          <details class="inline-details">
-            <summary data-l10n="统计口径">How usage is counted</summary>
-            <p class="scope-note" data-l10n="缓存率 = 缓存读取 ÷ 全部输入，按 Token 加权，并非请求命中率。输入已包含缓存读取与写入；推理为输出子集，不重复加总。计量记录按各工具原有规则汇总，部分后台请求仅计 Token、不计条数；不等同于用户消息或统一的对话轮次。缺少明细时不推算缓存率。缩写数值经四舍五入，悬停数值可查看精确值。">Cache rate is cache-read tokens divided by all input tokens, weighted by token count, not request count. Input includes cache reads and writes; reasoning is a subset of output. Records follow each tool's counting rules; some background requests count tokens without message records. Missing details do not imply zero. Hover rounded values for exact counts.</p>
-          </details>
+          <div id="chart">
+          </div>
+          <div class="hint" id="chart-hint" data-l10n="点柱子查看当天明细">Click a bar to see that day</div>
         </section>
-        <section class="block" id="distribution-block">
+        <section class="block" id="comp-block">
           <div class="block-title">
-            <span data-l10n="消耗分布">Usage distribution</span>
-            <div class="tabs" aria-label="Group by" data-l10n-aria-label="分组方式">
-              <button type="button" data-group="source" aria-pressed="true" data-l10n="按工具">By tool</button>
-              <button type="button" data-group="model" aria-pressed="false" data-l10n="按模型">By model</button>
-            </div>
+            <span data-l10n="Token 构成">Token mix</span>
+            <span class="meta" id="comp-meta"></span>
           </div>
-          <div class="distribution-controls">
-            <span class="scope-note" id="distribution-scope">
-            </span>
-            <div class="tabs" aria-label="Ranking metric" data-l10n-aria-label="排行指标">
-              <button type="button" data-metric="tokens" aria-pressed="true">Token</button>
-              <button type="button" data-metric="cost" aria-pressed="false" data-l10n="金额">Amount</button>
-            </div>
+          <div class="compbar" id="compbar">
           </div>
-          <table class="distribution-table">
+          <div class="complegend" id="complegend">
+          </div>
+        </section>
+        <section class="block" id="rank-block">
+          <div class="block-title">
+            <span id="rank-title"></span>
+            <span class="meta" id="rank-hint"></span>
+          </div>
+          <table class="rank-table">
             <thead>
               <tr>
-                <th id="distribution-name" data-l10n="工具 / 占比">Tool / Share</th>
+                <th id="rank-col"></th>
                 <th>Token</th>
-                <th data-l10n="金额 · USD">Amount · USD</th>
+                <th data-l10n="费用">Cost</th>
+                <th id="rank-rate-col" data-l10n="缓存命中">Cache hit</th>
+                <th data-l10n="均价 /M">Per 1M</th>
               </tr>
             </thead>
-            <tbody id="by-model">
+            <tbody id="rank-rows">
             </tbody>
           </table>
-          <button type="button" id="show-all-models" hidden data-l10n="展开全部">Show all</button>
+          <button type="button" id="show-all" class="linkbtn" hidden></button>
         </section>
       </section>
-      <section class="block" id="sessions-block">
-        <div class="block-title">
-          <span data-l10n="当前任务">Current tasks</span>
-          <span class="scope-note" data-l10n="实时 · 不随日期筛选">Live · Independent of date filter</span>
-        </div>
-        <div id="sess-list" class="rows">
-        </div>
-      </section>
-      <details class="block" id="ops-block">
-        <summary>
-          <span data-l10n="最近操作">Recent activity</span>
-          <span class="scope-note" data-l10n="实时 · 不随日期筛选">Live · Independent of date filter</span>
-        </summary>
-        <ul id="ops" class="ops">
-        </ul>
-      </details>
-      <section class="block" id="lifetime-block">
-        <div class="block-title">
-          <span data-l10n="历史累计">Lifetime usage</span>
-          <span class="scope-note" data-l10n="不随日期筛选">Independent of date filter</span>
-        </div>
-        <div class="lifetime-grid">
-          <div>
-            <span class="stat-label" data-l10n="累计 Token">Lifetime tokens</span>
-            <b id="lt-tokens">—</b>
-          </div>
-          <div>
-            <span class="stat-label" data-l10n="累计参考金额 · USD">Lifetime reference amount · USD</span>
-            <b id="lt-cost">—</b>
-          </div>
-          <div>
-            <span class="stat-label" data-l10n="累计计量记录">Lifetime metering records</span>
-            <b id="lt-msgs">—</b>
-          </div>
-        </div>
-        <p class="scope-note" id="lifetime-note" data-l10n="本机已记录的历史累计，可能超出活动图的保留窗口。">Locally recorded lifetime history may extend beyond the activity window.</p>
-      </section>
-      <footer id="updated-at" class="scope-note">
+      <footer id="lifetime">
       </footer>
     </div>
+    <div class="tip" id="tip" role="tooltip"></div>
     <script src="../shared/messages.js"></script>
     <script src="../shared/i18n.js">
     </script>

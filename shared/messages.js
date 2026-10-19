@@ -1816,16 +1816,6 @@
     "沒有儲存成功，請再試一次"
   ],
   [
-    "未计价 / 未记录",
-    "Unpriced / Unrecorded",
-    "未計價 / 未記錄"
-  ],
-  [
-    "缺少可用记录",
-    "No records available",
-    "缺少可用記錄"
-  ],
-  [
     "全部工具",
     "All tools",
     "全部工具"
@@ -1846,159 +1836,9 @@
     "用量資料尚未就緒，請等待下一次更新。"
   ],
   [
-    "<option value=\"all\">全部工具</option>",
-    "<option value=\"all\">All tools</option>",
-    "<option value=\"all\">全部工具</option>"
-  ],
-  [
-    "{0} · {1} · {2} · {3}/{4} 天有记录",
-    "{0} · {1} · {2} · {3}/{4} days recorded",
-    "{0} · {1} · {2} · {3}/{4} 天有記錄"
-  ],
-  [
-    "今日截至 ",
-    "Today through ",
-    "今日截至 "
-  ],
-  [
-    "完整自然日范围",
-    "Full calendar days",
-    "完整自然日范圍"
-  ],
-  [
-    "{0} 的数据源暂不可用；当前仅展示已采集记录。",
-    "{0} is temporarily unavailable; showing collected records only.",
-    "{0} 的資料源暫不可用；當前僅展示已采集記錄。"
-  ],
-  [
-    "台账已记录参考金额（USD），计价覆盖未知，不代表实际账单",
-    "Recorded reference amount (USD); pricing coverage is unknown. This is not a bill.",
-    "臺賬已記錄參考金額（USD），計價覆蓋未知，不代表實際帳單"
-  ],
-  [
-    "无记录，不代表零用量",
-    "No record; usage may be missing",
-    "無記錄，不代表零用量"
-  ],
-  [
-    "较前 {0} 天 {1}",
-    "Compared with the previous {0} days: {1}",
-    "較前 {0} 天 {1}"
-  ],
-  [
-    "今日尚未结束，暂不作环比",
-    "Today is incomplete; no comparison yet",
-    "今日尚未結束，暫不作環比"
-  ],
-  [
-    "同期记录不完整，暂不作环比",
-    "Incomplete comparison period; no comparison available",
-    "同期記錄不完整，暫不作環比"
-  ],
-  [
-    "没有可用金额记录",
-    "No amount recorded",
-    "沒有可用金額記錄"
-  ],
-  [
-    "已记录金额较前期 {0}",
-    "Recorded amount vs previous period: {0}",
-    "已記錄金額較前期 {0}"
-  ],
-  [
-    "零金额不代表免费",
-    "A zero amount does not mean free usage",
-    "零金額不代表免費"
-  ],
-  [
-    "仅已记录金额 · 覆盖率未知",
-    "Recorded amounts only · Coverage unknown",
-    "僅已記錄金額 · 覆蓋率未知"
-  ],
-  [
-    "暂无记录 · 计价覆盖未知",
-    "No records · Pricing coverage unknown",
-    "暫無記錄 · 計價覆蓋未知"
-  ],
-  [
-    "无已记录 Token 用量",
-    "No recorded token usage",
-    "無已記錄 Token 用量"
-  ],
-  [
-    "计价覆盖未知 · 金额可能不完整",
-    "Pricing coverage unknown · Amounts may be incomplete",
-    "計價覆蓋未知 · 金額可能不完整"
-  ],
-  [
-    "无记录",
-    "No record",
-    "無記錄"
-  ],
-  [
-    "输入明细不完整",
-    "Incomplete input details",
-    "輸入明細不完整"
-  ],
-  [
-    "无输入，比例不适用",
-    "No input; ratio does not apply",
-    "無輸入，比例不適用"
-  ],
-  [
-    "较前期持平",
-    "Unchanged from the previous period",
-    "較前期持平"
-  ],
-  [
-    "较前期 {0} {1} 个百分点",
-    "{0} {1} percentage points vs previous period",
-    "較前期 {0} {1} 個百分點"
-  ],
-  [
-    "缓存读取 ÷ 全部输入",
-    "Cache reads ÷ Total input",
-    "快取讀取 ÷ 全部輸入"
-  ],
-  [
-    "缺少可用明细",
-    "No details available",
-    "缺少可用明細"
-  ],
-  [
-    "输入 Token",
-    "Input tokens",
-    "輸入 Token"
-  ],
-  [
-    "含缓存读取与写入",
-    "Includes cache reads and writes",
-    "含快取讀取與寫入"
-  ],
-  [
-    "输出 Token",
-    "Output tokens",
-    "輸出 Token"
-  ],
-  [
     "普通输入",
     "Uncached input",
     "普通輸入"
-  ],
-  [
-    "其中：推理 Token",
-    "Of which: reasoning tokens",
-    "其中：推理 Token"
-  ],
-  [
-    "已记录部分，已计入输出",
-    "Recorded portion; already included in output",
-    "已記錄部分，已計入輸出"
-  ],
-  [
-    "未单独记录，不等同于零",
-    "Not recorded separately; may be missing",
-    "未單獨記錄，不等同于零"
   ],
   [
     "计量记录",
@@ -2006,39 +1846,9 @@
     "計量記錄"
   ],
   [
-    "<p class=\"scope-note token-note\">部分历史记录缺少输入/输出明细，已记录分项可能与总量不一致。</p>",
-    "<p class=\"scope-note token-note\">Some history lacks input/output details. Recorded components may not match the total.</p>",
-    "<p class=\"scope-note token-note\">部分歷史記錄缺少輸入/輸出明細，已記錄分項可能與總量不一致。</p>"
-  ],
-  [
-    "5 分钟缓存",
-    "5-minute cache",
-    "5 分鐘快取"
-  ],
-  [
-    "1 小时缓存",
-    "1-hour cache",
-    "1 小時快取"
-  ],
-  [
-    "未区分时长",
-    "Unspecified duration",
-    "未區分時長"
-  ],
-  [
     " 条",
     " records",
     " 條"
-  ],
-  [
-    "{0} · 本机已记录的历史累计，可能超出活动图保留窗口。金额计价覆盖未知。",
-    "{0} · Locally recorded lifetime history may exceed the activity window. Pricing coverage is unknown.",
-    "{0} · 本機已記錄的歷史累計，可能超出活動圖保留窗口。金額計價覆蓋未知。"
-  ],
-  [
-    "本机统计 · 系统本地时区 · 更新于 {0}",
-    "Local statistics · System time zone · Updated {0}",
-    "本機統計 · 系統本地時區 · 更新于 {0}"
   ],
   [
     "工具",
@@ -2051,34 +1861,9 @@
     "模型"
   ],
   [
-    " / 已记录金额占比",
-    " / Share of recorded amount",
-    " / 已記錄金額占比"
-  ],
-  [
-    " / Token 占比",
-    " / Share of tokens",
-    " / Token 占比"
-  ],
-  [
-    "<tr><td colspan=\"3\" class=\"empty\">所选范围没有用量记录</td></tr>",
-    "<tr><td colspan=\"3\" class=\"empty\">No usage records in this range</td></tr>",
-    "<tr><td colspan=\"3\" class=\"empty\">所選范圍沒有用量記錄</td></tr>"
-  ],
-  [
     "展开全部 {0} 项",
     "Show all {0} items",
     "展開全部 {0} 項"
-  ],
-  [
-    "{0} – {1} · 最近 90 天 · {2}",
-    "{0} – {1} · Last 90 days · {2}",
-    "{0} – {1} · 最近 90 天 · {2}"
-  ],
-  [
-    "<div class=\"activity-calendar\" style=\"--weeks:{0}\" aria-label=\"周一至周日排列的 Token 活动\">",
-    "<div class=\"activity-calendar\" style=\"--weeks:{0}\" aria-label=\"Token activity, Monday through Sunday\">",
-    "<div class=\"activity-calendar\" style=\"--weeks:{0}\" aria-label=\"周一至周日排列的 Token 活動\">"
   ],
   [
     "一",
@@ -2099,46 +1884,6 @@
     "日",
     "S",
     "日"
-  ],
-  [
-    "<span class=\"calendar-label\" style=\"grid-column:{0};grid-row:1\">{1}月</span>",
-    "<span class=\"calendar-label\" style=\"grid-column:{0};grid-row:1\">{1}</span>",
-    "<span class=\"calendar-label\" style=\"grid-column:{0};grid-row:1\">{1}月</span>"
-  ],
-  [
-    " · 今日未结束",
-    " · Today is incomplete",
-    " · 今日未結束"
-  ],
-  [
-    "<span>{0} 天有已记录消耗</span><span>少 {1} 多</span><span>统一色阶 · 斜纹为无记录</span>",
-    "<span>{0} days with recorded usage</span><span>Less {1} More</span><span>Shared scale · Hatched cells have no record</span>",
-    "<span>{0} 天有已記錄消耗</span><span>少 {1} 多</span><span>統一色階 · 斜紋為無記錄</span>"
-  ],
-  [
-    "周一开始 · 虚线 / 空心点：非完整周或有日期无记录",
-    "Weeks start Monday · Dashed lines / hollow dots: incomplete weeks or missing records",
-    "周一開始 · 虛線 / 空心點：非完整周或有日期無記錄"
-  ],
-  [
-    "仅累计此 90 天窗口内的已记录用量；空缺日期不补零",
-    "Recorded usage within this 90-day window only; missing days are not treated as zero",
-    "僅累計此 90 天窗口內的已記錄用量；空缺日期不補零"
-  ],
-  [
-    "每周已记录 Token",
-    "Recorded tokens per week",
-    "每周已記錄 Token"
-  ],
-  [
-    "窗口内已记录累计 Token",
-    "Recorded cumulative tokens in this window",
-    "窗口內已記錄累計 Token"
-  ],
-  [
-    " · 非完整周",
-    " · Incomplete week",
-    " · 非完整周"
   ],
   [
     "上下文 {0}%",
@@ -2194,16 +1939,6 @@
     "价目表: 内置价格（{0}）{1}",
     "Pricing: built-in ({0}){1}",
     "價目表: 內建價格（{0}）{1}"
-  ],
-  [
-    "此处为当前价目表状态，不代表历史用量的计价覆盖率。未匹配价格的用量不代表免费。",
-    "This describes the current price table, not pricing coverage of historical usage. Unmatched usage is not necessarily free.",
-    "此處為當前價目表狀態，不代表歷史用量的計價覆蓋率。未匹配價格的用量不代表免費。"
-  ],
-  [
-    "{0} 最近一次同步失败：{1}",
-    "{0} Last sync error: {1}",
-    "{0} 最近一次同步失敗：{1}"
   ],
   [
     "AgentPaw · 详情",
@@ -3806,39 +3541,9 @@
     "當前表情預覽"
   ],
   [
-    "用量详情",
-    "Usage details",
-    "用量詳情"
-  ],
-  [
-    "Token 活动",
-    "Token activity",
-    "Token 活動"
-  ],
-  [
     "每天",
     "Daily",
     "每天"
-  ],
-  [
-    "每周",
-    "Weekly",
-    "每周"
-  ],
-  [
-    "窗口累计",
-    "Window total",
-    "窗口累計"
-  ],
-  [
-    "查看当日明细 ↓",
-    "View this day ↓",
-    "查看當日明細 ↓"
-  ],
-  [
-    "用量明细",
-    "Usage breakdown",
-    "用量明細"
   ],
   [
     "返回周期统计",
@@ -3846,64 +3551,14 @@
     "返回周期統計"
   ],
   [
-    "已记录 Token",
-    "Recorded tokens",
-    "已記錄 Token"
-  ],
-  [
-    "参考金额 · USD · 非账单",
-    "Reference amount · USD · Not a bill",
-    "參考金額 · USD · 非帳單"
-  ],
-  [
-    "计价覆盖待确认",
-    "Pricing coverage unconfirmed",
-    "計價覆蓋待確認"
-  ],
-  [
-    "金额说明",
-    "About amounts",
-    "金額說明"
-  ],
-  [
-    "金额沿用本机台账，可能混合来源上报、匹配价格和近似估算，不代表订阅账单。旧台账未保存完整的逐笔计价状态，因此无法准确计算覆盖率；零金额用量不视为免费。",
-    "Amounts come from local ledgers and may combine reported values, matched prices and estimates. They are not subscription bills. Older records lack per-entry pricing status, so coverage cannot be calculated accurately. A zero amount does not imply free usage.",
-    "金額沿用本機臺賬，可能混合來源上報、匹配價格和近似估算，不代表訂閱帳單。舊臺賬未儲存完整的逐筆計價狀態，因此無法準確計算覆蓋率；零金額用量不視為免費。"
-  ],
-  [
-    "缓存与 Token",
-    "Cache & tokens",
-    "快取與 Token"
-  ],
-  [
-    "缓存率 · 读取占输入",
-    "Cache reads / Input",
-    "快取率 · 讀取占輸入"
-  ],
-  [
     "缓存写入",
     "Cache writes",
     "快取寫入"
   ],
   [
-    "缓存写入明细",
-    "Cache-write details",
-    "快取寫入明細"
-  ],
-  [
     "统计口径",
     "How usage is counted",
     "統計口徑"
-  ],
-  [
-    "缓存率 = 缓存读取 ÷ 全部输入，按 Token 加权，并非请求命中率。输入已包含缓存读取与写入；推理为输出子集，不重复加总。计量记录按各工具原有规则汇总，部分后台请求仅计 Token、不计条数；不等同于用户消息或统一的对话轮次。缺少明细时不推算缓存率。缩写数值经四舍五入，悬停数值可查看精确值。",
-    "Cache rate is cache-read tokens divided by all input tokens, weighted by token count, not request count. Input includes cache reads and writes; reasoning is a subset of output. Records follow each tool's counting rules; some background requests count tokens without message records. Missing details do not imply zero. Hover rounded values for exact counts.",
-    "快取率 = 快取讀取 ÷ 全部輸入，按 Token 加權，并非請求命中率。輸入已包含快取讀取與寫入；推理為輸出子集，不重復加總。計量記錄按各工具原有規則匯總，部分后臺請求僅計 Token、不計條數；不等同于用戶消息或統一的對話輪次。缺少明細時不推算快取率。縮寫數值經四舍五入，懸停數值可查看精確值。"
-  ],
-  [
-    "消耗分布",
-    "Usage distribution",
-    "消耗分布"
   ],
   [
     "按工具",
@@ -3921,16 +3576,6 @@
     "金額"
   ],
   [
-    "工具 / 占比",
-    "Tool / Share",
-    "工具 / 占比"
-  ],
-  [
-    "金额 · USD",
-    "Amount · USD",
-    "金額 · USD"
-  ],
-  [
     "展开全部",
     "Show all",
     "展開全部"
@@ -3941,44 +3586,9 @@
     "當前任務"
   ],
   [
-    "实时 · 不随日期筛选",
-    "Live · Independent of date filter",
-    "實時 · 不隨日期篩選"
-  ],
-  [
-    "最近操作",
-    "Recent activity",
-    "最近操作"
-  ],
-  [
-    "历史累计",
-    "Lifetime usage",
-    "歷史累計"
-  ],
-  [
-    "不随日期筛选",
-    "Independent of date filter",
-    "不隨日期篩選"
-  ],
-  [
     "累计 Token",
     "Lifetime tokens",
     "累計 Token"
-  ],
-  [
-    "累计参考金额 · USD",
-    "Lifetime reference amount · USD",
-    "累計參考金額 · USD"
-  ],
-  [
-    "累计计量记录",
-    "Lifetime metering records",
-    "累計計量記錄"
-  ],
-  [
-    "本机已记录的历史累计，可能超出活动图的保留窗口。",
-    "Locally recorded lifetime history may extend beyond the activity window.",
-    "本機已記錄的歷史累計，可能超出活動圖的保留窗口。"
   ],
   [
     "关闭（Esc）",
@@ -3991,31 +3601,6 @@
     "篩選工具"
   ],
   [
-    "活动视图",
-    "Activity view",
-    "活動視圖"
-  ],
-  [
-    "最近 90 天 Token 活动",
-    "Token activity over the last 90 days",
-    "最近 90 天 Token 活動"
-  ],
-  [
-    "上一个时段",
-    "Previous period",
-    "上一個時段"
-  ],
-  [
-    "下一个时段",
-    "Next period",
-    "下一個時段"
-  ],
-  [
-    "所选周期用量",
-    "Usage for the selected period",
-    "所選周期用量"
-  ],
-  [
     "统计周期",
     "Date range",
     "統計周期"
@@ -4024,11 +3609,6 @@
     "分组方式",
     "Group by",
     "分組方式"
-  ],
-  [
-    "排行指标",
-    "Ranking metric",
-    "排行指標"
   ],
   [
     "工作状态",
@@ -5059,5 +4639,345 @@
     "选择界面语言，立即生效",
     "Choose your interface language. Changes apply immediately.",
     "選擇介面語言，立即生效"
+  ],
+  [
+    "同步于 {0}",
+    "Synced {0}",
+    "同步於 {0}"
+  ],
+  [
+    "{0}后重置",
+    "Resets in {0}",
+    "{0}後重置"
+  ],
+  [
+    "剩余",
+    "left",
+    "剩餘"
+  ],
+  [
+    "{0} 个",
+    "{0}",
+    "{0} 個"
+  ],
+  [
+    "去处理",
+    "Open",
+    "去處理"
+  ],
+  [
+    "本轮已运行",
+    "Running this turn",
+    "本輪已執行"
+  ],
+  [
+    "{0}前",
+    "{0} ago",
+    "{0}前"
+  ],
+  [
+    "近 7 天：完成 {0}",
+    "Last 7 days: {0} done",
+    "近 7 天：完成 {0}"
+  ],
+  [
+    "失败 {0}",
+    "{0} failed",
+    "失敗 {0}"
+  ],
+  [
+    "需处理 {0}",
+    "{0} need you",
+    "需處理 {0}"
+  ],
+  [
+    "{0} 个任务等你处理",
+    "{0} waiting for you",
+    "{0} 個任務等你處理"
+  ],
+  [
+    "{0} 个进行中",
+    "{0} in progress",
+    "{0} 個進行中"
+  ],
+  [
+    "今天",
+    "Today",
+    "今天"
+  ],
+  [
+    "昨天",
+    "Yesterday",
+    "昨天"
+  ],
+  [
+    "模型明细缺失",
+    "Model details missing",
+    "模型明細缺失"
+  ],
+  [
+    "全部",
+    "All",
+    "全部"
+  ],
+  [
+    "近 90 天",
+    "Last 90 days",
+    "近 90 天"
+  ],
+  [
+    "截至 {0}",
+    "as of {0}",
+    "截至 {0}"
+  ],
+  [
+    "{0} 暂时读不到数据",
+    "{0} data is temporarily unavailable",
+    "{0} 暫時讀不到資料"
+  ],
+  [
+    "较前一日",
+    "vs prior day",
+    "較前一日"
+  ],
+  [
+    "较上期",
+    "vs prior",
+    "較上期"
+  ],
+  [
+    "按完整日比较：前 {0} 天对比上一周期同一位置",
+    "Compared by complete days: the first {0} days vs the same days of the previous period",
+    "按完整日比較：前 {0} 天對比上一週期同一位置"
+  ],
+  [
+    "持平",
+    "Flat",
+    "持平"
+  ],
+  [
+    "{0} 点",
+    "{0} pts",
+    "{0} 點"
+  ],
+  [
+    "日均 {0}",
+    "{0} per day",
+    "日均 {0}"
+  ],
+  [
+    "估算费用",
+    "Est. cost",
+    "估算費用"
+  ],
+  [
+    "均价 {0}/M",
+    "{0} per 1M",
+    "均價 {0}/M"
+  ],
+  [
+    "缓存命中",
+    "Cache hit",
+    "快取命中"
+  ],
+  [
+    "缓存读取 {0} ÷ 输入 {1}",
+    "Cache reads {0} ÷ input {1}",
+    "快取讀取 {0} ÷ 輸入 {1}"
+  ],
+  [
+    "读取 {0}",
+    "{0} read",
+    "讀取 {0}"
+  ],
+  [
+    "请求",
+    "Requests",
+    "請求"
+  ],
+  [
+    "每次约 {0}",
+    "~{0} each",
+    "每次約 {0}"
+  ],
+  [
+    "每日用量，方向键逐日查看，Enter 查看当天",
+    "Daily usage. Use arrow keys to move between days and Enter to open one",
+    "每日用量，方向鍵逐日檢視，Enter 檢視當天"
+  ],
+  [
+    "进行中",
+    "In progress",
+    "進行中"
+  ],
+  [
+    "没有记录",
+    "No records",
+    "沒有記錄"
+  ],
+  [
+    "点击查看这一天",
+    "Click to see this day",
+    "點擊檢視這一天"
+  ],
+  [
+    "含推理 {0}",
+    "incl. {0} reasoning",
+    "含推理 {0}"
+  ],
+  [
+    "未分项",
+    "Unsplit",
+    "未分項"
+  ],
+  [
+    "占全部 Token",
+    "Share of all tokens",
+    "佔全部 Token"
+  ],
+  [
+    "输入 {0} · 输出 {1}",
+    "Input {0} · Output {1}",
+    "輸入 {0} · 輸出 {1}"
+  ],
+  [
+    "按工具排行",
+    "By tool",
+    "按工具排行"
+  ],
+  [
+    "按模型排行",
+    "By model",
+    "按模型排行"
+  ],
+  [
+    "点一行只看该工具",
+    "Click a row to show only that tool",
+    "點一行只看該工具"
+  ],
+  [
+    "这段时间没有用量",
+    "No usage in this period",
+    "這段時間沒有用量"
+  ],
+  [
+    "价目表里没有对应价格",
+    "No price in the price list",
+    "價目表裡沒有對應價格"
+  ],
+  [
+    "累计",
+    "Lifetime",
+    "累計"
+  ],
+  [
+    "{0} 次请求",
+    "{0} requests",
+    "{0} 次請求"
+  ],
+  [
+    "更新于 {0}",
+    "Updated {0}",
+    "更新於 {0}"
+  ],
+  [
+    "此刻",
+    "Now",
+    "此刻"
+  ],
+  [
+    "Codex 额度",
+    "Codex quota",
+    "Codex 額度"
+  ],
+  [
+    "7 天",
+    "7 days",
+    "7 天"
+  ],
+  [
+    "30 天",
+    "30 days",
+    "30 天"
+  ],
+  [
+    "90 天",
+    "90 days",
+    "90 天"
+  ],
+  [
+    "统计",
+    "Usage",
+    "統計"
+  ],
+  [
+    "ⓘ 口径",
+    "ⓘ Definitions",
+    "ⓘ 口徑"
+  ],
+  [
+    "Token＝输入＋输出；输入包含缓存读取和写入，推理计入输出。",
+    "Tokens = input + output. Input includes cache reads and writes; reasoning is part of output.",
+    "Token＝輸入＋輸出；輸入包含快取讀取和寫入，推理計入輸出。"
+  ],
+  [
+    "缓存命中＝缓存读取 ÷ 输入，按 Token 加权计算。",
+    "Cache hit = cache reads ÷ input, weighted by tokens.",
+    "快取命中＝快取讀取 ÷ 輸入，按 Token 加權計算。"
+  ],
+  [
+    "请求按各工具的计量记录汇总，部分后台请求只计 Token。",
+    "Requests follow each tool's metering records; some background requests count tokens only.",
+    "請求按各工具的計量記錄彙總，部分背景請求只計 Token。"
+  ],
+  [
+    "费用按价目表估算，不等于订阅账单；没有价格的模型显示“—”。",
+    "Cost is estimated from price lists and is not a subscription bill. Models without a price show “—”.",
+    "費用按價目表估算，不等於訂閱帳單；沒有價格的模型顯示「—」。"
+  ],
+  [
+    "对比按完整日计算，不含今天，每天对应上一周期的同一天。",
+    "Comparisons use complete days, leave today out, and match each day with the same day of the previous period.",
+    "對比按完整日計算，不含今天，每天對應上一週期的同一天。"
+  ],
+  [
+    "明细保留 95 天，累计不受此限。所有数据只在本机统计。",
+    "Daily details are kept for 95 days; lifetime totals are not limited. All data stays on this computer.",
+    "明細保留 95 天，累計不受此限。所有資料只在本機統計。"
+  ],
+  [
+    "按天",
+    "Daily",
+    "按天"
+  ],
+  [
+    "指标",
+    "Metric",
+    "指標"
+  ],
+  [
+    "点柱子查看当天明细",
+    "Click a bar to see that day",
+    "點柱子檢視當天明細"
+  ],
+  [
+    "Token 构成",
+    "Token mix",
+    "Token 構成"
+  ],
+  [
+    "均价 /M",
+    "Per 1M",
+    "均價 /M"
+  ],
+  [
+    "失败",
+    "Failed",
+    "失敗"
+  ],
+  [
+    "需处理",
+    "Needs you",
+    "需處理"
   ]
 ];});

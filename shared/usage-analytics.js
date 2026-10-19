@@ -6,6 +6,10 @@
 })(typeof globalThis === 'object' ? globalThis : this, function () {
   'use strict';
   const fields = ['tokens', 'cost', 'messages', 'inputTotal', 'output', 'cacheRead', 'cacheWrite', 'cacheWrite5m', 'cacheWrite1h', 'cacheWriteUnspecified', 'reasoningOutput'];
+  // Every range ends on its last day (today unless a single day is selected).
+  const RANGE_DAYS = Object.freeze({ today: 1, day: 1, '7d': 7, '30d': 30, '90d': 90 });
+  // Provider ledgers retain this many calendar days (see metering DAILY_KEEP_DAYS).
+  const RETAINED_DAYS = 95;
   const num = value => Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : 0;
   function dayKey(value) {
     const d = value instanceof Date ? value : new Date(value);
@@ -32,30 +36,36 @@
     for (let day = start; day <= end && out.length < 366; day = offset(day, 1)) out.push(day);
     return out;
   }
+  function gather(scoped, keys) {
+    return sum(scoped.flatMap(source => keys.flatMap(key => source.daily[key] ? [source.daily[key]] : [])));
+  }
   function selection(data, state) {
     const today = dayKey(data.asOf);
-    const range = state.range || 'today';
-    const count = range === '30d' ? 30 : range === '7d' ? 7 : 1;
-    const end = range === 'day' ? state.day : range === 'today' ? today : offset(today, -1);
+    const range = RANGE_DAYS[state.range] ? state.range : 'today';
+    const count = RANGE_DAYS[range];
+    const end = range === 'day' && state.day ? state.day : today;
     const start = offset(end, 1 - count);
     const keys = daysBetween(start, end);
-    const previousKeys = daysBetween(offset(start, -count), offset(start, -1));
     const scoped = sources(data, state.source);
-    const gather = dates => scoped.flatMap(source => dates.flatMap(key => source.daily[key] ? [source.daily[key]] : []));
-    const current = sum(gather(keys)), previous = sum(gather(previousKeys));
-    const participants = scoped.filter(source => [...keys, ...previousKeys].some(key => source.daily[key]));
-    // No extrapolation for missing buckets, unavailable sources or a live day.
-    const comparable = end < today && participants.length > 0
-      && !scoped.some(source => source.unavailable)
-      && participants.every(source => [...keys, ...previousKeys].every(key => source.daily[key]));
+    // Compare complete days only: today is still running, so it is left out of
+    // both sides and every remaining day is matched with the same position of
+    // the previous period. A previous period outside retention is not compared.
+    const compareKeys = keys.filter(key => key !== today);
+    const previousKeys = compareKeys.map(key => offset(key, -count));
+    const compareCurrent = gather(scoped, compareKeys), previous = gather(scoped, previousKeys);
+    const comparable = compareKeys.length > 0
+      && previousKeys[0] >= offset(today, 1 - RETAINED_DAYS)
+      && compareCurrent.known && previous.known
+      && !scoped.some(source => source.unavailable);
     return {
-      start, end, keys, previousKeys, current, previous, comparable, today,
+      range, start, end, keys, today, current: gather(scoped, keys),
+      compareKeys, previousKeys, compareCurrent, previous, comparable,
       recordedDays: keys.filter(key => scoped.some(source => source.daily[key])).length,
-      bySource: scoped.map(source => ({ id: source.id, name: source.label, ...sum(keys.flatMap(key => source.daily[key] ? [source.daily[key]] : [])) })).filter(row => row.known),
-      byModel: modelsFor(scoped, keys),
+      bySource: scoped.map(source => ({ id: source.id, name: source.label, ...gather([source], keys) })).filter(row => row.known),
+      byModel: models(scoped, keys),
     };
   }
-  function modelsFor(scoped, keys) {
+  function models(scoped, keys) {
     const groups = new Map();
     function add(id, name, tokens, cost) {
       const row = groups.get(id) || { id, name, tokens: 0, cost: 0, known: true };
@@ -78,34 +88,20 @@
     }
     return [...groups.values()];
   }
-  function activity(data, source = 'all') {
-    const today = dayKey(data.asOf), scoped = sources(data, source);
-    return daysBetween(offset(today, -89), today).map(key => ({
-      key, ...sum(scoped.flatMap(row => row.daily[key] ? [row.daily[key]] : [])), live: key === today,
-    }));
-  }
-  function chartPoints(days, view) {
-    if (view === 'daily') return days;
-    if (view === 'cumulative') {
-      let total = 0;
-      return days.map(day => ({ ...day, value: total += day.tokens }));
-    }
-    const groups = new Map();
-    for (const day of days) {
-      const weekday = new Date(day.key + 'T12:00:00').getDay();
-      const key = offset(day.key, -((weekday + 6) % 7));
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key).push(day);
-    }
-    return [...groups.entries()].map(([key, week]) => ({
-      key, end: offset(key, 6), value: week.reduce((n, day) => n + day.tokens, 0),
-      known: week.some(day => day.known), partial: week.length !== 7 || week.some(day => day.live || !day.known),
+  // One bucket per day of the selection, split by source and by model, for the trend chart.
+  function daily(data, sel, source = 'all') {
+    const scoped = sources(data, source);
+    return sel.keys.map(key => ({
+      key, live: key === sel.today,
+      total: gather(scoped, [key]),
+      bySource: Object.fromEntries(scoped.filter(row => row.daily[key]).map(row => [row.id, row.daily[key]])),
+      byModel: Object.fromEntries(models(scoped, [key]).map(row => [row.id, row])),
     }));
   }
   function change(current, previous) {
-    if (!previous) return current ? '新增用量' : '无变化';
+    if (!(previous > 0)) return null;
     const pct = (current - previous) / previous * 100;
-    return Math.abs(pct) < .05 ? '持平' : `${pct > 0 ? '↑' : '↓'} ${Math.abs(pct).toFixed(1)}%`;
+    return Math.abs(pct) < .5 ? '持平' : `${pct > 0 ? '↑' : '↓'} ${Math.abs(pct) >= 10 ? Math.round(Math.abs(pct)) : Math.abs(pct).toFixed(1)}%`;
   }
-  return { num, dayKey, offset, sum, sources, selection, activity, chartPoints, change };
+  return { RANGE_DAYS, RETAINED_DAYS, num, dayKey, offset, sum, sources, selection, models, daily, change };
 });
