@@ -98,10 +98,60 @@
       byModel: Object.fromEntries(models(scoped, [key]).map(row => [row.id, row])),
     }));
   }
+  // 24 hourly buckets of one day, split by source (tokens and cost only).
+  function hourly(data, source, day) {
+    const rows = sources(data, source).filter(row => row.hourly && row.hourly[day]);
+    return {
+      known: rows.length > 0,
+      hours: Array.from({ length: 24 }, (_, hour) => ({
+        hour,
+        bySource: Object.fromEntries(rows.map(row => [row.id, { tokens: num(row.hourly[day].tokens[hour]), cost: num(row.hourly[day].cost[hour]) }])),
+      })),
+    };
+  }
+  // Today so far against yesterday up to the same minute (the current hour of
+  // yesterday is prorated, since only hourly buckets are kept).
+  function sameTime(data, source = 'all') {
+    const now = new Date(data.asOf), today = dayKey(now), yesterday = offset(today, -1);
+    const hour = now.getHours(), fraction = (now.getMinutes() * 60 + now.getSeconds()) / 3600;
+    const scoped = sources(data, source);
+    const part = (day, lastHourShare) => {
+      const out = { tokens: 0, cost: 0, known: false };
+      for (const row of scoped) {
+        const day24 = row.hourly && row.hourly[day];
+        if (!day24) continue;
+        out.known = true;
+        for (let h = 0; h <= hour; h++) {
+          const share = h === hour ? lastHourShare : 1;
+          out.tokens += num(day24.tokens[h]) * share;
+          out.cost += num(day24.cost[h]) * share;
+        }
+      }
+      return out;
+    };
+    const current = part(today, 1), previous = part(yesterday, fraction);
+    return { current, previous, comparable: current.known && previous.known && previous.tokens > 0 && !scoped.some(row => row.unavailable) };
+  }
+  // Weekday (Monday first) × hour token totals over the given days.
+  function weekHours(data, source, keys) {
+    const grid = Array.from({ length: 7 }, () => new Array(24).fill(0));
+    const days = new Array(7).fill(0);
+    let known = false;
+    const scoped = sources(data, source);
+    for (const key of keys) {
+      const rows = scoped.filter(row => row.hourly && row.hourly[key]);
+      if (!rows.length) continue;
+      known = true;
+      const weekday = (new Date(key + 'T12:00:00').getDay() + 6) % 7;
+      days[weekday]++;
+      for (const row of rows) for (let h = 0; h < 24; h++) grid[weekday][h] += num(row.hourly[key].tokens[h]);
+    }
+    return { grid, days, known };
+  }
   function change(current, previous) {
     if (!(previous > 0)) return null;
     const pct = (current - previous) / previous * 100;
     return Math.abs(pct) < .5 ? '持平' : `${pct > 0 ? '↑' : '↓'} ${Math.abs(pct) >= 10 ? Math.round(Math.abs(pct)) : Math.abs(pct).toFixed(1)}%`;
   }
-  return { RANGE_DAYS, RETAINED_DAYS, num, dayKey, offset, sum, sources, selection, models, daily, change };
+  return { RANGE_DAYS, RETAINED_DAYS, num, dayKey, offset, sum, sources, selection, models, daily, hourly, sameTime, weekHours, change };
 });

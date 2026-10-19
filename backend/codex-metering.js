@@ -19,7 +19,7 @@ const os = require('os');
 const path = require('path');
 const { createHash } = require('crypto');
 const { STATE_DIR } = require('./paths');
-const { num, dayKey, modelHistory } = require('./metering-common');
+const { num, dayKey, modelHistory, hourlyHistory } = require('./metering-common');
 const { createMeterQueue } = require('./meter-queue');
 
 const SESSIONS_DIR = path.join(os.homedir(), '.codex', 'sessions');
@@ -687,7 +687,8 @@ function createCodexMetering(options = {}) {
     return { live, count, ts, source, stale, estimate: true };
   }
 
-  return { start, stop, scan, rebuild, restoreLifetime, getStats, getQuotaHistory, priceInfo, _state: state, _processObject: processObject };
+  const getHourlyHistory = () => hourlyHistory(state.hourlyByDay, state.hourlyCostByDay);
+  return { start, stop, scan, rebuild, restoreLifetime, getStats, getHourlyHistory, getQuotaHistory, priceInfo, _state: state, _processObject: processObject };
 }
 
 module.exports = { createCodexMetering, normalizeUsage, deltaUsage, emptyUsage, priceFor, usageCost, parseTimestamp };

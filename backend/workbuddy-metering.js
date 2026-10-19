@@ -25,7 +25,7 @@ const fsp = fs.promises;
 const os = require('os');
 const path = require('path');
 const { STATE_DIR } = require('./paths');
-const { num, dayKey, modelHistory, parseTimestamp, mergeLifetime } = require('./metering-common');
+const { num, dayKey, modelHistory, hourlyHistory, parseTimestamp, mergeLifetime } = require('./metering-common');
 const { createMeterQueue } = require('./meter-queue');
 
 const PROJECTS_DIR = path.join(os.homedir(), '.workbuddy', 'projects');
@@ -486,7 +486,8 @@ function createWorkbuddyMetering(options = {}) {
     saveNow();
   }
 
-  return { start, stop, scan, rebuild, getStats, priceInfo, reloadPricing, _state: state, _processObject: processObject };
+  const getHourlyHistory = () => hourlyHistory(state.hourlyByDay, state.hourlyCostByDay);
+  return { start, stop, scan, rebuild, getStats, getHourlyHistory, priceInfo, reloadPricing, _state: state, _processObject: processObject };
 }
 
 module.exports = { createWorkbuddyMetering, normalizeUsage, usageCost };

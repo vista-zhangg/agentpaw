@@ -84,6 +84,26 @@ function renderQuota(quota) {
     fill.style.width = (remaining || 0) + '%';
     bar.append(fill);
     item.append(top, bar);
+    const forecast = quota.forecast && quota.forecast[row.key];
+    if (remaining !== null && forecast && forecast.status === 'ready') {
+      // Hatched: what the recent burn rate would still use before the reset.
+      const left = Math.max(0, Math.min(remaining, Number(forecast.remainingAtReset) || 0));
+      const projected = el('span', 'proj');
+      projected.style.left = left + '%';
+      projected.style.width = (remaining - left) + '%';
+      bar.append(projected);
+      const note = el('div', 'quota-note');
+      if (forecast.exhaustAt) {
+        note.classList.add('warn');
+        note.textContent = window.AgentPawI18n.text('按当前速度约 {0} 用完，比重置早 {1}', [clockText(forecast.exhaustAt), durationText(forecast.earlyMs)]);
+        if (item.dataset.level === 'normal') item.dataset.level = 'amber';
+      } else {
+        note.classList.add('ok');
+        note.textContent = window.AgentPawI18n.text('按当前速度够用，重置时约剩 {0}%', [Math.round(left)]);
+      }
+      note.title = window.AgentPawI18n.text('近期速度 {0}% / 小时', [forecast.ratePerHour.toFixed(1)]);
+      item.append(note);
+    }
     if (resetAt != null) {
       item.append(el('div', 'quota-at', new Date(resetAt).toLocaleString(window.AgentPawI18n.getLanguage(), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })));
     }

@@ -25,7 +25,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const { STATE_DIR } = require('./paths');
-const { num, dayKey, modelHistory, mergeLifetime } = require('./metering-common');
+const { num, dayKey, modelHistory, hourlyHistory, mergeLifetime } = require('./metering-common');
 const { createMeterQueue } = require('./meter-queue');
 
 const USAGE_FILE = path.join(STATE_DIR, 'opencode-usage.jsonl');
@@ -424,7 +424,8 @@ function createOpenCodeMetering(options = {}) {
     saveNow();
   }
 
-  return { start, stop, scan, rebuild, getStats, priceInfo, _state: state, _ingestLine: ingestLine };
+  const getHourlyHistory = () => hourlyHistory(state.hourlyByDay, state.hourlyCostByDay);
+  return { start, stop, scan, rebuild, getStats, getHourlyHistory, priceInfo, _state: state, _ingestLine: ingestLine };
 }
 
 module.exports = {

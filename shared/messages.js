@@ -4979,5 +4979,110 @@
     "需处理",
     "Needs you",
     "需處理"
+  ],
+  [
+    "按当前速度约 {0} 用完，比重置早 {1}",
+    "At this rate it runs out around {0}, {1} before the reset",
+    "按目前速度約 {0} 用完，比重置早 {1}"
+  ],
+  [
+    "按当前速度够用，重置时约剩 {0}%",
+    "Enough at this rate, about {0}% left at the reset",
+    "按目前速度夠用，重置時約剩 {0}%"
+  ],
+  [
+    "近期速度 {0}% / 小时",
+    "Recent rate {0}% / hour",
+    "近期速度 {0}% / 小時"
+  ],
+  [
+    "较昨日此时",
+    "vs this time yesterday",
+    "較昨日此時"
+  ],
+  [
+    "今日 0 点至现在，对比昨日同一时段",
+    "Today since midnight vs yesterday over the same hours",
+    "今日 0 點至現在，對比昨日同一時段"
+  ],
+  [
+    "{0}:00–{1}:00",
+    "{0}:00–{1}:00",
+    "{0}:00–{1}:00"
+  ],
+  [
+    "按小时",
+    "Hourly",
+    "按小時"
+  ],
+  [
+    "每小时用量，方向键逐小时查看",
+    "Hourly usage. Use arrow keys to move between hours",
+    "每小時用量，方向鍵逐小時檢視"
+  ],
+  [
+    "现在",
+    "Now",
+    "現在"
+  ],
+  [
+    "没有用量",
+    "No usage",
+    "沒有用量"
+  ],
+  [
+    "{0} 天平均",
+    "Average of {0} days",
+    "{0} 天平均"
+  ],
+  [
+    "最忙：{0}",
+    "Busiest: {0}",
+    "最忙：{0}"
+  ],
+  [
+    "夜间（22–6 点）占 {0}",
+    "Night (22–6) share: {0}",
+    "夜間（22–6 點）佔 {0}"
+  ],
+  [
+    "工作日日均是周末的 {0} 倍",
+    "Weekdays average {0}× weekends",
+    "工作日日均是週末的 {0} 倍"
+  ],
+  [
+    "{0} 天合计",
+    "{0}-day total",
+    "{0} 天合計"
+  ],
+  [
+    "少",
+    "Less",
+    "少"
+  ],
+  [
+    "多",
+    "More",
+    "多"
+  ],
+  [
+    "今日的 Token 和费用与昨日同一时刻比较。",
+    "Today's tokens and cost are compared with yesterday up to the same time.",
+    "今日的 Token 和費用與昨日同一時刻比較。"
+  ],
+  [
+    "额度预测按最近的消耗速度推算：5 小时窗口看近 1 小时，周窗口看近 24 小时。",
+    "Quota forecasts use the recent burn rate: the last hour for the 5-hour window and the last 24 hours for the weekly window.",
+    "額度預測按最近的消耗速度推算：5 小時視窗看近 1 小時，週視窗看近 24 小時。"
+  ],
+  [
+    "活跃时段",
+    "Active hours",
+    "活躍時段"
+  ],
+  [
+    "按星期和小时的 Token 分布",
+    "Tokens by weekday and hour",
+    "按星期和小時的 Token 分布"
   ]
 ];});

@@ -82,4 +82,23 @@ const unavailable = JSON.parse(JSON.stringify(data)); unavailable.sources[1].una
 assert(!A.selection(unavailable, { range: 'day', day: '2026-10-02', source: 'codex' }).comparable);
 const dst = spawnSync(process.execPath, ['-e', `const a=require('./shared/usage-analytics');const assert=require('assert');assert.equal(a.offset('2026-03-08',1),'2026-03-09');assert.equal(a.offset('2026-11-01',-1),'2026-10-31');`], { cwd: require('path').join(__dirname, '..'), env: { ...process.env, TZ: 'America/New_York' } });
 assert.equal(dst.status, 0, dst.stderr.toString());
-console.log('usage analytics: normalization, range/source scope, aligned comparison, daily buckets, missing/zero, model reconciliation, lifetime and DST passed');
+const flat = (v, upTo = 23) => Array.from({ length: 24 }, (_, h) => h <= upTo ? v : 0);
+const withHours = buildPanelUsage(meters, now, {
+  codex: { '2026-10-03': { tokens: flat(10, 14), cost: flat(.1, 14) }, '2026-10-02': { tokens: flat(20), cost: flat(.2) }, '2026-06-01': { tokens: flat(1) } },
+  claude: { '2026-10-03': { tokens: [5, 'x', -1], cost: [] } },
+});
+assert.deepStrictEqual(Object.keys(withHours.sources.find(s => s.id === 'codex').hourly), ['2026-10-03', '2026-10-02'], 'hourly projection keeps the retained window only');
+assert.deepStrictEqual(withHours.sources.find(s => s.id === 'claude').hourly['2026-10-03'].tokens.slice(0, 4), [5, 0, 0, 0], 'invalid hourly values become zero');
+const hours = A.hourly(withHours, 'all', '2026-10-03');
+assert(hours.known); assert.equal(hours.hours.length, 24);
+assert.equal(hours.hours[0].bySource.codex.tokens, 10); assert.equal(hours.hours[0].bySource.claude.tokens, 5);
+assert(!A.hourly(withHours, 'codex', '2026-09-01').known, 'a day without hourly buckets is unknown');
+const same = A.sameTime(withHours, 'codex');
+assert.equal(same.current.tokens, 150, 'today: hours 0-14');
+assert.equal(same.previous.tokens, 280, 'yesterday: hours 0-13 plus 0 minutes of 14:00');
+assert(same.comparable);
+assert(!A.sameTime(withHours, 'claude').comparable, 'no yesterday buckets, no comparison');
+const weekGrid = A.weekHours(withHours, 'codex', ['2026-10-02', '2026-10-03']);
+assert(weekGrid.known); assert.deepStrictEqual(weekGrid.days, [0, 0, 0, 0, 1, 1, 0], 'Friday and Saturday, Monday first');
+assert.equal(weekGrid.grid[4][23], 20); assert.equal(weekGrid.grid[5][14], 10);
+console.log('usage analytics: normalization, range/source scope, aligned comparison, daily buckets, missing/zero, model reconciliation, lifetime, hourly buckets, same-time comparison and DST passed');

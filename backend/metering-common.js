@@ -89,10 +89,21 @@ function mergeLifetime(previous, current) {
   return out;
 }
 
+// Detached 24-hour token/cost arrays per day for the detail panel. Only the
+// panel reads this, so it is not part of the frequent getStats() payload.
+function hourlyHistory(tokensByDay = {}, costByDay = {}) {
+  const hours = values => Array.from({ length: 24 }, (_, hour) => num(Array.isArray(values) ? values[hour] : 0));
+  const days = new Set([...Object.keys(tokensByDay || {}), ...Object.keys(costByDay || {})]);
+  return Object.fromEntries([...days].map(day => [day, {
+    tokens: hours(tokensByDay && tokensByDay[day]), cost: hours(costByDay && costByDay[day]),
+  }]));
+}
+
 module.exports = {
   num,
   dayKey,
   modelHistory,
+  hourlyHistory,
   parseTimestamp,
   MONOTONIC_USAGE_FIELDS,
   usageHasLoss,

@@ -72,7 +72,9 @@
             <li data-l10n="缓存命中＝缓存读取 ÷ 输入，按 Token 加权计算。">Cache hit = cache reads ÷ input, weighted by tokens.</li>
             <li data-l10n="请求按各工具的计量记录汇总，部分后台请求只计 Token。">Requests follow each tool's metering records; some background requests count tokens only.</li>
             <li data-l10n="费用按价目表估算，不等于订阅账单；没有价格的模型显示“—”。">Cost is estimated from price lists and is not a subscription bill. Models without a price show “—”.</li>
+            <li data-l10n="今日的 Token 和费用与昨日同一时刻比较。">Today's tokens and cost are compared with yesterday up to the same time.</li>
             <li data-l10n="对比按完整日计算，不含今天，每天对应上一周期的同一天。">Comparisons use complete days, leave today out, and match each day with the same day of the previous period.</li>
+            <li data-l10n="额度预测按最近的消耗速度推算：5 小时窗口看近 1 小时，周窗口看近 24 小时。">Quota forecasts use the recent burn rate: the last hour for the 5-hour window and the last 24 hours for the weekly window.</li>
             <li data-l10n="明细保留 95 天，累计不受此限。所有数据只在本机统计。">Daily details are kept for 95 days; lifetime totals are not. All data stays on this computer.</li>
           </ul>
           <p id="price-src" class="price-src"></p>
@@ -82,13 +84,13 @@
         </div>
         <section class="block" id="trend-block">
           <div class="block-title">
-            <span data-l10n="按天">Daily</span>
-            <div class="view-controls">
-              <div class="seg small" role="group" aria-label="Group by" data-l10n-aria-label="分组方式">
+            <span id="trend-title"></span>
+            <div class="view-controls" id="trend-controls">
+              <div class="seg small" id="group-seg" role="group" aria-label="Group by" data-l10n-aria-label="分组方式">
                 <button type="button" data-group="source" aria-pressed="true" data-l10n="按工具">By tool</button>
                 <button type="button" data-group="model" aria-pressed="false" data-l10n="按模型">By model</button>
               </div>
-              <div class="seg small" role="group" aria-label="Metric" data-l10n-aria-label="指标">
+              <div class="seg small" id="metric-seg" role="group" aria-label="Metric" data-l10n-aria-label="指标">
                 <button type="button" data-metric="tokens" aria-pressed="true">Token</button>
                 <button type="button" data-metric="cost" aria-pressed="false" data-l10n="费用">Cost</button>
               </div>
@@ -98,7 +100,7 @@
           </div>
           <div id="chart">
           </div>
-          <div class="hint" id="chart-hint" data-l10n="点柱子查看当天明细">Click a bar to see that day</div>
+          <div class="hint" id="chart-hint"></div>
         </section>
         <section class="block" id="comp-block">
           <div class="block-title">
@@ -114,6 +116,7 @@
           <div class="block-title">
             <span id="rank-title"></span>
             <span class="meta" id="rank-hint"></span>
+            <div class="view-controls" id="rank-controls"></div>
           </div>
           <table class="rank-table">
             <thead>
@@ -129,6 +132,17 @@
             </tbody>
           </table>
           <button type="button" id="show-all" class="linkbtn" hidden></button>
+        </section>
+        <section class="block" id="punch-block" hidden>
+          <div class="block-title">
+            <span data-l10n="活跃时段">Active hours</span>
+            <span class="meta" id="punch-meta"></span>
+            <span class="ramp" id="punch-ramp"></span>
+          </div>
+          <div class="insights" id="punch-insights">
+          </div>
+          <div class="punch" id="punch" role="img" aria-label="Tokens by weekday and hour" data-l10n-aria-label="按星期和小时的 Token 分布">
+          </div>
         </section>
       </section>
       <footer id="lifetime">

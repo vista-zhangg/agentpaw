@@ -23,7 +23,22 @@ function panelRow(source, raw) {
   };
 }
 
-function buildPanelUsage(sourceRows, now = Date.now()) {
+function hourlyRows(days, cutoff, today) {
+  const out = Object.create(null);
+  for (const [key, row] of Object.entries(days || {})) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || key < cutoff || key > today || !row) continue;
+    const pick = values => Array.from({ length: 24 }, (_, hour) => {
+      const value = Number(Array.isArray(values) ? values[hour] : 0);
+      return Number.isFinite(value) && value > 0 ? value : 0;
+    });
+    out[key] = { tokens: pick(row.tokens), cost: pick(row.cost) };
+  }
+  return out;
+}
+
+// hourlyBySource: { [sourceId]: { [day]: { tokens: [24], cost: [24] } } }, read
+// only while the details window is open.
+function buildPanelUsage(sourceRows, now = Date.now(), hourlyBySource = {}) {
   const today = dayKey(now);
   const start = new Date(now);
   start.setHours(12, 0, 0, 0);
@@ -54,6 +69,7 @@ function buildPanelUsage(sourceRows, now = Date.now()) {
         id, label, available: !!meter,
         unavailable: !!meter?.diagnostics?.unavailable,
         daily, modelsByDay,
+        hourly: hourlyRows(hourlyBySource && hourlyBySource[id], cutoff, today),
         lifetime: meter ? panelRow(id, meter.lifetime || {}) : null,
       };
     }),

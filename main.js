@@ -46,6 +46,8 @@ const { createWeeklyQuotaEstimator } = require('./backend/codex-quota-estimate')
 const weeklyQuotaEstimator = createWeeklyQuotaEstimator({
   statePath: require('./backend/paths').statePath('codex-quota-calibration.json'),
 });
+const { createQuotaForecaster } = require('./backend/codex-quota-forecast');
+const quotaForecaster = createQuotaForecaster();
 const codexQuotaTray = require('./backend/codex-quota-tray');
 const { createWorkbuddyMetering } = require('./backend/workbuddy-metering');
 const { createOpenCodeMetering } = require('./backend/opencode-metering');
@@ -888,6 +890,7 @@ function buildStats(agent = 'all', snapshot = null, cachedMeter = null) {
       planType: codexQuotaState.account.planType || null,
     }
     : null;
+  const quotaHistory = codexMetering ? codexMetering.getQuotaHistory() : [];
   stats.codexQuota = {
     windows: quotaWindows,
     observedWindows: codexQuotaState.observedWindows || [],
@@ -895,9 +898,8 @@ function buildStats(agent = 'all', snapshot = null, cachedMeter = null) {
     statusText: quotaStatusLabel(codexQuotaState),
     updatedAt: codexQuotaState.updatedAt,
     account: quotaAccount,
-    estimate: weeklyQuotaEstimator.observe({
-      quotaHistory: codexMetering ? codexMetering.getQuotaHistory() : [],
-    }, codexQuotaState),
+    estimate: weeklyQuotaEstimator.observe({ quotaHistory }, codexQuotaState),
+    forecast: quotaForecaster.observe(codexQuotaState, quotaHistory),
   };
   const decorated = taskCenter ? taskCenter.sync(stats, config.get().notifications) : stats;
   return privacy.protectStats(decorated, config.get().privacyMode === true);
@@ -926,8 +928,15 @@ function emitStats() {
   if (panelWin && !panelWin.isDestroyed()) sendPanel(IPC.PANEL_STATS, panelStats(lastStats, cachedMeter));
 }
 
+function meterHourly() {
+  return Object.fromEntries(withSourceValues(meterInstances()).map(({ id, value }) => [
+    id,
+    value && typeof value.getHourlyHistory === 'function' ? value.getHourlyHistory() : null,
+  ]));
+}
+
 function panelStats(stats, meters = meterStats()) {
-  return { ...stats, usage: buildPanelUsage(Object.entries(meters)) };
+  return { ...stats, usage: buildPanelUsage(Object.entries(meters), Date.now(), meterHourly()) };
 }
 
 function scheduleEmit() {

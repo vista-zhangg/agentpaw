@@ -3,7 +3,9 @@
 const { buildPanelUsage } = require('../backend/panel-stats');
 const A = require('../shared/usage-analytics');
 module.exports = function previewStats(now = Date.now()) {
-  const today = A.dayKey(now), meters = [];
+  const today = A.dayKey(now), meters = [], hourly = {};
+  const profile = [.02, .01, 0, 0, 0, 0, .01, .03, .12, .5, .85, .9, .55, .4, .8, .95, 1, .9, .6, .45, .55, .7, .6, .25];
+  const nowHour = new Date(now).getHours();
   for (const [index, id] of ['codex', 'claude', 'workbuddy'].entries()) {
     const daily = {}, byModelByDay = {}, lifetime = {};
     for (let offset = -81; offset <= 0; offset++) {
@@ -18,12 +20,16 @@ module.exports = function previewStats(now = Date.now()) {
       daily[key] = row;
       const model = id === 'codex' ? offset < -7 ? 'gpt-5.4' : 'gpt-5.5' : id === 'claude' ? 'claude-sonnet-4' : 'unknown-model';
       byModelByDay[key] = { [model]: { ...row } };
+      // Spread the day over working hours; today only up to the current hour.
+      const hours = profile.map((weight, hour) => offset === 0 && hour > nowHour ? 0 : weight * (1 + .3 * Math.sin(hour + offset + index)));
+      const weight = hours.reduce((a, b) => a + b, 0) || 1;
+      (hourly[id] ||= {})[key] = { tokens: hours.map(w => tokens * w / weight), cost: hours.map(w => row.cost * w / weight) };
       for (const [field, value] of Object.entries(row)) lifetime[field] = (lifetime[field] || 0) + value;
     }
     meters.push([id, { daily, byModelByDay, today: daily[today], byModel: byModelByDay[today], lifetime }]);
   }
   return {
-    usage: buildPanelUsage(meters, now),
+    usage: buildPanelUsage(meters, now, hourly),
     active: { project: '实现预览 · 测试数据', model: 'gpt-5.5' },
     sessions: [
       { agent: 'codex', state: 'working', project: 'AgentPaw', op: '检查统计口径', contextPercent: 68 },

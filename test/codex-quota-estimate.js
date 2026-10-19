@@ -82,3 +82,47 @@ assert.strictEqual(exhausted.observe(usage, state(100), now).estimatedTotalCost,
 assert.strictEqual(exhausted.observe(more, state(100, now + 1000), now + 1000).estimatedTotalCost, 42);
 assert.strictEqual(exhausted.observe(more, state(100, now + 2000), now + 2000).estimatedRemainingCost, 0);
 console.log('codex quota estimate checks passed');
+
+// Forecast: when each window runs out at the recent burn rate.
+const { createQuotaForecaster } = require('../backend/codex-quota-forecast');
+const H = 3600e3;
+const t0 = Date.parse('2026-10-19T12:00:00Z');
+const fiveReset = (t0 + 2 * H) / 1000, weekReset = (t0 + 80 * H) / 1000;
+const live = (fiveUsed, weekUsed, at) => ({ status: 'ready', updatedAt: at, windows: {
+  fiveHour: { windowId: 'codex:300', usedPercent: fiveUsed, resetsAt: fiveReset },
+  weekly: { windowId: 'codex:10080', usedPercent: weekUsed, resetsAt: weekReset },
+} });
+const forecaster = createQuotaForecaster();
+let f = forecaster.observe(live(40, 30, t0), [], t0);
+assert.strictEqual(f.fiveHour.status, 'collecting', 'one sample is not a rate');
+f = forecaster.observe(live(46, 30, t0 + 10 * 60e3), [], t0 + 10 * 60e3);
+assert.strictEqual(f.fiveHour.status, 'collecting', 'too short a span is not a rate');
+f = forecaster.observe(live(52, 30, t0 + 30 * 60e3), [], t0 + 30 * 60e3);
+assert.strictEqual(f.fiveHour.status, 'ready');
+assert(Math.abs(f.fiveHour.ratePerHour - 24) < 1e-9, '12 points in 30 minutes');
+// 48% left at 24%/h = 2h; reset is 1.5h away, so it is enough.
+assert.strictEqual(f.fiveHour.exhaustAt, null);
+assert(Math.abs(f.fiveHour.remainingAtReset - 12) < 1e-9);
+f = forecaster.observe(live(70, 30, t0 + 60 * 60e3), [], t0 + 60 * 60e3);
+// 30 points in the last hour; 30% left lasts 1h, reset is 1h away: boundary is enough.
+assert.strictEqual(f.fiveHour.exhaustAt, null);
+f = forecaster.observe(live(80, 30, t0 + 70 * 60e3), [], t0 + 70 * 60e3);
+// last hour: 46 -> 80 = 34 points in 60 min; 20% left runs out in ~35 min, reset in 50 min.
+assert(f.fiveHour.exhaustAt > t0 + 70 * 60e3 && f.fiveHour.exhaustAt < fiveReset * 1000, 'runs out before reset');
+assert(f.fiveHour.earlyMs > 0 && f.fiveHour.remainingAtReset === 0);
+assert.strictEqual(f.weekly.status, 'collecting', 'flat live weekly needs a longer span');
+// Weekly samples come from transcript history; other limit buckets are ignored.
+const history = [
+  { at: t0 - 6 * H, usedPercent: 20, resetsAt: weekReset, limitId: 'codex' },
+  { at: t0 - 3 * H, usedPercent: 26, resetsAt: weekReset, limitId: 'codex' },
+  { at: t0 - 3 * H, usedPercent: 90, resetsAt: weekReset, limitId: 'spark' },
+  { at: t0 - 2 * H, usedPercent: 5, resetsAt: weekReset - 7 * 24 * 3600, limitId: 'codex' },
+];
+const weekly = createQuotaForecaster().observe(live(10, 32, t0), history, t0).weekly;
+assert.strictEqual(weekly.status, 'ready');
+assert(Math.abs(weekly.ratePerHour - 2) < 1e-9, '12 points over 6 hours from the same cycle only');
+assert(Math.abs(weekly.exhaustAt - (t0 + 34 * H)) < 1000, '68% left at 2%/h runs out in 34h, before the 80h reset');
+assert(Math.abs(weekly.earlyMs - 46 * H) < 1000);
+assert.deepStrictEqual(createQuotaForecaster().observe({ status: 'error', windows: {} }, history, t0), {}, 'no live window, no forecast');
+console.log('codex quota forecast checks passed');
+

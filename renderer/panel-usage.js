@@ -118,6 +118,7 @@ function renderUsage(s) {
   renderTrend();
   renderComposition();
   renderRanking();
+  renderPunch();
   renderLifetime();
 }
 
@@ -194,9 +195,13 @@ function sparkline(values) {
 
 function renderKpis() {
   const sel = usageSelection, row = sel.current, a = sel.compareCurrent, b = sel.previous;
-  const vs = usageState.range === 'day' ? tx('较前一日') : tx('较上期');
-  const compareTitle = usageState.range === 'day' ? '' : tx('按完整日比较：前 {0} 天对比上一周期同一位置', [sel.compareKeys.length]);
+  const live = sel.keys.length === 1 && sel.end === sel.today;
+  const same = live ? Usage.sameTime(usageData, usageState.source) : null;
+  const vs = live ? tx('较昨日此时') : usageState.range === 'day' ? tx('较前一日') : tx('较上期');
+  const compareTitle = live ? tx('今日 0 点至现在，对比昨日同一时段')
+    : usageState.range === 'day' ? '' : tx('按完整日比较：前 {0} 天对比上一周期同一位置', [sel.compareKeys.length]);
   const delta = (current, previous) => sel.comparable ? Usage.change(current, previous) : null;
+  const liveDelta = key => same && same.comparable ? Usage.change(same.current[key], same.previous[key]) : null;
   const rateDelta = sel.comparable && a.cacheRate != null && b.cacheRate != null
     ? (Math.abs(a.cacheRate - b.cacheRate) < .1 ? tx('持平') : `${a.cacheRate > b.cacheRate ? '↑' : '↓'} ${tx('{0} 点', [Math.abs(a.cacheRate - b.cacheRate).toFixed(1)])}`)
     : null;
@@ -205,9 +210,9 @@ function renderKpis() {
   const days = Math.max(1, sel.keys.length);
   const items = [
     { label: 'Token', value: row.known ? fmt(row.tokens) : '—', exact: row.known ? exactNumber(row.tokens) + ' Token' : null,
-      delta: delta(a.tokens, b.tokens), fallback: days > 1 && row.known ? tx('日均 {0}', [fmt(row.tokens / days)]) : '', spark: series(r => r.tokens) },
+      delta: live ? liveDelta('tokens') : delta(a.tokens, b.tokens), fallback: days > 1 && row.known ? tx('日均 {0}', [fmt(row.tokens / days)]) : '', spark: series(r => r.tokens) },
     { label: tx('估算费用'), value: row.known ? usd(row.cost) : '—', exact: row.known ? '$' + row.cost.toFixed(4) : null,
-      delta: delta(a.cost, b.cost), fallback: row.cost > 0 ? tx('均价 {0}/M', [usd(row.cost / row.tokens * 1e6)]) : '', spark: series(r => r.cost) },
+      delta: live ? liveDelta('cost') : delta(a.cost, b.cost), fallback: row.cost > 0 ? tx('均价 {0}/M', [usd(row.cost / row.tokens * 1e6)]) : '', spark: series(r => r.cost) },
     { label: tx('缓存命中'), value: row.cacheRate == null ? '—' : row.cacheRate.toFixed(1) + '%',
       exact: row.cacheRate == null ? null : tx('缓存读取 {0} ÷ 输入 {1}', [fmt(row.cacheRead), fmt(row.inputTotal)]),
       delta: rateDelta, fallback: row.cacheRead > 0 ? tx('读取 {0}', [fmt(row.cacheRead)]) : '', spark: series(r => r.cacheRate) },
@@ -255,16 +260,49 @@ function niceMax(v) {
 }
 function metricText(value) { return usageState.metric === 'cost' ? usd(value) : fmt(value); }
 
+function placeControls(trendShown, hourlyChart) {
+  const trend = $('trend-controls'), rank = $('rank-controls');
+  // Hourly buckets only exist per tool, so the tool/model switch then drives the ranking alone.
+  const groupHost = trendShown && !hourlyChart ? trend : rank;
+  const metricHost = trendShown ? trend : rank;
+  if ($('group-seg').parentElement !== groupHost) groupHost.prepend($('group-seg'));
+  if ($('metric-seg').parentElement !== metricHost) metricHost.append($('metric-seg'));
+}
+
+// Builds the buckets the chart draws: one per day, or one per hour of a single day.
+function trendModel(sel) {
+  if (sel.keys.length > 1) {
+    const buckets = Usage.daily(usageData, sel, usageState.source).map(day => ({
+      key: day.key, live: day.live, known: day.total.known, bySource: day.bySource, byModel: day.byModel,
+      title: dayName(day.key), axis: day.key === sel.today ? tx('今天') : sel.keys.length <= 7 ? weekday(day.key) : shortDate(day.key),
+    }));
+    return { hourlyChart: false, buckets, series: chartSeries(sel) };
+  }
+  const day = sel.keys[0];
+  const hours = Usage.hourly(usageData, usageState.source, day);
+  if (!hours.known) return null;
+  const nowHour = day === sel.today ? new Date(usageData.asOf).getHours() : 24;
+  const buckets = hours.hours.map(row => ({
+    key: day + '#' + row.hour, live: row.hour === nowHour, known: row.hour <= nowHour, future: row.hour > nowHour, bySource: row.bySource,
+    title: `${dayName(day)} ${tx('{0}:00–{1}:00', [String(row.hour).padStart(2, '0'), String(row.hour + 1).padStart(2, '0')])}`,
+    axis: String(row.hour).padStart(2, '0') + ':00',
+  }));
+  const present = new Set(hours.hours.flatMap(row => Object.keys(row.bySource)));
+  const series = orderedSources(usageData.sources.filter(source => present.has(source.id)))
+    .map(source => ({ id: source.id, name: source.label, color: sourceColor(source.id), value: (b, m) => Number(b.bySource[source.id]?.[m]) || 0 }));
+  return { hourlyChart: true, buckets, series, nowHour };
+}
+
 function renderTrend() {
   const sel = usageSelection;
-  const block = $('trend-block'), controls = document.querySelector('.view-controls');
-  const multi = sel.keys.length > 1;
-  block.hidden = !multi;
-  const host = multi ? block.querySelector('.block-title') : $('rank-block').querySelector('.block-title');
-  if (controls.parentElement !== host) host.append(controls);
-  if (!multi) { hideTip(); return; }
-  const buckets = Usage.daily(usageData, sel, usageState.source);
-  const series = chartSeries(sel);
+  const model = trendModel(sel);
+  $('trend-block').hidden = !model;
+  placeControls(!!model, !!model && model.hourlyChart);
+  if (!model) { hideTip(); return; }
+  const { buckets, series, hourlyChart } = model;
+  $('trend-title').textContent = hourlyChart ? tx('按小时') : tx('按天');
+  $('chart-hint').textContent = hourlyChart ? '' : tx('点柱子查看当天明细');
+  $('chart-hint').hidden = hourlyChart;
   const metric = usageState.metric;
   const box = $('chart');
   const W = Math.max(240, box.clientWidth), H = 176, L = 46, R = 4, T = 8, B = 24;
@@ -273,16 +311,17 @@ function renderTrend() {
   const max = niceMax(Math.max(...totals, metric === 'cost' ? .01 : 1));
   const pw = W - L - R, ph = H - T - B, slot = pw / n, gap = n > 40 ? 1 : n > 20 ? 2 : 4, bw = Math.max(1.5, slot - gap);
   const y = v => T + ph - v / max * ph;
-  let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" tabindex="0" role="img" aria-label="${escapeAttr(tx('每日用量，方向键逐日查看，Enter 查看当天'))}">`;
+  const label = hourlyChart ? tx('每小时用量，方向键逐小时查看') : tx('每日用量，方向键逐日查看，Enter 查看当天');
+  let svg = `<svg viewBox="0 0 ${W} ${H}" height="${H}" tabindex="0" role="img" aria-label="${escapeAttr(label)}">`;
   for (let i = 0; i <= 2; i++) {
     const v = max * i / 2;
     svg += `<line class="gridline" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${escapeAttr(metricText(v))}</text>`;
   }
-  const labels = n <= 7 ? buckets.map((_, i) => i) : [0, Math.round((n - 1) / 3), Math.round((n - 1) * 2 / 3), n - 1];
+  const labels = hourlyChart ? [0, 6, 12, 18, 23] : n <= 7 ? buckets.map((_, i) => i) : [0, Math.round((n - 1) / 3), Math.round((n - 1) * 2 / 3), n - 1];
   for (const i of labels) {
-    const key = buckets[i].key, anchor = n <= 7 ? 'middle' : i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle';
+    const anchor = n <= 7 ? 'middle' : i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle';
     const x = anchor === 'start' ? L + i * slot : anchor === 'end' ? L + (i + 1) * slot : L + i * slot + slot / 2;
-    svg += `<text x="${x}" y="${H - 6}" text-anchor="${anchor}">${escapeAttr(key === sel.today ? tx('今天') : n <= 7 ? weekday(key) : shortDate(key))}</text>`;
+    svg += `<text x="${x}" y="${H - 6}" text-anchor="${anchor}">${escapeAttr(buckets[i].axis)}</text>`;
   }
   svg += '<g class="bars">';
   buckets.forEach((bucket, i) => {
@@ -305,7 +344,13 @@ function renderTrend() {
     });
     svg += '</g>';
   });
-  svg += `</g><rect x="${L}" y="${T}" width="${pw}" height="${ph + B}" fill="transparent" style="cursor:pointer"/></svg>`;
+  svg += '</g>';
+  if (hourlyChart && model.nowHour < 24) {
+    const now = new Date(usageData.asOf);
+    const x = L + (model.nowHour + now.getMinutes() / 60) * slot;
+    svg += `<line class="nowline" x1="${x}" x2="${x}" y1="${T}" y2="${T + ph}"/><text x="${Math.min(x + 4, W - 30)}" y="${T + 12}">${escapeAttr(tx('现在'))}</text>`;
+  }
+  svg += `<rect x="${L}" y="${T}" width="${pw}" height="${ph + B}" fill="transparent" style="cursor:${hourlyChart ? 'default' : 'pointer'}"/></svg>`;
   box.innerHTML = svg;
   const chart = box.querySelector('svg'), bars = chart.querySelector('.bars');
   const indexAt = clientX => {
@@ -319,16 +364,16 @@ function renderTrend() {
     const rows = series.map(s => ({ name: s.name, color: s.color, v: s.value(bucket, metric) })).filter(r => r.v > 0)
       .sort((a, b) => b.v - a.v).map(r => ({ ...r, value: metricText(r.v) }));
     showTip(x, yPos, {
-      title: dayName(bucket.key) + (bucket.live ? ' · ' + tx('进行中') : ''),
-      value: bucket.total.known ? metricText(totals[i]) : tx('没有记录'),
+      title: bucket.title + (bucket.live ? ' · ' + tx('进行中') : ''),
+      value: bucket.future ? '—' : !bucket.known ? tx('没有记录') : totals[i] > 0 ? metricText(totals[i]) : tx('没有用量'),
       rows,
-      foot: bucket.total.known ? tx('点击查看这一天') : null,
+      foot: !hourlyChart && bucket.known ? tx('点击查看这一天') : null,
     });
   };
   const clear = () => { bars.classList.remove('dim'); hideTip(); };
   const drill = i => {
     const bucket = buckets[i];
-    if (!bucket || !bucket.total.known) return;
+    if (hourlyChart || !bucket || !bucket.known) return;
     hideTip();
     if (usageState.range !== 'day') previousRange = usageState.range;
     usageState.range = 'day';
@@ -362,6 +407,72 @@ function renderTrend() {
     legend.append(item);
   }
 }
+
+const RAMP = ['#cde2fb', '#86b6ef', '#3987e5', '#1c5cab', '#0d366b'];
+function renderPunch() {
+  const sel = usageSelection, block = $('punch-block');
+  const data = sel.keys.length > 1 ? Usage.weekHours(usageData, usageState.source, sel.keys) : null;
+  const values = data ? data.grid.flat().filter(v => v > 0).sort((a, b) => a - b) : [];
+  block.hidden = !data || !data.known || !values.length;
+  if (block.hidden) return;
+  const quantile = p => values[Math.min(values.length - 1, Math.floor(values.length * p))];
+  const thresholds = [quantile(.2), quantile(.4), quantile(.6), quantile(.8)];
+  const names = [tx('周一'), tx('周二'), tx('周三'), tx('周四'), tx('周五'), tx('周六'), tx('周日')];
+  const grid = $('punch');
+  grid.replaceChildren();
+  let best = { value: 0, day: 0, hour: 0 }, total = 0, night = 0;
+  for (let d = 0; d < 7; d++) {
+    const ylabel = el('span', 'ylabel', [tx('一'), '', tx('三'), '', tx('五'), '', tx('日')][d]);
+    ylabel.style.gridRow = d + 1;
+    ylabel.style.gridColumn = 1;
+    grid.append(ylabel);
+    for (let h = 0; h < 24; h++) {
+      const value = data.grid[d][h];
+      total += value;
+      if (h >= 22 || h < 6) night += value;
+      if (value > best.value) best = { value, day: d, hour: h };
+      const cell = el('div', 'cell');
+      cell.style.gridRow = d + 1;
+      cell.style.gridColumn = h + 2;
+      if (value > 0) cell.style.background = RAMP[thresholds.filter(t => value > t).length];
+      hoverTip(cell, () => ({
+        title: `${names[d]} ${tx('{0}:00–{1}:00', [String(h).padStart(2, '0'), String(h + 1).padStart(2, '0')])}`,
+        value: value > 0 ? fmt(value) + ' Token' : tx('没有用量'),
+        rows: data.days[d] > 1 && value > 0 ? [{ name: tx('{0} 天平均', [data.days[d]]), value: fmt(value / data.days[d]) }] : [],
+      }));
+      grid.append(cell);
+    }
+  }
+  for (const h of [0, 6, 12, 18, 23]) {
+    const xlabel = el('span', 'xlabel', String(h));
+    xlabel.style.gridRow = 8;
+    xlabel.style.gridColumn = h + 2;
+    grid.append(xlabel);
+  }
+  const insights = $('punch-insights');
+  insights.replaceChildren();
+  const add = (text, bold) => {
+    const [before, after] = text.split('{0}');
+    const chip = el('span', 'insight');
+    chip.append(document.createTextNode(before), el('b', '', bold), document.createTextNode(after || ''));
+    insights.append(chip);
+  };
+  add(tx('最忙：{0}'), `${names[best.day]} ${String(best.hour).padStart(2, '0')}:00`);
+  if (total > 0) add(tx('夜间（22–6 点）占 {0}'), Math.round(night / total * 100) + '%');
+  const weekdayDays = data.days.slice(0, 5).reduce((a, b) => a + b, 0), weekendDays = data.days[5] + data.days[6];
+  const weekdayTotal = data.grid.slice(0, 5).flat().reduce((a, b) => a + b, 0), weekendTotal = data.grid.slice(5).flat().reduce((a, b) => a + b, 0);
+  if (weekdayDays && weekendDays && weekendTotal > 0) add(tx('工作日日均是周末的 {0} 倍'), (weekdayTotal / weekdayDays / (weekendTotal / weekendDays)).toFixed(1));
+  $('punch-meta').textContent = tx('{0} 天合计', [sel.keys.length]);
+  const ramp = $('punch-ramp');
+  ramp.replaceChildren(document.createTextNode(tx('少')));
+  for (const color of RAMP) {
+    const swatch = el('i');
+    swatch.style.background = color;
+    ramp.append(swatch);
+  }
+  ramp.append(document.createTextNode(tx('多')));
+}
+
 function escapeAttr(value) { return String(value).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 function renderComposition() {

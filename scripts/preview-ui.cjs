@@ -48,7 +48,8 @@ const stats = { today, sessions, active: sessions[0], lifetime: { cost: 136.72, 
   hourlyTok: Array.from({length:24}, (_,i) => i<7 || i>21 ? 0 : 12000+(i*91317)%200000), hourly: Array.from({length:24}, (_,i) => i<7 || i>21 ? 0 : .12+(i*.371)%1.4), daily,
   lastOps: [{ icon:'◈', detail:'更新界面样式', project:'AgentPaw', ts:Date.now() },{ icon:'↗', detail:'检查交互行为', project:'AgentPaw', ts:Date.now()-13000 }],
   idleMs: 0, bg: {}, chipDisplay,
-  codexQuota: { status:'ready', updatedAt:Date.now(), windows:{ fiveHour:{ remainingPercent:76, usedPercent:24, resetsAt:Math.floor(Date.now()/1000)+6200 }, weekly:{ remainingPercent:92,usedPercent:8,resetsAt:Math.floor(Date.now()/1000)+320000 } } }
+  codexQuota: { status:'ready', updatedAt:Date.now(), windows:{ fiveHour:{ remainingPercent:76, usedPercent:24, resetsAt:Math.floor(Date.now()/1000)+6200 }, weekly:{ remainingPercent:92,usedPercent:8,resetsAt:Math.floor(Date.now()/1000)+320000 } },
+    forecast: { fiveHour: { status:'ready', ratePerHour:52, exhaustAt:Date.now()+5260e3, earlyMs:940e3, remainingAtReset:0 }, weekly: { status:'ready', ratePerHour:.4, exhaustAt:null, earlyMs:0, remainingAtReset:56 } } }
 };
 const noop = () => {};
 stats.usage = require('./panel-preview-data.cjs')().usage;
@@ -261,20 +262,32 @@ app.whenReady().then(async()=>{
     await checkReadable(panel);
     assert.equal(await js(`document.querySelectorAll('#sess-list .sess').length`),2,'live tasks are listed above the filters');
     assert.equal(await js(`document.getElementById('quota-block').hidden`),false,'Codex quota is shown on the first screen');
+    assert.equal(await js(`document.querySelectorAll('#quota-rows .quota-note.warn').length`),1,'a window that runs out before its reset is flagged');
     await js(`document.getElementById('filterbar').scrollIntoView({block:'start'})`);
     await capture(panel,'panel-stats');
     await js(`document.getElementById('rank-block').scrollIntoView({block:'center'})`);
     await capture(panel,'panel-ranking');
     const lifetimeText = await js(`document.getElementById('lifetime').textContent`);
-    for(const [range,bars] of [['today',0],['30d',30],['90d',90],['7d',7]]) {
+    for(const [range,bars] of [['today',24],['30d',30],['90d',90],['7d',7]]) {
       await js(`document.querySelector('[data-range="${range}"]').click()`);
-      assert.equal(await js(`document.getElementById('trend-block').hidden`),bars===0,'single days hide the daily chart: '+range);
-      if (bars) assert.equal(await js(`document.querySelectorAll('#chart g[data-i]').length`),bars,'one bar per day in '+range);
+      assert.equal(await js(`document.querySelectorAll('#chart g[data-i]').length`),bars,'one bar per bucket in '+range);
+      assert.equal(await js(`document.getElementById('punch-block').hidden`),range==='today','active hours cover multi-day ranges: '+range);
+      if (range==='today') {
+        assert.equal(await js(`document.querySelector('#kpis .kpi-foot b') !== null`),true,'today compares with yesterday at the same time');
+        assert.equal(await js(`document.getElementById('group-seg').parentElement.id`),'rank-controls','hourly buckets are per tool, so grouping moves to the ranking');
+        await js(`document.getElementById('trend-block').scrollIntoView({block:'center'})`);
+        await capture(panel,'panel-today');
+      }
+      if (range==='30d') {
+        assert.equal(await js(`document.querySelectorAll('#punch .cell').length`),168,'weekday x hour grid');
+        await js(`document.getElementById('punch-block').scrollIntoView({block:'center'})`);
+        await capture(panel,'panel-hours');
+      }
       assert.equal(await js(`document.getElementById('lifetime').textContent`),lifetimeText,'range filter never changes lifetime');
     }
     await js(`(() => { const svg = document.querySelector('#chart svg'); const r = svg.getBoundingClientRect(); svg.dispatchEvent(new MouseEvent('click', { clientX: r.left + r.width * .6, clientY: r.top + 60, bubbles: true })); })()`);
     assert.equal(await js(`document.querySelectorAll('#chips .chip').length`),1,'clicking a bar drills into that day');
-    assert.equal(await js(`document.getElementById('trend-block').hidden`),true,'a drilled day shows its totals');
+    assert.equal(await js(`document.querySelectorAll('#chart g[data-i]').length`),24,'a drilled day shows its hours');
     await js(`document.getElementById('filterbar').scrollIntoView({block:'start'})`);
     await capture(panel,'panel-drill');
     await js(`document.querySelector('#chips .chip button').click()`);
