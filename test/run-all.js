@@ -1,5 +1,7 @@
 'use strict';
 
+const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { spawnSync } = require('child_process');
 
@@ -59,18 +61,33 @@ const TESTS = Object.freeze([
   'workflow-main.js',
 ]);
 
+// Modules resolve ~/.agentpaw from os.homedir() at load time, so every suite
+// runs against a throwaway home and never touches the developer's real state.
+function isolatedEnv(home) {
+  return { ...process.env, USERPROFILE: home, HOME: home };
+}
+
 function runAll() {
-  for (const file of TESTS) {
-    const result = spawnSync(process.execPath, [path.join(__dirname, file)], {
-      cwd: path.join(__dirname, '..'),
-      stdio: 'inherit',
-    });
-    if (result.error) throw result.error;
-    if (result.status !== 0) process.exit(result.status || 1);
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'agentpaw-test-home-'));
+  try {
+    for (const file of TESTS) {
+      const result = spawnSync(process.execPath, [path.join(__dirname, file)], {
+        cwd: path.join(__dirname, '..'),
+        env: isolatedEnv(home),
+        stdio: 'inherit',
+      });
+      if (result.error) throw result.error;
+      if (result.status !== 0) {
+        process.exitCode = result.status || 1;
+        return;
+      }
+    }
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
   }
   console.log(`\nAgentPaw: ${TESTS.length} test suites passed`);
 }
 
 if (require.main === module) runAll();
 
-module.exports = { TESTS, runAll };
+module.exports = { TESTS, runAll, isolatedEnv };
