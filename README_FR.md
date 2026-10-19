@@ -12,13 +12,13 @@
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><strong>Télécharger pour Windows</strong></a> ·
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.10">Notes de version 1.9.10</a> ·
+    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.11">Notes de version 1.9.11</a> ·
     <a href="docs/介绍.md">Guide complet (chinois simplifié)</a>
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="Windows x64 uniquement">
-    <img src="https://img.shields.io/badge/version-1.9.10-F6A04A" alt="Version 1.9.10">
+    <img src="https://img.shields.io/badge/version-1.9.11-F6A04A" alt="Version 1.9.11">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="Licence MIT"></a>
   </p>
 </div>
@@ -47,7 +47,7 @@ Suivez la progression de Codex, ses quotas d'abonnement sur 5 heures et 7 jours,
 
 ## Installation et mises à jour
 
-Téléchargez `AgentPaw-1.9.10-Windows-x64.exe` depuis la [dernière version publiée](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest), exécutez l'installateur, puis lancez AgentPaw. Pour mettre à jour une installation existante, utilisez la mise à jour intégrée ou le nouvel installateur. Vos paramètres et vos données locales de consommation sont conservés.
+Téléchargez `AgentPaw-1.9.11-Windows-x64.exe` depuis la [dernière version publiée](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest), exécutez l'installateur, puis lancez AgentPaw. Pour mettre à jour une installation existante, utilisez la mise à jour intégrée ou le nouvel installateur. Vos paramètres et vos données locales de consommation sont conservés.
 
 La distribution propose un installateur EXE pour Windows x64. Le fichier `latest.yml` est destiné au système de mise à jour : vous n'avez pas besoin de le télécharger manuellement. Aucune archive ZIP portable n'est proposée. Le lancement depuis les sources et les commandes npm sont réservés au développement ; consultez le [guide de développement et de compilation](docs/LOCAL_DEPLOYMENT.md) en chinois simplifié.
 

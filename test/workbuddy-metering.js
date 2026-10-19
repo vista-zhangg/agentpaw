@@ -10,6 +10,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const os = require('os');
 const path = require('path');
+const check = require('assert/strict');
 
 const { createWorkbuddyMetering } = require('../backend/workbuddy-metering');
 
@@ -21,7 +22,7 @@ function assert(cond, msg) {
 async function main() {
   // 用「今天」构造时间戳，避免硬编码日期跨午夜后 today 桶错位。
   const _n = new Date();
-  const todayTs = (h) => `${_n.getFullYear()}-${String(_n.getMonth() + 1).padStart(2, '0')}-${String(_n.getDate()).padStart(2, '0')}T${String(h).padStart(2, '0')}:00:00.000Z`;
+  const todayTs = (h) => new Date(_n.getFullYear(), _n.getMonth(), _n.getDate(), h).toISOString();
   const historicalTs = Date.now() - 2 * 24 * 60 * 60 * 1000;
 
   const base = await fsp.mkdtemp(path.join(os.tmpdir(), 'wb-meter-test-'));
@@ -194,9 +195,104 @@ async function main() {
     'stream correction agrees across lifetime and hourly costs');
   corrections.stop();
   m.stop();
+  await testToolCallUsage(base);
   // cleanup
   await fsp.rm(base, { recursive: true, force: true });
   console.log('\nALL WORKBUDDY-METERING TESTS PASSED');
+}
+
+async function testToolCallUsage(base) {
+  const stateDir = path.join(base, 'tool-call-state');
+  const projectsDir = path.join(base, 'tool-call-projects');
+  const statePath = path.join(stateDir, 'workbuddy-usage.json');
+  const file = path.join(projectsDir, 'session.jsonl');
+  const ts = Date.now();
+  const toolCall = (id, input = 1000, output = 100) => ({
+    type: 'function_call', id: `row-${id}`, sessionId: 'session-1', timestamp: ts,
+    providerData: { model: 'gpt-4o', messageId: id,
+      usage: { inputTokens: input, outputTokens: output, totalTokens: input + output,
+        inputTokensDetails: [{ cached_tokens: 800 }], outputTokensDetails: [{ reasoning_tokens: 20 }] } },
+  });
+  const first = toolCall('request-1');
+  // A tool request can produce multiple function_call rows and an assistant
+  // output sharing providerData.messageId. They are one billable request.
+  const rows = [first, { ...first, id: 'parallel-tool-output' },
+    { ...first, id: 'text-output', type: 'message', role: 'assistant' },
+    toolCall('request-2'),
+    { ...toolCall('request-1'), sessionId: 'session-2' },
+    { ...first, type: 'function_call_result', providerData: { ...first.providerData, messageId: 'result' } },
+    { ...first, type: 'message', role: 'user', providerData: { ...first.providerData, messageId: 'user' } },
+    { type: 'function_call', id: 'no-usage', timestamp: ts },
+  ];
+  await fsp.mkdir(projectsDir, { recursive: true });
+  await fsp.mkdir(stateDir, { recursive: true });
+  await fsp.writeFile(file, rows.map(JSON.stringify).join('\n') + '\n');
+  const old = { schemaVersion: 7, files: { [file]: { offset: (await fsp.stat(file)).size, carry: '' } },
+    daily: {}, lifetime: { tokens: 2000, msgs: 2 } };
+  const saved = JSON.stringify(old);
+  await fsp.writeFile(statePath, saved);
+  const options = { projectsDir, stateDir,
+    pricingCachePath: path.join(base, 'pricing-cache.json'),
+    pricingOverridePath: path.join(base, 'absent-pricing.json') };
+  let meter = createWorkbuddyMetering(options);
+  try {
+    await meter.scan();
+    const stats = meter.getStats();
+    check.equal(stats.today.tokens, 3300, 'Issue #19: count function_call usage without an assistant role');
+    check.equal(stats.today.msgs, 3, 'dedupe parallel tool/text output within each session');
+    check.equal(stats.today.cachedInput, 2400);
+    check.equal(stats.today.reasoningOutput, 60);
+    check.equal(stats.today.input + stats.today.output, stats.today.tokens);
+    check.equal(stats.hourlyTok.reduce((sum, n) => sum + n, 0), 3300);
+    check.equal(stats.byModel['gpt-4o'].tokens, 3300);
+    check.equal(stats.lifetime.tokens, 3300);
+    check.equal(await fsp.readFile(`${statePath}.before-v8.bak`, 'utf8'), saved,
+      'automatic migration keeps an exact recovery copy');
+    await meter.scan();
+    check.equal(meter.getStats().today.tokens, 3300, 'repeat scan is idempotent');
+  } finally { meter.stop(); }
+
+  meter = createWorkbuddyMetering(options);
+  try {
+    await meter.scan();
+    check.equal(meter.getStats().today.tokens, 3300, 'restart preserves tool-call receipts');
+    await fsp.appendFile(file, JSON.stringify(toolCall('request-1', 1000, 120)) + '\n');
+    await meter.scan();
+    check.equal(meter.getStats().today.tokens, 3320, 'streamed tool-call update adds only its delta');
+    check.equal(meter.getStats().today.msgs, 3);
+    await meter.reloadPricing();
+    check.equal(meter.getStats().today.tokens, 3320, 'repricing does not count tool calls twice');
+    const text = { type: 'assistant', timestamp: ts,
+      message: { id: 'native-message', model: 'gpt-4o', usage: { input_tokens: 10, output_tokens: 5 } } };
+    meter._processObject({}, file, text);
+    meter._processObject({}, file, { ...text, timestamp: ts + 1 });
+    check.equal(meter.getStats().today.tokens, 3335, 'nested message.id dedupes native assistant rows');
+  } finally { meter.stop(); }
+
+  // A temporarily missing source must not erase the previous ledger or mark
+  // migration complete. Retry automatically once the transcripts return.
+  const offlineState = path.join(base, 'offline-state');
+  const offlineProjects = path.join(base, 'offline-projects');
+  const offlinePath = path.join(offlineState, 'workbuddy-usage.json');
+  await fsp.mkdir(offlineState);
+  const prior = JSON.stringify({ schemaVersion: 7, lifetime: { tokens: 9000, msgs: 9 },
+    daily: { [require('../backend/metering-common').dayKey(ts)]: { tokens: 1100, msgs: 1 } } });
+  await fsp.writeFile(offlinePath, prior);
+  meter = createWorkbuddyMetering({ ...options, projectsDir: offlineProjects, stateDir: offlineState });
+  try {
+    await meter.rebuild();
+    check.equal(meter.getStats().today.tokens, 1100);
+    check.equal(meter.getStats().lifetime.tokens, 9000);
+    meter.stop();
+    check.equal(await fsp.readFile(offlinePath, 'utf8'), prior, 'missing source leaves v7 ledger intact');
+    await fsp.mkdir(offlineProjects);
+    await fsp.writeFile(path.join(offlineProjects, 'returned.jsonl'), JSON.stringify(first) + '\n');
+    await meter.scan();
+    check.equal(meter.getStats().today.tokens, 1100, 'source recovery resumes migration');
+    check.equal(meter.getStats().lifetime.tokens, 9000, 'incomplete source preserves lifetime');
+  } finally { meter.stop(); }
+  check.equal(JSON.parse(await fsp.readFile(offlinePath, 'utf8')).schemaVersion, 8);
+  console.log('ok - Issue #19 tool-call usage, deduplication, restart and v7 migration');
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

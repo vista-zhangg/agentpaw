@@ -4,24 +4,21 @@
 //
 // WorkBuddy writes one JSONL transcript per session under
 //   ~/.workbuddy/projects/<encoded-cwd>/<session-id>.jsonl
-// Each assistant turn (role:"assistant" OR type:"assistant") carries its token
-// usage inside `providerData.usage` (OpenAI-style camelCase):
+// Model responses, including function_call rows without an assistant role,
+// carry token usage inside `providerData.usage` (OpenAI-style camelCase):
 //   { inputTokens, outputTokens, totalTokens,
 //     inputTokensDetails:  [{ cached_tokens }],
 //     outputTokensDetails: [{ reasoning_tokens }] }
 // The model id lives in `providerData.model` (e.g. "hy3"); a stable per-message
 // dedup key is `providerData.messageId`.
 //
-// Only SOME assistant lines carry usage (the text responses, not the tool_use
-// blocks), so we count exactly the lines that have `providerData.usage`.
+// Multiple output rows can share a model messageId. Count usage once per
+// message, including streamed corrections, regardless of the output row type.
 //
 // Pricing policy (per product decision): use the EXACT prices found in the
 // models.dev price source — if a model has a price there, use it; if not, do NOT
 // estimate, just report tokens (cost 0). The source cache carries explicitly
-// extracted maps (models / openaiModels / otherModels)，其中 otherModels 覆盖
-// 主流模型提供商（GLM/Kimi/DeepSeek/Qwen/豆包/MiniMax…），全部由社区维护价目
-// 每日自动同步，无需人工维护。
-// WorkBuddy's default model "hy3" has no public price, so its cost shows $0.
+// extracted maps (models / openaiModels / otherModels).
 
 const fs = require('fs');
 const fsp = fs.promises;
@@ -32,15 +29,10 @@ const { num, dayKey, modelHistory, parseTimestamp, mergeLifetime } = require('./
 const { createMeterQueue } = require('./meter-queue');
 
 const PROJECTS_DIR = path.join(os.homedir(), '.workbuddy', 'projects');
-const STATE_PATH = path.join(STATE_DIR, 'workbuddy-usage.json');
 const PRICING_CACHE_PATH = path.join(STATE_DIR, 'pricing-cache.json'); // models.dev sync cache
 const PRICING_OVERRIDE_PATH = path.join(STATE_DIR, 'workbuddy-pricing.json'); // user override
-// v5: 修正流式 assistant 消息的轮次统计。相同 messageId 的后续累计更新
-// 只补 token 增量，不应再次增加消息轮次，需要全量重扫一次。
-// v6: numeric Unix timestamps were previously passed to Date.parse(), which
-// failed and assigned every historical row to the scan day. Force one clean
-// rescan so already-persisted "today" buckets are repaired automatically.
-const SCHEMA_VERSION = 7; // Reprice streamed cache corrections from whole-message usage.
+// v8: rescan tool-call usage skipped by the former assistant-only filter.
+const SCHEMA_VERSION = 8;
 const DAILY_KEEP_DAYS = 95;
 const BACKFILL_MS = DAILY_KEEP_DAYS * 24 * 60 * 60 * 1000;
 
@@ -109,19 +101,6 @@ function loadPricing(pricingCachePath = PRICING_CACHE_PATH, pricingOverridePath 
   return out;
 }
 
-// exactOnly: return the exact price if the model is in the source, else null
-// (never fall back to a family/default estimate).
-// Module-level helper using the default (real user) paths — kept for external
-// callers; the factory below uses its own instance-scoped copy so injected
-// pricingCachePath/pricingOverridePath options actually take effect.
-let pricing = loadPricing();
-function priceFor(model) {
-  const models = pricing._models || {};
-  const norm = normModelName(model);
-  if (norm && models[norm]) return normalizePriceRow(models[norm]);
-  return null;
-}
-
 function usageCost(usage, price) {
   if (!price) return 0; // no source price → don't count cost
   const u = usage || emptyUsage();
@@ -142,10 +121,7 @@ function emptyUsage() {
 // details arrays) and message.usage (Anthropic shape: input_tokens /
 // cache_creation_input_tokens / cache_read_input_tokens). Handle both.
 //
-// 语义约定（v4 修正）：归一化后 input 一律为 OpenAI 语义——包含缓存读取与
-// 缓存写入部分；cachedInput 只表示缓存「读取」、cacheWrite 只表示缓存「写入」。
-// 此前 Anthropic 形状把 cache_creation 当 cachedInput 返回（写入价按读取价计），
-// 且 cacheWrite 虽统计却从未参与计费，两个 bug 一起修掉。
+// input includes cache reads/writes; cachedInput and cacheWrite are subsets.
 function normalizeUsage(raw) {
   const u = raw && typeof raw === 'object' ? raw : {};
   const isAnthropicShape = u.inputTokens == null && u.input_tokens != null;
@@ -202,8 +178,7 @@ function createWorkbuddyMetering(options = {}) {
     pricingOverridePath: options.pricingOverridePath || PRICING_OVERRIDE_PATH,
   };
 
-  // 实例级价表：必须用注入的 pricingPaths（此前 record() 走模块级 pricing，
-  // 导致 options.pricingCachePath 形同虚设——review 发现并已修正）。
+  // Keep pricing instance-scoped so isolated callers use their own paths.
   let instancePricing = loadPricing(pricingPaths.pricingCachePath, pricingPaths.pricingOverridePath);
   function priceForInstance(model, table = instancePricing) {
     const models = (table && table._models) || {};
@@ -223,7 +198,7 @@ function createWorkbuddyMetering(options = {}) {
     lifetime: emptyDay(),
     diagnostics: { lastScanTs: 0, scannedFiles: 0, events: 0 },
   };
-  let scanning = false;
+  let migrationPending = false;
   const operations = createMeterQueue();
   let dirty = false;
   let saveTimer = null;
@@ -236,7 +211,8 @@ function createWorkbuddyMetering(options = {}) {
     try {
       const raw = JSON.parse(fs.readFileSync(statePath, 'utf8'));
       if (raw && typeof raw === 'object') {
-        if (raw.schemaVersion !== SCHEMA_VERSION) return; // rescan from scratch
+        if (raw.schemaVersion !== SCHEMA_VERSION && raw.schemaVersion !== 7) return;
+        migrationPending = raw.schemaVersion === 7;
         state.files = raw.files && typeof raw.files === 'object' ? raw.files : {};
         state.messages = raw.messages && typeof raw.messages === 'object' ? raw.messages : {};
         state.daily = raw.daily && typeof raw.daily === 'object' ? raw.daily : {};
@@ -251,6 +227,8 @@ function createWorkbuddyMetering(options = {}) {
   }
 
   function saveNow() {
+    // Keep the previous ledger intact until its source can be rescanned.
+    if (migrationPending) return;
     dirty = false;
     try {
       fs.mkdirSync(stateDir, { recursive: true });
@@ -316,9 +294,8 @@ function createWorkbuddyMetering(options = {}) {
 
     const dayK = dayKey(ts);
     const day = (state.daily[dayK] = state.daily[dayK] || emptyDay());
-    // Streaming updates reuse the same messageId. They contribute token/cost
-    // deltas, but are still one assistant round rather than one round per
-    // partial update.
+    // Streaming updates and parallel tool/text outputs sharing a messageId
+    // contribute deltas to one model call.
     const messageDelta = prev ? 0 : 1;
     addUsage(day, delta, messageDelta);
     addUsage(state.lifetime, delta, messageDelta);
@@ -339,7 +316,7 @@ function createWorkbuddyMetering(options = {}) {
   }
 
   function processObject(fileState, file, o) {
-    if (!o || (o.role !== 'assistant' && o.type !== 'assistant')) return;
+    if (!o || (o.role !== 'assistant' && o.type !== 'assistant' && o.type !== 'function_call')) return;
     const pd = o.providerData && typeof o.providerData === 'object' ? o.providerData : {};
     // Prefer providerData.usage (richer: carries cached_tokens / reasoning_tokens
     // details); fall back to message.usage (Anthropic shape) only if absent.
@@ -348,7 +325,8 @@ function createWorkbuddyMetering(options = {}) {
     const normalized = normalizeUsage(usageRaw);
     if (normalized.tokens <= 0) return;
     const model = pd.model || (o.message && o.message.model) || o.model || 'unknown';
-    const messageId = pd.messageId || o.id || `${o.requestId || ''}:${o.timestamp || ''}`;
+    const id = pd.messageId || (o.message && o.message.id) || o.id || `${o.requestId || ''}:${o.timestamp || ''}`;
+    const messageId = JSON.stringify([o.sessionId || file, id]);
     const ts = parseTimestamp(o.timestamp);
     if (fileState.replaying && ts < Date.now() - BACKFILL_MS) return;
     record(ts, model, normalized, messageId);
@@ -390,19 +368,28 @@ function createWorkbuddyMetering(options = {}) {
 
   async function performScan() {
     load();
-    scanning = true;
     try {
       const files = (await listFiles()).sort();
+      let oldLifetime;
+      if (migrationPending) {
+        if (!files.length) return;
+        // Preserve a recovery copy, including days no longer in the source.
+        const backupPath = `${statePath}.before-v8.bak`;
+        try { fs.copyFileSync(statePath, backupPath, fs.constants.COPYFILE_EXCL); }
+        catch (error) { if (error.code !== 'EEXIST') throw error; }
+        oldLifetime = { ...state.lifetime };
+        resetHistory();
+        migrationPending = false;
+      }
       for (const file of files) {
         try { await scanFile(file); } catch {}
       }
+      if (oldLifetime) state.lifetime = mergeLifetime(oldLifetime, state.lifetime);
       state.diagnostics.lastScanTs = Date.now();
       state.diagnostics.scannedFiles = files.length;
       pruneDaily();
       scheduleSave();
     } catch {
-    } finally {
-      scanning = false;
     }
   }
 
@@ -431,8 +418,6 @@ function createWorkbuddyMetering(options = {}) {
     let live = false;
     let ts = 0;
     let source = 'builtin';
-    // 价目条数 = 内存价表的模型数（loadPricing 已合并缓存+override）。
-    // 之前在这里又遍历缓存逐行累加，导致条数被重复计算约 2 倍——已修正。
     const count = Object.keys(instancePricing._models || {}).length;
     try {
       const c = JSON.parse(fs.readFileSync(pricingPaths.pricingCachePath, 'utf8'));
@@ -452,9 +437,26 @@ function createWorkbuddyMetering(options = {}) {
     return rebuild();
   }
 
+  function resetHistory() {
+    state.files = {};
+    state.messages = {};
+    state.daily = {};
+    state.hourlyByDay = {};
+    state.hourlyCostByDay = {};
+    state.byModelByDay = {};
+    state.lifetime = emptyDay();
+    state.diagnostics = { lastScanTs: 0, scannedFiles: 0, events: 0 };
+  }
+
   async function rebuild() {
     return operations.exclusive(async () => {
       load();
+      if (migrationPending) {
+        instancePricing = loadPricing(pricingPaths.pricingCachePath, pricingPaths.pricingOverridePath);
+        await performScan();
+        saveNow();
+        return getStats();
+      }
       // A missing transcript tree is a valid offline/deleted-source case, not
       // evidence that the user's accumulated ledger should be reset.
       if (!(await listFiles()).length) {
@@ -462,14 +464,7 @@ function createWorkbuddyMetering(options = {}) {
         return getStats();
       }
       const oldLifetime = { ...state.lifetime };
-      state.files = {};
-      state.messages = {};
-      state.daily = {};
-      state.hourlyByDay = {};
-      state.hourlyCostByDay = {};
-      state.byModelByDay = {};
-      state.lifetime = emptyDay();
-      state.diagnostics = { lastScanTs: 0, scannedFiles: 0, events: 0 };
+      resetHistory();
       instancePricing = loadPricing(pricingPaths.pricingCachePath, pricingPaths.pricingOverridePath);
       await performScan();
       state.lifetime = mergeLifetime(oldLifetime, state.lifetime);
@@ -494,4 +489,4 @@ function createWorkbuddyMetering(options = {}) {
   return { start, stop, scan, rebuild, getStats, priceInfo, reloadPricing, _state: state, _processObject: processObject };
 }
 
-module.exports = { createWorkbuddyMetering, normalizeUsage, priceFor, usageCost };
+module.exports = { createWorkbuddyMetering, normalizeUsage, usageCost };

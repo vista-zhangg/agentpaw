@@ -13,14 +13,14 @@
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><strong>下载 Windows 安装包</strong></a> ·
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.10">1.9.10 更新说明</a> ·
+    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.11">1.9.11 更新说明</a> ·
     <a href="docs/介绍.md">使用指南</a>
   </p>
 
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="Windows x64 only">
-    <img src="https://img.shields.io/badge/version-1.9.10-F6A04A" alt="Version 1.9.10">
+    <img src="https://img.shields.io/badge/version-1.9.11-F6A04A" alt="Version 1.9.11">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
   </p>
 </div>
