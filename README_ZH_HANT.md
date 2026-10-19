@@ -12,13 +12,13 @@
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><strong>下載 Windows 安裝程式</strong></a> ·
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.9">1.9.9 更新說明</a> ·
+    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.10">1.9.10 更新說明</a> ·
     <a href="docs/介绍.md">完整使用指南（簡體中文）</a>
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="僅支援 Windows x64">
-    <img src="https://img.shields.io/badge/version-1.9.9-F6A04A" alt="Version 1.9.9">
+    <img src="https://img.shields.io/badge/version-1.9.10-F6A04A" alt="Version 1.9.10">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
   </p>
 </div>
@@ -47,7 +47,7 @@
 
 ## 安裝與升級
 
-從[最新 Release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) 下載 `AgentPaw-1.9.9-Windows-x64.exe`，執行安裝程式後啟動 AgentPaw。已安裝的使用者可透過應用程式內更新升級，或執行新版安裝程式；現有設定與本機用量紀錄會保留。
+從[最新 Release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) 下載 `AgentPaw-1.9.10-Windows-x64.exe`，執行安裝程式後啟動 AgentPaw。已安裝的使用者可透過應用程式內更新升級，或執行新版安裝程式；現有設定與本機用量紀錄會保留。
 
 Release 提供 Windows x64 EXE 安裝程式；`latest.yml` 供自動更新使用，無須手動下載。不提供 ZIP 可攜版。原始碼啟動與 npm 指令僅供開發者使用，請參閱[本機開發與打包手冊](docs/LOCAL_DEPLOYMENT.md)。
 

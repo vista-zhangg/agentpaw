@@ -1,6 +1,6 @@
 {
   "name": "agentpaw",
-  "version": "1.9.9",
+  "version": "1.9.10",
   "description": "AgentPaw — A Windows desktop companion for Codex, Claude Code, WorkBuddy and opencode, with task notifications, custom GIF characters, usage analytics and break reminders.",
   "keywords": [
     "codex",
@@ -53,13 +53,16 @@
     "release:publish": "node scripts/publish-release.js"
   },
   "devDependencies": {
-    "electron": "^43.4.0",
+    "electron": "^43.8.0",
     "electron-builder": "^26.15.3",
     "js-yaml": "4.3.2"
   },
   "dependencies": {
     "electron-updater": "^6.8.9",
-    "sharp": "^0.35.3"
+    "sharp": "^0.35.5"
+  },
+  "overrides": {
+    "@electron/get": "^5.1.0"
   },
   "build": {
     "appId": "io.github.vista-zhangg.agentpaw",

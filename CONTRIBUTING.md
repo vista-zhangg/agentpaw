@@ -47,9 +47,9 @@ test: cover rollout truncation
 
 ## 品牌与素材 / Brand and artwork
 
-对外名称统一为 **AgentPaw**，运行时标识以 `shared/brand.js` 为准。旧品牌标识仅保留在升级兼容模块与历史发布记录中。应用图标的源文件及生成命令见[图标说明](assets/brand/README.md)，角色署名与使用边界见[素材说明](assets/CREDITS.md)。
+对外名称统一为 **AgentPaw**，运行时标识以 `shared/brand.js` 为准。旧品牌标识仅保留在升级兼容模块中。应用图标的源文件及生成命令见[图标说明](assets/brand/README.md)，角色署名与使用边界见[素材说明](assets/CREDITS.md)。
 
-Use the canonical brand in public copy and `shared/brand.js` for runtime identity. Keep legacy identifiers in migration modules and historical release notes; preserve creator attribution separately from product branding.
+Use the canonical brand in public copy and `shared/brand.js` for runtime identity. Keep legacy identifiers in migration modules; preserve creator attribution separately from product branding.
 
 ## 新 Agent 接入 / Adding an agent
 

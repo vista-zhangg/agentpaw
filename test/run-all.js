@@ -29,6 +29,7 @@ const TESTS = Object.freeze([
   'auto-launch.js',
   'updater.js',
   'dist-verifier.js',
+  'build-download.js',
   'xiaban-schedule.js',
   'rest-reminders.js',
   'rest-ui.js',
