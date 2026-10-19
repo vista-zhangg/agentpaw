@@ -1,6 +1,6 @@
 {
   "name": "agentpaw",
-  "version": "1.9.11",
+  "version": "1.9.12",
   "description": "AgentPaw — A Windows desktop companion for Codex, Claude Code, WorkBuddy and opencode, with task notifications, custom GIF characters, usage analytics and break reminders.",
   "keywords": [
     "codex",
