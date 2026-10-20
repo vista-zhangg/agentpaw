@@ -13,14 +13,14 @@
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><strong>下载 Windows 安装包</strong></a> ·
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.12">1.9.12 更新说明</a> ·
+    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v2.0.0">2.0.0 更新说明</a> ·
     <a href="docs/介绍.md">使用指南</a>
   </p>
 
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="Windows x64 only">
-    <img src="https://img.shields.io/badge/version-1.9.12-F6A04A" alt="Version 1.9.12">
+    <img src="https://img.shields.io/badge/version-2.0.0-F6A04A" alt="Version 2.0.0">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
   </p>
 </div>
@@ -44,16 +44,16 @@ AgentPaw让你在桌面上查看 Codex 的任务进度、5h / 7d 订阅额度与
 - **多角色与自建 IP**：角色独立保存动作；一张待命 GIF 即可创建新角色，也可通过角色包导入整套状态。内置角色的编辑和恢复默认互不影响。
 - **状态一眼可见**：工作、思考、并行、清理、等待授权、等待回复、完成、出错、摸鱼与睡眠；后台任务或定时唤醒未结束时保持运行，不提前报完成。
 - **表情自由定制**：集中查看每个状态的全部 GIF，可新增轮换、替换或移出选中项，也可一键恢复默认。
-- **原生权限卡**：Claude Code 请求授权时，可直接在桌宠上允许、拒绝或永久允许。
+- **授权卡片**：Claude Code 请求授权时，可直接在桌宠上允许或拒绝（Enter 允许，Esc 留待稍后）；方案评审以 Markdown 排版显示，可批准或附意见退回。
 - **克制的任务提醒**：标准／仅需处理两档；常规操作只更新状态，连续完成合并提示，短暂失败恢复后不再弹出。可按 Agent 或项目静音，待处理数量和权限卡仍保留。
-- **最近事件与会话偏好**：行动中心可回看最近 7 天、最多 100 条完成／失败／待处理事件，设置会话别名与关注，并返回对应任务；全局快捷键可在设置中自行配置，默认停用。
-- **统一用量面板**：聚合 Token、缓存率与缓存读写、上下文窗口、模型和参考金额，支持工具与日期筛选、90 天活动热图及历史累计。
-- **无需打开 Codex 即可查额度**：启动时自动发现桌面 Codex 自带的 CLI；右键 AgentPaw 品牌托盘图标即可查看当前脱敏账户、5h / 7d 剩余量、刷新点和更新时间。缺失窗口明确显示 `--`，无需手动配置。
+- **快速视图**：左键点伙伴，一处看到需要你的事项（可就地允许）、进行中的任务（模型、耗时、上下文占比）、最近会话与近 7 天记录；完成的任务在你打开前会一直在胶囊上标出。可就地关注、改名或静音项目；全局快捷键可在设置中配置，默认停用。
+- **统一用量面板**：聚合 Token、缓存率与缓存读写、上下文窗口、模型和参考金额，支持工具与周期筛选、按天与按小时图表、活跃时段、Codex 额度用完预测及历史累计。
+- **无需打开 Codex 即可查额度**：启动时自动发现桌面 Codex 自带的 CLI；右键 AgentPaw 品牌托盘图标即可查看当前脱敏账户、5h / 7d 剩余量、刷新点和更新时间；也可点胶囊上的 5h / 7d 查看重置时间与用完预测。缺失窗口明确显示 `--`，无需手动配置。
 - **接入自检与修复**：在设置中核对四个 Agent 的 Hook、插件或只读监听状态，可一键修复或卸载 AgentPaw 接入。
-- **一键隐私模式**：右键 AgentPaw通过 ON/OFF 快速切换，也可在设置中控制；隐藏敏感明细但保留必要状态和用量。
+- **一键隐私模式**：在伙伴的右键菜单中勾选「隐私模式」，也可在设置中控制；隐藏敏感明细但保留必要状态和用量。
 - **本地优先**：会话与统计数据留在本机；公共价格由 models.dev 提供，订阅额度由 Codex 自己认证并读取。
-- **轻量桌面交互**：拖动、贴边、工作速览、行动中心、系统托盘、开机启动和下班彩蛋。
-- **照顾你的工作节奏**：喝水、伸展和远眺提醒独立于 AI 任务状态，伙伴和胶囊均可提醒；总开关、各类提醒、间隔和稍后提醒时长均可调整，也可今天跳过。
+- **轻量桌面交互**：拖动、贴边、快速视图、右键菜单（详情、隐私、全屏藏起、安静一会儿）、系统托盘、开机启动和下班彩蛋。
+- **照顾你的工作节奏**：喝水、伸展和远眺提醒独立于 AI 任务状态，伙伴和胶囊均可提醒；总开关、各类提醒、间隔和稍后提醒时长均可调整，也可今天跳过。休息卡会显示已连续使用多久，设置中可看今日使用时长、完成与跳过次数。
 - **全屏免打扰与临时安静**：全屏时自动藏起，退出全屏后恢复；可选择安静 15 / 30 / 60 分钟或自定义时长。伙伴和胶囊使用同一套隐藏机制，后台继续监控，手动「收起／藏起」后只在你主动显示时恢复。
 
 ## 真实状态示例
@@ -135,7 +135,7 @@ AgentPaw 只把处理后的副本保存在当前用户的 `~/.agentpaw/pet-asset
 - 本地 HTTP 服务只监听 loopback，写接口要求每次运行随机生成的令牌。
 - models.dev 同步只下载公开价目表，不上传 transcript、rollout、权限内容或统计数据。
 - Codex 额度通过一个长生命周期的 `codex app-server --stdio` 连接读取；AgentPaw 会先用 `account/read` 确认当前账户，再读取额度并监听更新。认证与上游请求均由 Codex 负责；AgentPaw 不读取 `~/.codex/auth.json` 的内容，也不访问 ChatGPT 网页接口。文件认证下，`auth.json` 被替换会触发立即重连；keyring / auto / ephemeral 没有可监听的文件事件，账户切换依赖 App Server 的账户通知、周期性 `account/read` 和定期重建连接收敛。因此界面表示的是 AgentPaw 自己这条 App Server 连接当前可见的账户，不承诺另一进程中的非文件认证切换能被文件 watcher 即时发现。
-- 右键 AgentPaw或在设置中开启「隐私模式」只会遮蔽屏幕展示；监控与用量统计继续在本机运行，关闭后未处理事项自动恢复。
+- 在 AgentPaw 右键菜单或设置中开启「隐私模式」只会遮蔽屏幕展示；监控与用量统计继续在本机运行，关闭后未处理事项自动恢复。
 - 面板费用是按公开 API 单价折算的估计值，不等同于订阅账单或厂商最终结算。
 
 完整说明见 [隐私与数据边界](docs/PRIVACY.md)。

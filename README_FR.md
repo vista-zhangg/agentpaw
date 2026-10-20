@@ -12,13 +12,13 @@
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><strong>Télécharger pour Windows</strong></a> ·
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.12">Notes de version 1.9.12</a> ·
+    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v2.0.0">Notes de version 2.0.0</a> ·
     <a href="docs/介绍.md">Guide complet (chinois simplifié)</a>
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="Windows x64 uniquement">
-    <img src="https://img.shields.io/badge/version-1.9.12-F6A04A" alt="Version 1.9.12">
+    <img src="https://img.shields.io/badge/version-2.0.0-F6A04A" alt="Version 2.0.0">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="Licence MIT"></a>
   </p>
 </div>
@@ -35,9 +35,9 @@ Suivez la progression de Codex, ses quotas d'abonnement sur 5 heures et 7 jours,
 - **Un compagnon, quatre agents** : Codex, Claude Code, WorkBuddy, opencode.
 - **Personnages et GIF personnalisés** : choisissez le chat au travail, Milk Tea Mouse, Mimi Bee ou Line Dog. Créez votre propre personnage à partir d'un GIF d'attente ou importez un [pack de personnages](docs/character-packs.md). Chaque personnage conserve ses propres animations, variantes et réglages.
 - **États et autorisations** : travail, réflexion, tâches parallèles, attente d'autorisation ou de réponse, fin de tâche et erreurs. Pour les demandes compatibles de Claude Code, autorisez, refusez ou autorisez durablement une opération depuis le compagnon ; les autres outils fournissent des notifications en lecture seule.
-- **Cartes d'autorisation harmonisées** : titres, projets, commandes et boutons reprennent le même style arrondi que les autres fenêtres. Les champs de réponse apparaissent selon le besoin et les contenus longs peuvent défiler.
-- **Notifications et centre d'action** : choisissez les notifications standard ou seulement celles qui demandent votre attention, mettez un outil ou un projet en sourdine, consultez les événements récents et donnez un alias aux sessions. Les raccourcis globaux sont désactivés par défaut et configurables.
-- **Quotas et consommation** : le menu de la zone de notification affiche le compte Codex masqué, les quotas restants sur 5 heures et 7 jours et leurs heures de réinitialisation. Le panneau détaillé propose des filtres par outil et par date, une carte d'activité des tokens sur 90 jours, des statistiques de cache et de modèles, et des totaux historiques.
+- **Cartes d'autorisation** : Entrée autorise, Échap garde la demande pour plus tard ; les plans s'affichent en Markdown et peuvent être approuvés ou renvoyés avec un commentaire.
+- **Vue rapide et notifications** : un clic sur le compagnon ouvre une vue unique avec ce qui vous attend (à approuver sur place), les tâches en cours avec modèle, durée et contexte, les sessions récentes et les 7 derniers jours. Les tâches terminées restent signalées sur la capsule jusqu'à ce que vous les ouvriez. Choisissez les notifications standard ou seulement celles qui demandent votre attention, mettez un outil ou un projet en sourdine et donnez un alias aux sessions. Les raccourcis globaux sont désactivés par défaut et configurables.
+- **Quotas et consommation** : le menu de la zone de notification et les badges 5h / 7d de la capsule affichent les quotas restants, leurs heures de réinitialisation et une prévision d'épuisement. Le panneau détaillé propose des filtres par outil et par période, des graphiques par jour et par heure, les heures d'activité, des statistiques de cache et de modèles, et des totaux historiques.
 - **Confidentialité et intégrations** : masquez les détails sensibles en un clic et vérifiez, réparez ou supprimez les intégrations gérées par AgentPaw depuis les paramètres.
 - **Rythme de travail et pauses** : configurez les rappels pour boire, s'étirer ou regarder au loin, reportez-les ou ignorez-les pour la journée. Le compagnon se masque automatiquement en plein écran et peut rester silencieux temporairement. Le personnage et la capsule compacte partagent les mêmes réglages.
 
@@ -47,7 +47,7 @@ Suivez la progression de Codex, ses quotas d'abonnement sur 5 heures et 7 jours,
 
 ## Installation et mises à jour
 
-Téléchargez `AgentPaw-1.9.12-Windows-x64.exe` depuis la [dernière version publiée](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest), exécutez l'installateur, puis lancez AgentPaw. Pour mettre à jour une installation existante, utilisez la mise à jour intégrée ou le nouvel installateur. Vos paramètres et vos données locales de consommation sont conservés.
+Téléchargez `AgentPaw-2.0.0-Windows-x64.exe` depuis la [dernière version publiée](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest), exécutez l'installateur, puis lancez AgentPaw. Pour mettre à jour une installation existante, utilisez la mise à jour intégrée ou le nouvel installateur. Vos paramètres et vos données locales de consommation sont conservés.
 
 La distribution propose un installateur EXE pour Windows x64. Le fichier `latest.yml` est destiné au système de mise à jour : vous n'avez pas besoin de le télécharger manuellement. Aucune archive ZIP portable n'est proposée. Le lancement depuis les sources et les commandes npm sont réservés au développement ; consultez le [guide de développement et de compilation](docs/LOCAL_DEPLOYMENT.md) en chinois simplifié.
 

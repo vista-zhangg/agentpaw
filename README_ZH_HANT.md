@@ -12,13 +12,13 @@
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><strong>下載 Windows 安裝程式</strong></a> ·
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.12">1.9.12 更新說明</a> ·
+    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v2.0.0">2.0.0 更新說明</a> ·
     <a href="docs/介绍.md">完整使用指南（簡體中文）</a>
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="僅支援 Windows x64">
-    <img src="https://img.shields.io/badge/version-1.9.12-F6A04A" alt="Version 1.9.12">
+    <img src="https://img.shields.io/badge/version-2.0.0-F6A04A" alt="Version 2.0.0">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
   </p>
 </div>
@@ -35,9 +35,9 @@
 - **一個夥伴，四種 Agent**：支援 Codex、Claude Code、WorkBuddy、opencode。
 - **角色與自訂 GIF**：內建打工貓、奶茶鼠、小蜜蜂蜜蜜與線條小狗。可用一張待命 GIF 建立自己的角色，或匯入整套[角色包](docs/character-packs.md)；各角色的動作、輪換與還原設定獨立保存。
 - **任務狀態與授權**：顯示工作、思考、並行、等待授權、等待回覆、完成與錯誤等狀態。Claude Code 支援的授權請求可直接在桌面夥伴上允許、拒絕或始終允許；其他工具提供唯讀提醒。
-- **清楚的授權卡片**：標題、專案、命令與操作按鈕採用一致的圓角風格；回答輸入框只在需要時顯示，長內容可捲動。
-- **提醒與行動中心**：可選標準或僅需處理的通知，依工具或專案靜音，查看最近事件、設定工作階段別名與關注；全域快捷鍵預設停用，可自行設定。
-- **額度與用量**：托盤選單顯示 Codex 目前的遮蔽帳號、5 小時／7 天剩餘額度與重設時間。詳細面板提供工具與日期篩選、90 天 Token 活動熱圖、快取與模型資訊，以及歷史累計。
+- **授權卡片**：Enter 允許、Esc 留待稍後；方案評審以 Markdown 排版顯示，可批准或附意見退回。
+- **快速檢視與提醒**：左鍵點夥伴，一處看到需要你的事項（可就地允許）、進行中的任務（模型、耗時、上下文占比）、最近工作階段與近 7 天記錄；完成的任務在你開啟前會一直標在膠囊上。可選標準或僅需處理的通知，依工具或專案靜音，設定工作階段別名與關注；全域快捷鍵預設停用，可自行設定。
+- **額度與用量**：托盤選單與膠囊上的 5h / 7d 顯示剩餘額度、重設時間與用完預測。詳細面板提供工具與週期篩選、按日與按小時圖表、活躍時段、快取與模型資訊，以及歷史累計。
 - **隱私與接入檢查**：可一鍵隱藏敏感明細，並在設定中檢查、修復或移除 AgentPaw 管理的工具接入。
 - **工作與休息節奏**：支援喝水、伸展與遠眺提醒，可調整間隔、延後提醒或今天略過。全螢幕時自動隱藏，也可暫時安靜；角色與精簡膠囊模式共用設定。
 
@@ -47,7 +47,7 @@
 
 ## 安裝與升級
 
-從[最新 Release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) 下載 `AgentPaw-1.9.12-Windows-x64.exe`，執行安裝程式後啟動 AgentPaw。已安裝的使用者可透過應用程式內更新升級，或執行新版安裝程式；現有設定與本機用量紀錄會保留。
+從[最新 Release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) 下載 `AgentPaw-2.0.0-Windows-x64.exe`，執行安裝程式後啟動 AgentPaw。已安裝的使用者可透過應用程式內更新升級，或執行新版安裝程式；現有設定與本機用量紀錄會保留。
 
 Release 提供 Windows x64 EXE 安裝程式；`latest.yml` 供自動更新使用，無須手動下載。不提供 ZIP 可攜版。原始碼啟動與 npm 指令僅供開發者使用，請參閱[本機開發與打包手冊](docs/LOCAL_DEPLOYMENT.md)。
 

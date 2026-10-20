@@ -13,14 +13,14 @@
   </p>
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><strong>Download for Windows</strong></a> ·
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v1.9.12">1.9.12 release notes</a> ·
+    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v2.0.0">2.0.0 release notes</a> ·
     <a href="docs/介绍.md">User guide (中文)</a>
   </p>
 
   <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="Windows x64 only">
-    <img src="https://img.shields.io/badge/version-1.9.12-F6A04A" alt="Version 1.9.12">
+    <img src="https://img.shields.io/badge/version-2.0.0-F6A04A" alt="Version 2.0.0">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
   </p>
 </div>
@@ -40,16 +40,16 @@ Keep Codex progress, 5h / 7d subscription quota, and token usage on your desktop
 - **Multiple characters and custom GIF pets** — switch characters, create one from an idle GIF, or import an entire state pack. Each character keeps independent edits and reset defaults.
 - **Status at a glance** — working, thinking, parallel tasks, compaction, permission waits, user input, completion, errors, breaks, and sleep; background tasks and scheduled wakeups stay active until they actually clear.
 - **Custom expressions** — browse every state GIF, add rotating variants, replace or remove a selected item, or restore defaults.
-- **Native permission cards** — allow, deny, or permanently allow supported Claude Code requests from the pet.
+- **Approval cards** — allow or deny supported Claude Code requests right from the pet (Enter allows, Esc saves it for later), and review plans as formatted Markdown before approving or sending them back with notes.
 - **Calmer task notifications** — choose Standard or Needs attention only, combine completion notices, defer transient failures, and mute an agent or project while keeping permission cards available.
-- **Recent events and session preferences** — review recent activity in the action center, label or follow sessions, return to a task, and optionally set global shortcuts. Shortcuts are disabled by default.
-- **Unified usage view** — tokens, cache ratios and reads/writes, context windows, models, and reference costs, with tool/date filters, a 90-day activity heatmap, and lifetime totals.
-- **Check Codex quota without opening Codex** — startup automatically discovers the native Codex Desktop CLI. The tray uses the independent AgentPaw brand icon; right-click the AgentPaw tray icon to see the masked current account, 5h / 7d remaining quota, reset times, and the last update. Missing windows stay `--`, with no manual setup required.
+- **Quick view** — click the companion for one place with what needs you (approve on the spot), what is running with model, elapsed time and context use, recent sessions, and the last 7 days. Finished tasks stay marked on the capsule until you open them. Follow, rename, or mute a project in place; global shortcuts are optional and off by default.
+- **Unified usage view** — tokens, cache ratios and reads/writes, context windows, models, and reference costs, with tool and period filters, daily and hourly charts, active hours, a Codex quota forecast, and lifetime totals.
+- **Check Codex quota without opening Codex** — startup automatically discovers the native Codex Desktop CLI. The tray uses the independent AgentPaw brand icon; right-click the AgentPaw tray icon to see the masked current account, 5h / 7d remaining quota, reset times, and the last update, or click the 5h / 7d badges on the capsule for reset times and a run-out forecast. Missing windows stay `--`, with no manual setup required.
 - **Integration health and repair** — verify all four agents, then repair or remove AgentPaw-managed integrations from Settings.
-- **One-click privacy mode** — right-click the companion to toggle the compact ON/OFF control, or use Settings, while keeping essential state and usage visible.
+- **One-click privacy mode** — tick Privacy mode in the companion's right-click menu, or use Settings, while keeping essential state and usage visible.
 - **Local-first operation** — conversations and usage stay on the machine; models.dev supplies public pricing while Codex authenticates and reads its own subscription quota.
-- **Desktop-friendly controls** — drag, edge snapping, work peek, action center, system tray, auto-start, and scheduled break animations.
-- **Reminders for your workday** — water, stretch, and eye-rest reminders run independently of AI activity in both character and capsule modes. Set each interval and snooze duration, turn reminders on or off individually or together, or skip a reminder for today.
+- **Desktop-friendly controls** — drag, edge snapping, quick view, a right-click menu for details, privacy, fullscreen hiding and quiet time, system tray, auto-start, and scheduled break animations.
+- **Reminders for your workday** — water, stretch, and eye-rest reminders run independently of AI activity in both character and capsule modes. Set each interval and snooze duration, turn reminders on or off individually or together, or skip a reminder for today. The break card shows how long you have been at it, and Settings shows today's usage, completed and skipped breaks.
 - **Fullscreen and temporary quiet** — hide automatically during fullscreen use and restore afterward, or stay quiet for 15 / 30 / 60 minutes or a custom duration. Both modes share the existing window-hiding behavior while monitoring continues in the background. A manually hidden companion stays hidden until you explicitly show it.
 
 ## Real state examples
