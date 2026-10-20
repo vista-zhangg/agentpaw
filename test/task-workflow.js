@@ -109,6 +109,19 @@ for (let i = 0; i < 105; i++) center.record({ ...session, kind: 'done', eventKey
 assert.equal(center.sync(snapshot, notifications).recent.length, MAX_RECENT);
 advance(RETENTION_MS + 1);
 assert.equal(center.sync({ sessions: [], actions: [] }, notifications).recent.length, 0);
+// Completions stay unread until the session is opened or starts another turn.
+const idle = { ...session, state: 'idle', turnStartedAt: time - 5000 };
+center.record({ ...idle, kind: 'done', eventKey: 'turn-1', ts: time });
+center.record({ ...idle, sessionId: 'thread-b', kind: 'done', eventKey: 'turn-b', ts: time });
+assert.equal(center.sync({ sessions: [idle], actions: [] }, notifications).recent.filter(row => !row.read).length, 2);
+advance(1000);
+const next = center.sync({ sessions: [{ ...idle, state: 'working', turnStartedAt: time }], actions: [] }, notifications);
+assert(next.recent.find(row => row.sessionId === 'thread-a').read, 'a new turn marks the previous completion read');
+assert(!next.recent.find(row => row.sessionId === 'thread-b').read);
+assert.equal(center.markSessionRead('thread-b'), true);
+assert(center.sync({ sessions: [], actions: [] }, notifications).recent.every(row => row.read), 'opening a session marks it read');
+assert(JSON.parse(fs.readFileSync(file, 'utf8')).recent.every(row => row.read), 'read state persists');
+center.clear();
 assert.notEqual(projectKey({ cwd: 'D:/one/app' }), projectKey({ cwd: 'D:/two/app' }));
 assert.equal(projectKey({ cwd: 'D:\\one\\APP\\' }), projectKey({ cwd: 'd:/one/app' }));
 

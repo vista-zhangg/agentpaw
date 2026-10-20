@@ -401,6 +401,7 @@ const askBack = document.getElementById('ask-back');
 const askTerm = document.getElementById('ask-term');
 const notepad = document.getElementById('notepad');
 const npBadge = document.getElementById('np-badge');
+const donePill = document.getElementById('done-pill');
 const actionPop = document.getElementById('action-pop');
 const acActs = document.getElementById('ac-acts');
 const acActSec = document.getElementById('ac-act-sec');
@@ -1142,6 +1143,11 @@ function actionableItems() {
     .filter((c) => (c.options && c.options.length) || c.allowInput);
 }
 
+// Sessions whose latest completion has not been opened yet.
+function unseenDoneSessions(s) {
+  return new Set(((s && s.recent) || []).filter((row) => row && row.kind === 'done' && !row.read && row.sessionId).map((row) => row.sessionId));
+}
+
 function updateNotepad(s) {
   curSessions = s.sessions || [];
   curActions = Array.isArray(s.actions) ? s.actions : [];
@@ -1151,6 +1157,11 @@ function updateNotepad(s) {
   npBadge.textContent = pendingCount || '';
   notepad.setAttribute('aria-label', window.AgentPawI18n.text("需要你处理 {0} 项", [pendingCount]));
   notepad.title = notepad.getAttribute('aria-label');
+  const unseen = unseenDoneSessions(s);
+  donePill.hidden = !unseen.size;
+  donePill.textContent = unseen.size ? '✓' + unseen.size : '';
+  donePill.setAttribute('aria-label', window.AgentPawI18n.text("{0} 个会话完成后还没看过", [unseen.size]));
+  donePill.title = donePill.getAttribute('aria-label');
   if (actionPopOpen) { renderActionPop(); fitPopup(actionPop); }
 }
 
@@ -2382,7 +2393,7 @@ function attachDrag(el, options = {}) {
     // Inline controls keep their own click/keyboard actions when the capsule
     // becomes the drag handle; pressing one must not capture its pointer.
     if (el === chip && e.target && e.target.closest
-      && e.target.closest('#chip-quota, #rest-pending, #notepad')) return;
+      && e.target.closest('#chip-quota, #rest-pending, #notepad, #done-pill')) return;
     if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
     try { el.setPointerCapture(e.pointerId); } catch {}
     el.classList.add('dragging');
@@ -2482,6 +2493,13 @@ notepad.addEventListener('keydown', (e) => {
   actionPopOpen ? closeActionPop() : openActionPop();
 });
 notepad.addEventListener('contextmenu', (e) => e.stopPropagation());
+donePill.addEventListener('click', (e) => { e.stopPropagation(); actionPopOpen ? closeActionPop() : openActionPop(); });
+donePill.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault(); e.stopPropagation();
+  actionPopOpen ? closeActionPop() : openActionPop();
+});
+donePill.addEventListener('contextmenu', (e) => e.stopPropagation());
 const acCloseButton = document.getElementById('ac-close');
 acCloseButton.innerHTML = window.AgentPawIcons?.icon('close') || '';
 acCloseButton.addEventListener('click', (e) => { e.stopPropagation(); closeActionPop(); });
@@ -2603,7 +2621,7 @@ window.addEventListener('blur', () => {
 // The capsule is still the drag handle when the cat is hidden, while the
 // quota group is a deliberate click target in either layout. The rest of the
 // visible capsule remains click-through so hovering it never creates a popup.
-const HIT_SEL = '#cat,#stage.cat-hidden #chip,#chip-quota,#quota-popover,#notepad,#action-pop,#ask,#rest-reminder,#rest-pending';
+const HIT_SEL = '#cat,#stage.cat-hidden #chip,#chip-quota,#quota-popover,#notepad,#done-pill,#action-pop,#ask,#rest-reminder,#rest-pending';
 let mouseIgnoring = false;
 function setMouseIgnore(on) {
   if (on === mouseIgnoring) return;

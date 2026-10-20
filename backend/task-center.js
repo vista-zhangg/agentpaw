@@ -84,8 +84,15 @@ function createTaskCenter({ file, now = Date.now } = {}) {
         choice: action.choice ? { ...action.choice, project: preferences.get(action.sessionId)?.alias || action.choice.project } : null };
     });
     activeActions = new Set(actions.map(action => action.actionId));
-    const kept = recent.filter(row => now() - row.at < RETENTION_MS);
-    if (kept.length !== recent.length) { recent = kept; persist(); }
+    let changed = false;
+    // A completion counts as seen once its session starts another turn.
+    recent = recent.flatMap(row => {
+      if (now() - row.at >= RETENTION_MS) { changed = true; return []; }
+      const started = Number(sessions.get(row.sessionId)?.turnStartedAt) || 0;
+      if (row.kind === 'done' && !row.read && started > row.at) { changed = true; return [{ ...row, read: true }]; }
+      return [row];
+    });
+    if (changed) persist();
     return { ...stats, sessions: rows, actions, recent: recent.map(row => ({ ...row,
       alias: preferences.get(row.sessionId)?.alias || '',
       focusable: row.agent === 'codex' || sessions.get(row.sessionId)?.focusable === true,
@@ -123,6 +130,14 @@ function createTaskCenter({ file, now = Date.now } = {}) {
       const selected = new Set(ids.slice(0, MAX_RECENT));
       const previous = recent;
       recent = recent.map(row => selected.has(row.id) ? { ...row, read: true } : row);
+      if (persist()) return true;
+      recent = previous;
+      return false;
+    },
+    markSessionRead(sessionId) {
+      if (!recent.some(row => row.sessionId === sessionId && !row.read)) return true;
+      const previous = recent;
+      recent = recent.map(row => row.sessionId === sessionId ? { ...row, read: true } : row);
       if (persist()) return true;
       recent = previous;
       return false;

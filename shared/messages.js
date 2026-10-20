@@ -5339,5 +5339,15 @@
     "说明",
     "More information",
     "說明"
+  ],
+  [
+    "{0} 个会话完成后还没看过",
+    "{0} finished, not viewed yet",
+    "{0} 個工作階段完成後還沒看過"
+  ],
+  [
+    "新完成，还没看过",
+    "Just finished, not viewed yet",
+    "新完成，還沒看過"
   ]
 ];});

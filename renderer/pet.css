@@ -201,6 +201,15 @@ body.window-focused .ask[data-kind="perm"] .ask-opt .kbd { display: inline-block
   display: inline-flex; align-items: center; justify-content: center;
 }
 .notepad:hover .np-badge { background: #ec6346; }
+/* 完成但还没看过：绿色 ✓n，与“需要你”的红色数字并列 */
+.done-pill {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-app-region: no-drag;
+  margin: -2px -6px -2px 2px; min-width: 18px; height: 18px; padding: 0 6px; border-radius: 999px;
+  background: var(--ui-green); color: #fff; font-size: 11px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.done-pill[hidden] { display: none; }
+.done-pill:hover { background: #2e9a6a; }
+.notepad:not(.hidden) + .done-pill { margin-left: 8px; }
 
 /* ---------- 快速视图（材质见 popovers.css） ---------- */
 .action-pop {
@@ -533,7 +542,7 @@ body.window-focused .ask[data-kind="perm"] .ask-opt .kbd { display: inline-block
 }
 #cat img { width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; }
 
-#cat:focus-visible, .notepad:focus-visible,
+#cat:focus-visible, .notepad:focus-visible, .done-pill:focus-visible,
 button:focus-visible, input:focus-visible {
   outline: 3px solid rgba(37, 99, 235, 0.8);
   outline-offset: 2px;

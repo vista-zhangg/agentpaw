@@ -92,6 +92,7 @@
 .sess .proj { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .sess .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sess .star { display: inline-grid; color: #e2a325; font-size: 12px; }
+.sess .new-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--pop-good); box-shadow: 0 0 0 3px var(--pop-good-soft); }
 .sess .model { flex: none; color: var(--pop-text3); font-size: 12px; font-weight: 400; }
 .sess .op { margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--pop-text2); }
 .sw-t { font-weight: 600; }

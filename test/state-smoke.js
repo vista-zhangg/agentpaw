@@ -814,6 +814,26 @@ async function main() {
     ] }));
     check('历史关注不能遮蔽正在执行的任务', () => assert.strictEqual(find(w.elements('ac-session-list').children[0], 'name').textContent, 'current'));
     check('普通未读记录不在胶囊上显示数量', () => assert(w.elements('notepad').classList.contains('hidden')));
+    w.handlers.stats(baseStats({ recent: [
+      { id: 'a1', sessionId: 'past', kind: 'done', read: false },
+      { id: 'a2', sessionId: 'past', kind: 'done', read: false },
+      { id: 'b1', sessionId: 'other', kind: 'failed', read: false },
+      { id: 'c1', sessionId: 'seen', kind: 'done', read: true },
+    ], sessions: [
+      { sessionId: 'seen', agent: 'codex', project: 'seen', state: 'idle', updatedAt: 9 },
+      { sessionId: 'past', agent: 'codex', project: 'fresh', state: 'idle', updatedAt: 1 },
+    ] }));
+    check('胶囊绿色 ✓n 只数完成未看的会话', () => {
+      assert(!w.elements('done-pill').hidden);
+      assert.equal(w.elements('done-pill').textContent, '✓1');
+    });
+    check('新完成的会话排在最近会话前并带标记', () => {
+      const first = w.elements('ac-other-list').children[0];
+      assert.equal(find(first, 'name').textContent, 'fresh');
+      assert(find(first, 'new-dot'));
+    });
+    w.handlers.stats(baseStats({ recent: [{ id: 'a1', sessionId: 'past', kind: 'done', read: true }] }));
+    check('看过后 ✓ 熄灭', () => assert(w.elements('done-pill').hidden));
   }
 
   console.log(`\n${failures === 0 ? '✅ RENDERER ALL PASS' : '❌ ' + failures + ' FAILURE(S)'}`);

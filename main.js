@@ -1530,11 +1530,13 @@ function registerIpc() {
     if (!permissions || typeof permId !== 'string' || !permId) return false;
     return permissions.decide(permId, behavior) === true;
   });
-  ipcMain.handle(IPC.FOCUS_SESSION, (_e, sessionId) => {
+  ipcMain.handle(IPC.FOCUS_SESSION, async (_e, sessionId) => {
     const stored = taskCenter && taskCenter.lookup(sessionId);
-    return focusSession(core.getSession(sessionId) || (stored && stored.agent === 'codex' ? { id: sessionId, agentId: 'codex' } : null), {
+    const ok = await focusSession(core.getSession(sessionId) || (stored && stored.agent === 'codex' ? { id: sessionId, agentId: 'codex' } : null), {
       openExternal: (url) => shell.openExternal(url),
     });
+    if (ok && taskCenter) { taskCenter.markSessionRead(sessionId); emitStats(); }
+    return ok;
   });
   // Dynamic sizing: renderer measures either the resting capsule or an open
   // popup and asks for an exact fit. w/h <= 0 resets to the base pet size.

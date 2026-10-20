@@ -14,6 +14,7 @@
   let recentSignature = '';
   let recentCards = new Map();
   let sessionSignature = '';
+  let unseen = new Set();
   const pendingReadIds = new Set();
   const readError = () => text("已读状态保存失败，重新展开记录可重试");
   const status = get('ac-status');
@@ -145,6 +146,11 @@
       proj.appendChild(star);
     }
     proj.appendChild(element('span', 'name', title(row)));
+    if (unseen.has(row.sessionId)) {
+      const dot = element('span', 'new-dot');
+      dot.title = text("新完成，还没看过");
+      proj.appendChild(dot);
+    }
     if (row.model) proj.appendChild(element('span', 'model', row.model));
     const [word, tone] = stateWord(row);
     const op = element('div', 'op');
@@ -226,9 +232,12 @@
     const byUpdate = (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0);
     const rank = row => ATTENTION.has(row.state) || row.state === 'error' ? 0 : PEEK_BUSY_STATES.has(row.state) ? 1 : 2;
     const active = rows.filter(isActive).sort((a, b) => rank(a) - rank(b) || (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || byUpdate(a, b));
-    const others = rows.filter(row => !isActive(row)).sort(byUpdate).slice(0, 4);
+    unseen = unseenDoneSessions(stats);
+    const fresh = row => unseen.has(row.sessionId) ? 0 : 1;
+    const others = rows.filter(row => !isActive(row)).sort((a, b) => fresh(a) - fresh(b) || byUpdate(a, b))
+      .filter((row, index) => index < 4 || unseen.has(row.sessionId));
     const signature = JSON.stringify([...active, ...others].map(row => [row.sessionId, row.alias, row.project, row.model, row.state, row.badge,
-      row.pinned, row.projectMuted, row.archived, row.focusable, row.contextPercent, row.op, row.turnStartedAt])) + stats.privacyMode + window.AgentPawI18n.getLanguage();
+      row.pinned, row.projectMuted, row.archived, row.focusable, row.contextPercent, row.op, row.turnStartedAt, unseen.has(row.sessionId)])) + stats.privacyMode + window.AgentPawI18n.getLanguage();
     if (!force && sessionSignature === signature) {
       // Times move every second; refresh them without rebuilding focused controls.
       for (const [list, items] of [[get('ac-session-list'), active], [get('ac-other-list'), others]]) {
