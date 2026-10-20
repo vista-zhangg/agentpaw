@@ -646,7 +646,8 @@ function fitPopup(el) {
   if (!el) return;
   const seq = ++fitPopupSeq;
   requestAnimationFrame(() => {
-    const measure = () => {
+    let requestedH = 0;
+    const measure = (rechecks = 2) => {
       if (seq !== fitPopupSeq) return;
       const popupW = POPUP_W;
       // 关键：先临时去掉 max-height 再量，否则 scrollHeight 会被「当前小窗口算出的
@@ -658,14 +659,21 @@ function fitPopup(el) {
       const viewportH = el === askEl || el === actionPop ? Math.min(contentH, ASK_VIEWPORT_MAX_H) : contentH;
       const popupBottom = el === actionPop ? positionActionPop() : POPUP_BOTTOM;
       const winH = Math.max(340, popupBottom + viewportH + 24);
-      setRequestedPetSize(popupW, winH, { popup: true, popupHeight: viewportH });
+      if (Math.abs(winH - requestedH) > 2 || Math.abs((window.innerHeight || 0) - winH) > 2) {
+        requestedH = winH;
+        setRequestedPetSize(popupW, winH, { popup: true, popupHeight: viewportH });
+      }
+      // The resize lands asynchronously and the first measurement can run
+      // against the previous frame, which clipped the card's buttons. Check
+      // again once the window has had time to settle.
+      if (rechecks > 0) setTimeout(() => measure(rechecks - 1), 180);
     };
 
     const targetW = POPUP_W;
     if (Math.abs((window.innerWidth || 0) - targetW) > 2) {
       // 第一拍只扩宽，第二拍在正确的横向排版下测真实高度。
       setRequestedPetSize(targetW, Math.max(340, window.innerHeight || 340), { popup: true });
-      requestAnimationFrame(() => requestAnimationFrame(measure));
+      requestAnimationFrame(() => requestAnimationFrame(() => measure()));
     } else {
       measure();
     }

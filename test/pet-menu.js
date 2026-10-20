@@ -66,7 +66,7 @@ async function main() {
   });
   handler({ sender: 'foreign' }); handler({ sender: 'pet' });
   assert.equal(opened, 1, 'only pet windows can use the settings entry');
-  const existingWindowBranch = mainSource.slice(mainSource.indexOf('function openSettings()'), mainSource.indexOf('  const win = new BrowserWindow', mainSource.indexOf('function openSettings()')));
+  const existingWindowBranch = mainSource.slice(mainSource.indexOf('function openSettings('), mainSource.indexOf('  const win = new BrowserWindow', mainSource.indexOf('function openSettings(')));
   let shown = 0, focused = 0;
   vm.runInNewContext(existingWindowBranch + '}; openSettings(); openSettings();', {
     settingsWin: { isDestroyed: () => false, show: () => shown++, focus: () => focused++ },

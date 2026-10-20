@@ -40,13 +40,6 @@
     'dlg.dupTitle': 'AgentPaw已在运行',
     'dlg.dupBody': '检测到另一个 AgentPaw实例正在端口 {port} 上服务（可能来自其他代码副本）。\n',
     'dlg.dupHint': '本实例将退出，避免抢占会话事件。\n开发需要多开时：AGENTPAW_ALLOW_MULTI=1',
-    'dlg.integrationsTitle': 'AgentPaw已准备好',
-    'dlg.integrationsMessage': '便携运行环境已经就绪',
-    'dlg.integrationsReady': '已接入',
-    'dlg.integrationsMissing': '未检测到，安装或首次使用后会自动接入',
-    'dlg.integrationsFailed': '已检测到，但接入尚未完成',
-    'dlg.integrationsDisabled': '已停用，可在设置中重新接入',
-    'dlg.integrationsHint': '无需安装 Node.js。以后可以在设置的 Agent 接入区域再次检查与修复。',
 
     // ── settings ────────────────────────────────────────────────────────────
     'settings.title': 'AgentPaw · 设置',

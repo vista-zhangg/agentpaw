@@ -5519,5 +5519,20 @@
     "演示结束。真实任务需要你时，我也会这样提醒你。",
     "That's the demo. When a real task needs you, I'll let you know the same way.",
     "示範結束。真實任務需要你時，我也會這樣提醒你。"
+  ],
+  [
+    "欢迎使用 AgentPaw",
+    "Welcome to AgentPaw",
+    "歡迎使用 AgentPaw"
+  ],
+  [
+    "已自动接入你正在使用的 AI 编程工具，接入情况见下方。想先看看它怎么工作吗？",
+    "AgentPaw has connected to the AI coding tools you already use; see the status below. Want to see how it works first?",
+    "已自動接入你正在使用的 AI 程式開發工具，接入情況見下方。想先看看它怎麼運作嗎？"
+  ],
+  [
+    "看一遍演示",
+    "Watch a demo",
+    "看一遍示範"
   ]
 ];});

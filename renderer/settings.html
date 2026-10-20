@@ -203,6 +203,17 @@
         </div>
         <div id="panel-integrations" class="settings-panel" data-panel="integrations" role="tabpanel" aria-labelledby="tab-integrations" tabindex="0" hidden>
           <div class="page-heading"><h1 data-l10n="连接">Connections</h1></div>
+          <section class="welcome-card" id="welcome-card" hidden>
+            <img src="../assets/agentpaw-icon.png" alt="" width="56" height="56">
+            <div class="welcome-copy">
+              <h2 data-l10n="欢迎使用 AgentPaw">Welcome to AgentPaw</h2>
+              <p data-l10n="已自动接入你正在使用的 AI 编程工具，接入情况见下方。想先看看它怎么工作吗？">AgentPaw has connected to the AI coding tools you already use; see the status below. Want to see how it works first?</p>
+              <div class="action-buttons welcome-actions">
+                <button id="welcome-done" class="subtle-button" type="button" data-l10n="开始使用">Get started</button>
+                <button id="welcome-demo" class="done-button" type="button" data-l10n="看一遍演示">Watch a demo</button>
+              </div>
+            </div>
+          </section>
           <section class="settings-section" id="integrations-section">
           <div class="section-kicker"><span data-i18n="settings.integrationsSection" data-l10n="Agent 接入">Integrations</span><button class="info" type="button" aria-label="More information" data-l10n-aria-label="说明">i<span class="tipbox" role="tooltip" data-l10n="修复只处理已检测工具；卸载只移除 AgentPaw 写入的 Hook 和插件，不影响 Agent 本身。">Repair handles detected tools only. Disconnect removes AgentPaw's hooks and plugins without uninstalling your AI tools.</span></button></div>
           <div class="integration-card">

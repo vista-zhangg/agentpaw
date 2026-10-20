@@ -198,3 +198,10 @@ button:disabled { opacity: .5; }
   .asset-inspector { position: static; width: 100%; max-width: 420px; margin-inline: auto; }
   .asset-variants { grid-template-columns: repeat(5, minmax(0,1fr)); }
 }
+.welcome-card { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px; padding: 18px 20px; border-radius: 16px;
+  background: linear-gradient(135deg, #eef8f2 0%, #f3f6fd 100%); border: 1px solid #d9eadf; }
+.welcome-card img { flex: none; border-radius: 14px; box-shadow: 0 4px 12px #1820301a; }
+.welcome-copy { flex: 1; min-width: 0; }
+.welcome-copy h2 { margin: 2px 0 6px; font-size: 18px; font-weight: 650; color: var(--ui-text); }
+.welcome-copy p { margin: 0 0 14px; font-size: 13px; line-height: 20px; color: #5a5e68; }
+.welcome-actions { margin-left: 0; }

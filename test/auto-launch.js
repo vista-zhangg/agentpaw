@@ -19,7 +19,7 @@ assert(/app\.setLoginItemSettings\(autoLaunchSettings\(desired\)\)/.test(main), 
 assert(/LEGACY_AUTO_LAUNCH_NAMES/.test(main) && /autoLaunchSettings\(false, name\)/.test(main),
   'disabling auto-launch must remove legacy registry entries for the same executable');
 assert(/executableWillLaunchAtLogin/.test(main), 'Windows settings must use the executable launch status');
-assert(/function openSettings\(\)/.test(main) && /settings\.html/.test(main), 'tray must open the settings window');
+assert(/function openSettings\((?:options = \{\})?\)/.test(main) && /settings\.html/.test(main), 'tray must open the settings window');
 assert(/tray\.settings/.test(main), 'tray menu must expose a settings entry');
 assert(/GET_AUTO_LAUNCH/.test(channels) && /SET_AUTO_LAUNCH/.test(channels), 'settings must have dedicated IPC channels');
 assert(/getAutoLaunch:/.test(preload) && /setAutoLaunch:/.test(preload), 'preload must expose auto-launch settings APIs');

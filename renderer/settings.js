@@ -1051,7 +1051,14 @@ document.addEventListener('keydown', (event) => {
 });
 
 applyStaticI18n();
-setTab('general');
+const welcome = new URLSearchParams(location.search).get('welcome') === '1';
+setTab(welcome ? 'integrations' : 'general');
+if (welcome) {
+  $('welcome-card').hidden = false;
+  $('welcome-done').addEventListener('click', () => window.pet.closeSettings());
+  $('welcome-demo').addEventListener('click', () => window.pet.startDemo());
+  $('welcome-demo').focus();
+}
 loadSettings();
 loadPrivacyMode();
 loadIntegrationHealth();

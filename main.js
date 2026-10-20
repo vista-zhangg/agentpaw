@@ -354,7 +354,8 @@ function closePanel() {
 }
 
 // 设置面板：沿用详情面板的无边框玻璃卡片风格，集中放置用户偏好。
-function openSettings() {
+// `welcome` opens Connections with the first-run welcome card on top.
+function openSettings(options = {}) {
   if (settingsWin && !settingsWin.isDestroyed()) {
     settingsWin.show(); settingsWin.focus();
     return;
@@ -395,7 +396,7 @@ function openSettings() {
     }
   };
   win.on('blur', resumeShortcuts);
-  win.loadFile(path.join(__dirname, 'renderer', 'settings.html'));
+  win.loadFile(path.join(__dirname, 'renderer', 'settings.html'), options.welcome ? { query: { welcome: '1' } } : undefined);
   win.webContents.on('did-finish-load', () => {
     setTimeout(() => {
       try {
@@ -1442,6 +1443,13 @@ function registerIpc() {
     }
     return uninstallIntegrationHealth();
   });
+  ipcMain.handle(IPC.START_DEMO, (e) => {
+    if (!settingsWin || settingsWin.isDestroyed() || e.sender !== settingsWin.webContents) {
+      return { ok: false, error: 'forbidden' };
+    }
+    settingsWin.close();
+    return { ok: startDemo() };
+  });
   ipcMain.handle(IPC.GET_CLAUDE_QUOTA, (e) => {
     if (!settingsWin || settingsWin.isDestroyed() || e.sender !== settingsWin.webContents || !claudeQuota) {
       return { ok: false, error: 'forbidden' };
@@ -1647,27 +1655,10 @@ function startDemo() {
   return demoTour.start();
 }
 
+// First run: the styled Connections page with a welcome card instead of a
+// plain system dialog; the card offers the demo.
 function showIntegrationStatus() {
-  const health = currentIntegrationHealth();
-  const rows = health.integrations;
-  const detail = rows.map((row) => {
-    const ready = row.state === 'ready';
-    const key = ready
-      ? 'dlg.integrationsReady'
-      : row.state === 'disabled'
-        ? 'dlg.integrationsDisabled'
-        : row.detected ? 'dlg.integrationsFailed' : 'dlg.integrationsMissing';
-    return `${ready ? '✓' : '—'} ${row.label}：${t(key)}`;
-  }).join('\n') + `\n\n${t('dlg.integrationsHint')}`;
-  dialog.showMessageBox({
-    type: 'info',
-    title: t('dlg.integrationsTitle'),
-    message: t('dlg.integrationsMessage'),
-    detail,
-    buttons: [i18n.text("开始使用")],
-    defaultId: 0,
-    noLink: true,
-  }).then(() => startDemo()).catch(() => {});
+  openSettings({ welcome: true });
 }
 
 function autoLaunchMatchOptions() {
