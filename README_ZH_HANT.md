@@ -6,7 +6,7 @@
   <p>支援 <strong>Codex</strong> · <strong>Claude Code</strong> · <strong>WorkBuddy</strong> · <strong>opencode</strong></p>
 
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BC%89%20Windows%20%E7%89%88-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="下載 Windows 版"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/releases/latest"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BC%89%20Windows%20%E7%89%88-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="下載 Windows 版"></a>
   </p>
   <p>
     <a href="README.md">English</a> ·
@@ -15,7 +15,7 @@
     <a href="README_FR.md">Français</a>
   </p>
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/agentpaw/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="僅支援 Windows x64">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
     <img src="https://img.shields.io/badge/data-local--first-F6A04A" alt="本機優先">
@@ -42,7 +42,7 @@
 
 ## 30 秒上手
 
-1. 從[最新 Release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) 下載 `AgentPaw-<version>-Windows-x64.exe` 並執行。
+1. 從[最新 Release](https://github.com/vista-zhangg/agentpaw/releases/latest) 下載 `AgentPaw-<version>-Windows-x64.exe` 並執行。
 2. 安裝程式尚未進行商業程式碼簽章。若出現 SmartScreen 提示，點 **其他資訊 → 仍要執行**。
 3. 完成。AgentPaw 會自動辨識你已在使用的工具並接入，無需設定；之後可在應用程式內直接更新。
 
@@ -65,4 +65,4 @@
 
 AgentPaw 是獨立、免費、非營利的開放原始碼專案，與 OpenAI、Anthropic 無隸屬關係。本專案基於 [LLMPET](https://github.com/myunwang/LLMPET) 二次開發，保留上游 MIT 授權與原始版權聲明，見 [LICENSE](LICENSE)。第三方角色素材不包含在程式碼的 MIT 授權內；原創作者、來源與使用範圍見[角色素材總覽](assets/CREDITS.md)、[打工貓](assets/cat/CREDITS.md)、[奶茶鼠](assets/characters/milktea-mouse/CREDITS.md)、[小蜜蜂蜜蜜](assets/characters/mimi-bee/CREDITS.md)及[線條小狗](assets/characters/line-dog/CREDITS.md)。自行匯入素材時，請確認使用授權。
 
-歡迎透過 [Issues](https://github.com/vista-zhangg/codex-desktop-pet/issues) 回報問題，或依[貢獻指南](CONTRIBUTING.md)提交改進。詳細接入矩陣與工作原理請參閱[簡體中文 README](README_ZH_HANS.md)。
+歡迎透過 [Issues](https://github.com/vista-zhangg/agentpaw/issues) 回報問題，或依[貢獻指南](CONTRIBUTING.md)提交改進。詳細接入矩陣與工作原理請參閱[簡體中文 README](README_ZH_HANS.md)。

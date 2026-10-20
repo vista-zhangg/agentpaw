@@ -6,7 +6,7 @@
 
 对外产品名使用「AgentPaw」，Release 标题由 `shared/brand.js` 统一生成。npm 包名为 `agentpaw`、应用 ID 为 `io.github.vista-zhangg.agentpaw`、程序为 `AgentPaw.exe`、数据目录为 `~/.agentpaw/`。NSIS 安装 GUID 必须保持稳定，兼容模块负责迁移旧数据、Hook 与协议。
 
-仓库地址为 `vista-zhangg/codex-desktop-pet`。`package.json` 中的仓库与发布配置、应用更新链接、发布脚本的仓库校验和文档链接必须保持一致。历史仓库地址依赖 GitHub 的改名重定向服务旧客户端，不得重新创建同名仓库占用旧地址。
+仓库地址为 `vista-zhangg/agentpaw`。`package.json` 中的仓库与发布配置、应用更新链接、发布脚本的仓库校验和文档链接必须保持一致。历史仓库地址（`vista-zhangg/codex-desktop-pet`，2026-10-20 改名）依赖 GitHub 的改名重定向服务旧客户端，不得重新创建同名仓库占用旧地址。
 
 `dist/` 和 GitHub Release 的上传附件必须恰好包含两个文件：
 

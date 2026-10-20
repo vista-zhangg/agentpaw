@@ -6,7 +6,7 @@
   <p>Compatible avec <strong>Codex</strong> · <strong>Claude Code</strong> · <strong>WorkBuddy</strong> · <strong>opencode</strong></p>
 
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><img src="https://img.shields.io/badge/T%C3%A9l%C3%A9charger%20pour%20Windows-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="Télécharger pour Windows"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/releases/latest"><img src="https://img.shields.io/badge/T%C3%A9l%C3%A9charger%20pour%20Windows-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="Télécharger pour Windows"></a>
   </p>
   <p>
     <a href="README.md">English</a> ·
@@ -15,7 +15,7 @@
     <a href="README_FR.md">Français</a>
   </p>
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/agentpaw/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="Windows x64 uniquement">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="Licence MIT"></a>
     <img src="https://img.shields.io/badge/data-local--first-F6A04A" alt="Données locales">
@@ -42,7 +42,7 @@ Il prend aussi soin de vous : les rappels pour boire, s'étirer et reposer les y
 
 ## Démarrer
 
-1. Téléchargez `AgentPaw-<version>-Windows-x64.exe` depuis la [dernière version publiée](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) et lancez-le.
+1. Téléchargez `AgentPaw-<version>-Windows-x64.exe` depuis la [dernière version publiée](https://github.com/vista-zhangg/agentpaw/releases/latest) et lancez-le.
 2. L'installateur n'a pas encore de signature de code commerciale. Si SmartScreen s'affiche, choisissez **Informations complémentaires → Exécuter quand même**.
 3. C'est tout. AgentPaw détecte les agents que vous utilisez déjà et s'y connecte automatiquement, sans configuration. Les mises à jour s'installent depuis l'application.
 
@@ -65,4 +65,4 @@ Tout reste sur votre machine : les données de session sont lues et traitées lo
 
 AgentPaw est un projet indépendant, gratuit et non lucratif, sans affiliation avec OpenAI ou Anthropic. Il est dérivé de [LLMPET](https://github.com/myunwang/LLMPET) et conserve sa licence MIT ainsi que les mentions de copyright d'origine ; voir [LICENSE](LICENSE). Les illustrations des personnages tiers ne sont pas couvertes par la licence MIT du code ; leurs auteurs et conditions d'utilisation figurent dans les [crédits généraux](assets/CREDITS.md) et les pages du [chat](assets/cat/CREDITS.md), de [Milk Tea Mouse](assets/characters/milktea-mouse/CREDITS.md), de [Mimi Bee](assets/characters/mimi-bee/CREDITS.md) et de [Line Dog](assets/characters/line-dog/CREDITS.md). Vérifiez les droits des images que vous importez.
 
-Signalez les problèmes dans les [Issues](https://github.com/vista-zhangg/codex-desktop-pet/issues) ou proposez des améliorations selon le [guide de contribution](CONTRIBUTING.md). La matrice des intégrations et l'architecture sont détaillées dans le [README en anglais](README.md).
+Signalez les problèmes dans les [Issues](https://github.com/vista-zhangg/agentpaw/issues) ou proposez des améliorations selon le [guide de contribution](CONTRIBUTING.md). La matrice des intégrations et l'architecture sont détaillées dans le [README en anglais](README.md).

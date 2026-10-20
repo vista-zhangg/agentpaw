@@ -44,14 +44,14 @@ npm --version
 ### 获取依赖并启动
 
 ```powershell
-git clone https://github.com/vista-zhangg/codex-desktop-pet.git
-cd codex-desktop-pet
+git clone https://github.com/vista-zhangg/agentpaw.git
+cd agentpaw
 npm ci
 npm test
 npm start
 ```
 
-项目仓库为 <https://github.com/vista-zhangg/codex-desktop-pet>，上游源码地址为 <https://github.com/myunwang/LLMPET>。
+项目仓库为 <https://github.com/vista-zhangg/agentpaw>，上游源码地址为 <https://github.com/myunwang/LLMPET>。
 
 ### 发布前许可证与素材检查
 

@@ -6,7 +6,7 @@
   <p>Works with <strong>Codex</strong> · <strong>Claude Code</strong> · <strong>WorkBuddy</strong> · <strong>opencode</strong></p>
 
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><img src="https://img.shields.io/badge/Download%20for%20Windows-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="Download for Windows"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/releases/latest"><img src="https://img.shields.io/badge/Download%20for%20Windows-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="Download for Windows"></a>
   </p>
   <p>
     <a href="README.md">English</a> ·
@@ -15,7 +15,7 @@
     <a href="README_FR.md">Français</a>
   </p>
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/agentpaw/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="Windows x64 only">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
     <img src="https://img.shields.io/badge/data-local--first-F6A04A" alt="Local-first">
@@ -41,7 +41,7 @@ It also looks after you: water, stretch and eye-rest reminders follow your time 
 
 ## Get started
 
-1. Download `AgentPaw-<version>-Windows-x64.exe` from the [latest release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) and run it.
+1. Download `AgentPaw-<version>-Windows-x64.exe` from the [latest release](https://github.com/vista-zhangg/agentpaw/releases/latest) and run it.
 2. The installer is not commercially code-signed yet. If Windows SmartScreen appears, choose **More info → Run anyway**.
 3. That's it. AgentPaw detects the agents you already use and connects to them automatically; no configuration is needed. Updates install from inside the app.
 

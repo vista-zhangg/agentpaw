@@ -29,7 +29,7 @@ assert.strictEqual(pkg.build.productName, BRAND.displayName);
 assert.strictEqual(pkg.build.executableName, 'AgentPaw');
 assert.strictEqual(pkg.build.appId, BRAND.appId);
 assert.strictEqual(pkg.author, 'vista-zhang');
-assert.strictEqual(pkg.repository.url, 'git+https://github.com/vista-zhangg/codex-desktop-pet.git');
+assert.strictEqual(pkg.repository.url, 'git+https://github.com/vista-zhangg/agentpaw.git');
 assert(pkg.build.files.includes('LICENSE'), 'packaged app must retain the upstream MIT license');
 assert.strictEqual(pkg.build.win.artifactName, 'AgentPaw-${version}-Windows-${arch}.${ext}');
 assert(/--publish never(?:\s|$)/.test(pkg.scripts['package:win']), 'Windows packaging must use the unified release job');

@@ -6,7 +6,7 @@
   <p>支持 <strong>Codex</strong> · <strong>Claude Code</strong> · <strong>WorkBuddy</strong> · <strong>opencode</strong></p>
 
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD%20Windows%20%E7%89%88-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="下载 Windows 版"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/releases/latest"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD%20Windows%20%E7%89%88-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="下载 Windows 版"></a>
   </p>
   <p>
     <a href="README.md">English</a> ·
@@ -15,7 +15,7 @@
     <a href="README_FR.md">Français</a>
   </p>
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/agentpaw/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="仅支持 Windows x64">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
     <img src="https://img.shields.io/badge/data-local--first-F6A04A" alt="本地优先">
@@ -41,7 +41,7 @@
 
 ## 30 秒上手
 
-1. 从[最新 Release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) 下载 `AgentPaw-<version>-Windows-x64.exe` 并运行。
+1. 从[最新 Release](https://github.com/vista-zhangg/agentpaw/releases/latest) 下载 `AgentPaw-<version>-Windows-x64.exe` 并运行。
 2. 安装包暂未做商业代码签名。若出现 SmartScreen 提示，点 **更多信息 → 仍要运行**。
 3. 完成。AgentPaw 会自动识别你已经在用的工具并接入，无需配置；之后可在应用内直接更新。
 

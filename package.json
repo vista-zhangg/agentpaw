@@ -34,11 +34,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vista-zhangg/codex-desktop-pet.git"
+    "url": "git+https://github.com/vista-zhangg/agentpaw.git"
   },
-  "homepage": "https://github.com/vista-zhangg/codex-desktop-pet#readme",
+  "homepage": "https://github.com/vista-zhangg/agentpaw#readme",
   "bugs": {
-    "url": "https://github.com/vista-zhangg/codex-desktop-pet/issues"
+    "url": "https://github.com/vista-zhangg/agentpaw/issues"
   },
   "scripts": {
     "start": "node start-detached.js",
@@ -74,7 +74,7 @@
       {
         "provider": "github",
         "owner": "vista-zhangg",
-        "repo": "codex-desktop-pet",
+        "repo": "agentpaw",
         "releaseType": "release"
       }
     ],

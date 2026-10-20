@@ -23,7 +23,7 @@ AgentPaw · AI 桌伴是免费、非营利的个人开源项目，面向个人�
 
 ## 权利人联系与处理
 
-若您是原创作者或权利人，希望更正署名、调整展示方式或停止分发相关素材，请通过 [GitHub Issues](https://github.com/vista-zhangg/codex-desktop-pet/issues) 联系维护者，并说明作品与涉及文件。维护者会核实并及时更正、替换或移除相关内容；请勿在公开 Issue 中提交身份证件、合同或其他敏感信息。
+若您是原创作者或权利人，希望更正署名、调整展示方式或停止分发相关素材，请通过 [GitHub Issues](https://github.com/vista-zhangg/agentpaw/issues) 联系维护者，并说明作品与涉及文件。维护者会核实并及时更正、替换或移除相关内容；请勿在公开 Issue 中提交身份证件、合同或其他敏感信息。
 
 ## English
 

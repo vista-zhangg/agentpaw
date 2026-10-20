@@ -6,7 +6,7 @@ const path = require('path');
 const { verifyDist } = require('./verify-dist');
 const BRAND = require('../shared/brand');
 
-const REPOSITORY = 'vista-zhangg/codex-desktop-pet';
+const REPOSITORY = 'vista-zhangg/agentpaw';
 
 function getReleaseByTag(api, tag) {
   // The tag endpoint only exposes published releases. Resolve draft IDs via the list.
