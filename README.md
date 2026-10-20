@@ -22,6 +22,9 @@
   </p>
 </div>
 
+<p align="center"><img src="docs/images/en/demo.gif" width="800" alt="AgentPaw demo: the pet follows a coding task, asks for approval and celebrates when it is done"><br>
+<sub>Demo recorded with a character pack made from the AgentPaw icon. Built-in characters and your own GIFs work the same way.</sub></p>
+
 <table>
   <tr>
     <td align="center" valign="bottom" width="33%"><img src="docs/images/en/quick-view.png" alt="Quick view: running tasks, cost, tokens and Codex quota"><br><sub><strong>Quick view</strong> — click the pet</sub></td>
@@ -44,6 +47,7 @@ It also looks after you: water, stretch and eye-rest reminders follow your time 
 1. Download `AgentPaw-<version>-Windows-x64.exe` from the [latest release](https://github.com/vista-zhangg/agentpaw/releases/latest) and run it.
 2. The installer is not commercially code-signed yet. If Windows SmartScreen appears, choose **More info → Run anyway**.
 3. That's it. AgentPaw detects the agents you already use and connects to them automatically; no configuration is needed. Updates install from inside the app.
+4. Want to see it in action first? Right-click the pet and choose **Play a demo**.
 
 > [!NOTE]
 > AgentPaw supports **Windows x64 only**; macOS, Linux and Windows on ARM are not supported. The app UI is available in English, Simplified Chinese and Traditional Chinese.

@@ -34,26 +34,26 @@ async function main() {
   const menuSource = ['quietMenuItems', 'fullscreenMenuItem', 'petMenuItems']
     .map((name) => mainSource.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\n\\}`))[0]).join('\n');
   const sent = [];
-  let privacy = null, panels = 0, settings = 0, hidden = 0, snoozed = null;
+  let privacy = null, demos = 0, panels = 0, settings = 0, hidden = 0, snoozed = null;
   const menuWorld = {
     i18n: { text: (text, args = []) => text.replace(/\{(\d+)\}/g, (_, i) => args[i]) },
     config: { get: () => ({ privacyMode: true, quietMinutes: 45 }) },
     companionState: () => ({ visibility: { autoHideFullscreen: false } }),
     IPC: { WORKFLOW_COMMAND: 'workflow:command' },
     sendWin: (win, channel, payload) => sent.push([win, channel, payload]),
-    openPanel: () => panels++, openSettings: () => settings++, hidePet: () => hidden++,
+    openPanel: () => panels++, openSettings: () => settings++, hidePet: () => hidden++, startDemo: () => demos++,
     setPrivacyMode: (value) => { privacy = value; }, setFullscreenPreference() {},
     petVisibility: { snooze: (minutes) => { snoozed = minutes; } }, applyPetVisibility() {},
   };
   vm.runInNewContext(`${menuSource}; result = petMenuItems('pet-window');`, menuWorld);
   const items = menuWorld.result;
   const labels = [...items].map((item) => item.type === 'separator' ? '-' : item.label);
-  assert.deepStrictEqual(labels, ['详情面板', '快速视图', '-', '隐私模式', '全屏时自动藏起', '安静一会儿', '-', '设置…', '藏起，直到我再次打开']);
+  assert.deepStrictEqual(labels, ['详情面板', '快速视图', '-', '隐私模式', '全屏时自动藏起', '安静一会儿', '-', '演示一遍', '设置…', '藏起，直到我再次打开']);
   assert.equal(items[3].type, 'checkbox'); assert.equal(items[3].checked, true, 'privacy shows its saved state');
   assert.equal(items[4].type, 'checkbox'); assert.equal(items[4].checked, false, 'fullscreen shows its saved state');
   assert.deepStrictEqual([...items[5].submenu].map((item) => item.label), ['安静 45 分钟 · 我的时长', '安静 15 分钟', '安静 30 分钟', '安静 60 分钟']);
-  items[0].click(); items[1].click(); items[3].click({ checked: false }); items[5].submenu[2].click(); items[7].click(); items[8].click();
-  assert.equal(panels, 1); assert.equal(settings, 1); assert.equal(hidden, 1); assert.equal(snoozed, 30);
+  items[0].click(); items[1].click(); items[3].click({ checked: false }); items[5].submenu[2].click(); items[7].click(); items[8].click(); items[9].click();
+  assert.equal(demos, 1); assert.equal(panels, 1); assert.equal(settings, 1); assert.equal(hidden, 1); assert.equal(snoozed, 30);
   assert.equal(privacy, false, 'unchecking the menu item turns privacy off');
   assert.deepStrictEqual(sent, [['pet-window', 'workflow:command', 'peek']], 'quick view opens in the window that was clicked');
 

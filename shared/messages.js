@@ -5479,5 +5479,45 @@
     "设置失败，请重试。",
     "Couldn't save the setting. Please try again.",
     "設定失敗，請重試。"
+  ],
+  [
+    "演示一遍",
+    "Play a demo",
+    "示範一遍"
+  ],
+  [
+    "AgentPaw 演示",
+    "AgentPaw demo",
+    "AgentPaw 示範"
+  ],
+  [
+    "运行命令：npm test",
+    "Run command: npm test",
+    "執行指令：npm test"
+  ],
+  [
+    "运行 npm test",
+    "Running npm test",
+    "執行 npm test"
+  ],
+  [
+    "换一种做法",
+    "Trying another way",
+    "換個做法"
+  ],
+  [
+    "测试通过",
+    "Tests passed",
+    "測試通過"
+  ],
+  [
+    "修改 src/app.js",
+    "Editing src/app.js",
+    "修改 src/app.js"
+  ],
+  [
+    "演示结束。真实任务需要你时，我也会这样提醒你。",
+    "That's the demo. When a real task needs you, I'll let you know the same way.",
+    "示範結束。真實任務需要你時，我也會這樣提醒你。"
   ]
 ];});

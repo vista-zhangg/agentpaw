@@ -22,6 +22,9 @@
   </p>
 </div>
 
+<p align="center"><img src="docs/images/zh/demo.gif" width="800" alt="AgentPaw 示範：桌寵跟隨程式開發任務、請求授權、完成時提醒"><br>
+<sub>示範使用以 AgentPaw 圖示製作的角色包（簡體中文介面）；內建角色和你自己的 GIF 效果相同。</sub></p>
+
 <table>
   <tr>
     <td align="center" valign="bottom" width="33%"><img src="docs/images/zh/quick-view.png" alt="快速檢視：進行中的任務、費用、Token 與 Codex 額度"><br><sub><strong>快速檢視</strong>：點一下夥伴</sub></td>
@@ -45,6 +48,7 @@
 1. 從[最新 Release](https://github.com/vista-zhangg/agentpaw/releases/latest) 下載 `AgentPaw-<version>-Windows-x64.exe` 並執行。
 2. 安裝程式尚未進行商業程式碼簽章。若出現 SmartScreen 提示，點 **其他資訊 → 仍要執行**。
 3. 完成。AgentPaw 會自動辨識你已在使用的工具並接入，無需設定；之後可在應用程式內直接更新。
+4. 想先看看效果？右鍵桌寵，選「示範一遍」。
 
 > [!NOTE]
 > AgentPaw 目前**僅支援 Windows x64**，不支援 macOS、Linux 或 Windows on ARM。

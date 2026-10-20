@@ -22,6 +22,9 @@
   </p>
 </div>
 
+<p align="center"><img src="docs/images/en/demo.gif" width="800" alt="Démo d'AgentPaw : le compagnon suit une tâche, demande une autorisation et signale la fin"><br>
+<sub>Démo enregistrée avec un pack de personnage créé à partir de l'icône d'AgentPaw ; les personnages intégrés et vos propres GIF fonctionnent de la même façon.</sub></p>
+
 <table>
   <tr>
     <td align="center" valign="bottom" width="33%"><img src="docs/images/en/quick-view.png" alt="Vue rapide : tâches en cours, coût, tokens et quota Codex"><br><sub><strong>Vue rapide</strong> — un clic sur le compagnon</sub></td>
@@ -45,6 +48,7 @@ Il prend aussi soin de vous : les rappels pour boire, s'étirer et reposer les y
 1. Téléchargez `AgentPaw-<version>-Windows-x64.exe` depuis la [dernière version publiée](https://github.com/vista-zhangg/agentpaw/releases/latest) et lancez-le.
 2. L'installateur n'a pas encore de signature de code commerciale. Si SmartScreen s'affiche, choisissez **Informations complémentaires → Exécuter quand même**.
 3. C'est tout. AgentPaw détecte les agents que vous utilisez déjà et s'y connecte automatiquement, sans configuration. Les mises à jour s'installent depuis l'application.
+4. Envie de voir avant d'essayer ? Clic droit sur le compagnon, puis **Play a demo**.
 
 > [!NOTE]
 > AgentPaw prend en charge **Windows x64 uniquement** ; macOS, Linux et Windows sur ARM ne sont pas pris en charge.

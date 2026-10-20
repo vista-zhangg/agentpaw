@@ -39,6 +39,7 @@ const { createServer } = require('./backend/server');
 const adapter = require('./backend/adapter');
 const hooks = require('./backend/hooks');
 const { createClaudeQuota } = require('./backend/claude-quota');
+const { createDemoTour } = require('./backend/demo-tour');
 const { focusSession } = require('./backend/focus');
 const { createCodexWatch } = require('./backend/codex-watch');
 const { createCodexMetering } = require('./backend/codex-metering');
@@ -121,6 +122,7 @@ let codexMetering = null; // Codex rollout 累计 token 台账（与状态 watch
 let codexRateLimits = null; // Codex App Server 订阅额度（独立于 rollout token 台账）
 let codexQuotaState = unavailableCodexQuota('idle');
 let claudeQuota = null; // Claude Code 订阅额度（可选，经 statusLine 中继）
+let demoTour = null; // 演示一遍：叠加在真实数据上的脚本化任务
 let workbuddyMetering = null; // WorkBuddy 转录 token 台账（只读，从 ~/.workbuddy/projects 扫描）
 let opencodeMetering = null; // opencode 用量台账（只读，tail ~/.agentpaw/opencode-usage.jsonl）
 let updateService = null;
@@ -612,6 +614,7 @@ function petMenuItems(win) {
     fullscreenMenuItem(),
     { label: i18n.text("安静一会儿"), submenu: quietMenuItems() },
     { type: 'separator' },
+    { label: i18n.text("演示一遍"), click: () => startDemo() },
     { label: i18n.text("设置…"), click: () => openSettings() },
     { label: i18n.text("藏起，直到我再次打开"), click: hidePet },
   ];
@@ -947,8 +950,14 @@ function emitStats() {
   const snapshot = core.buildSnapshot();
   // 一次性获取 metering 数据，避免多次调用 getStats()
   const cachedMeter = meterStats();
-  lastStats = buildStats('all', snapshot, cachedMeter);
-  if (taskNotifications) taskNotifications.reconcile(lastStats.sessions);
+  let stats = buildStats('all', snapshot, cachedMeter);
+  // A real request always wins over the demo.
+  if (demoTour && demoTour.active()) {
+    if (stats.waitingCount > 0 || stats.needsinputCount > 0) demoTour.stop({ quiet: true });
+    else stats = demoTour.overlay(stats);
+  }
+  lastStats = stats;
+  if (taskNotifications && !(demoTour && demoTour.active())) taskNotifications.reconcile(lastStats.sessions);
   for (const st of petStates()) sendWin(st.win, IPC.PET_STATS, lastStats);
   // Historical model matrices belong to the details window. Keep them off
   // the pet's frequent stats channel and skip their projection when closed.
@@ -1238,6 +1247,7 @@ function bootBackend() {
   });
 
   claudeQuota = createClaudeQuota({ config });
+  demoTour = createDemoTour({ text: i18n.text, t, emitStats, sendEvent: sendPetEvent });
   server = createServer({ core, permissions, onClaudeQuota: (report) => {
     if (claudeQuota.record(report)) emitStats();
   } });
@@ -1560,6 +1570,7 @@ function registerIpc() {
 
   ipcMain.handle(IPC.PERMISSION_DECIDE, (_e, permId, behavior) => {
     if (!permissions || typeof permId !== 'string' || !permId) return false;
+    if (demoTour && demoTour.decide(permId, behavior)) return true;
     return permissions.decide(permId, behavior) === true;
   });
   ipcMain.handle(IPC.FOCUS_SESSION, async (_e, sessionId) => {
@@ -1629,6 +1640,13 @@ function buildTray() {
   tray.on('click', () => { showPet(); });
 }
 
+// Shows the pet first so the demo is never played to a hidden window.
+function startDemo() {
+  if (!demoTour) return false;
+  if (!mergedWin || mergedWin.isDestroyed() || !mergedWin.isVisible()) showPet();
+  return demoTour.start();
+}
+
 function showIntegrationStatus() {
   const health = currentIntegrationHealth();
   const rows = health.integrations;
@@ -1649,7 +1667,7 @@ function showIntegrationStatus() {
     buttons: [i18n.text("开始使用")],
     defaultId: 0,
     noLink: true,
-  }).catch(() => {});
+  }).then(() => startDemo()).catch(() => {});
 }
 
 function autoLaunchMatchOptions() {
@@ -1781,6 +1799,7 @@ function refreshTrayMenu() {
       ? i18n.text("临时安静 · 至 {0}", [new Date(companionState().visibility.quietUntil).toLocaleTimeString(i18n.getLanguage(), { hour: '2-digit', minute: '2-digit' })])
       : i18n.text("临时安静与全屏免打扰"), submenu: hideMenuItems() },
     { type: 'separator' },
+    { label: i18n.text("演示一遍"), click: () => startDemo() },
     { label: t('tray.settings'), click: () => openSettings() },
     { type: 'separator' },
     { label: t('tray.quit'), click: () => app.quit() },
