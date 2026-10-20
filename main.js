@@ -1250,7 +1250,7 @@ function bootBackend() {
   claudeQuota = createClaudeQuota({ config });
   demoTour = createDemoTour({ text: i18n.text, t, emitStats, sendEvent: sendPetEvent });
   server = createServer({ core, permissions, onClaudeQuota: (report) => {
-    if (claudeQuota.record(report)) emitStats();
+    if (claudeQuota.record(report)) { emitStats(); refreshTrayMenu(); }
   } });
   server.start();
 
@@ -1462,6 +1462,7 @@ function registerIpc() {
     }
     const result = claudeQuota.setEnabled(enabled === true);
     emitStats();
+    refreshTrayMenu();
     return result;
   });
   ipcMain.handle(IPC.GET_UPDATE_STATE, () => updateService ? updateService.snapshot() : null);
@@ -1766,6 +1767,23 @@ function quotaStatusLabel(quota) {
   return t('tray.quotaStatusUnavailable');
 }
 
+// Claude Code plan usage rows, shown only while the option is on.
+function claudeTrayItems() {
+  const card = claudeQuota ? claudeQuota.card() : null;
+  if (!card) return [];
+  const rows = codexQuotaTray.displayRows(card);
+  const items = [{ type: 'separator' }, { label: i18n.text("Claude Code 额度"), enabled: false }];
+  if (card.status !== 'ready') {
+    items.push({ label: i18n.text("在终端运行 claude 并收到回复后更新"), enabled: false });
+    return items;
+  }
+  for (const key of ['fiveHour', 'weekly']) {
+    if (card.windows[key]) items.push({ label: t('tray.quotaWindow', rows[key]), enabled: false });
+  }
+  items.push({ label: t('tray.quotaUpdated', { time: rows.updated }), enabled: false });
+  return items;
+}
+
 function refreshTrayMenu() {
   if (!tray) return;
   const privacyMode = config.get().privacyMode === true;
@@ -1783,6 +1801,7 @@ function refreshTrayMenu() {
     ...(quota.status === 'ready' ? [] : [
       { label: t('tray.quotaStatus', { status: quotaStatusLabel(quota) }), enabled: false },
     ]),
+    ...claudeTrayItems(),
     { type: 'separator' },
     { label: t('tray.panel'), click: () => openPanel() },
     { label: petVisible ? t('tray.hidePet') : t('tray.showPet'), click: () => (petVisible ? hidePet() : showPet()) },

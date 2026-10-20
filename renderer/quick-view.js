@@ -110,15 +110,31 @@
       usage.cacheRate == null ? text("{0} 轮对话", [usage.rounds]) : text("缓存命中 {0}%", [usage.cacheRate.toFixed(0)]));
     const quota = stats.codexQuota || {};
     const entry = quota.status === 'ready' && quotaWindowEntries(quota)[0];
+    const claude = stats.claudeQuota;
+    // Four tiles leave no room for "quota" in the labels.
     if (entry) {
       const [key, labelKey] = entry;
       const remaining = quotaRemainingPercent(quota.windows[key]);
       const forecast = quota.forecast && quota.forecast[key];
       const runsOut = forecast && forecast.status === 'ready' && forecast.exhaustAt;
-      tile(text("Codex {0} 额度", [labelKey === 'quota.fiveHour' ? '5h' : '7d']),
+      const span = labelKey === 'quota.fiveHour' ? '5h' : '7d';
+      tile(claude ? 'Codex ' + span : text("Codex {0} 额度", [span]),
         remaining == null ? '--' : Math.round(remaining) + '%',
         runsOut ? text("约 {0} 用完", [quotaClockText(forecast.exhaustAt)]) : quotaResetShort(quota.windows[key]),
         !!runsOut || (remaining != null && remaining <= 20));
+    }
+    // Claude Code plan usage, only while the user has turned it on.
+    if (claude) {
+      const claudeEntry = claude.status === 'ready' && quotaWindowEntries(claude)[0];
+      if (claudeEntry) {
+        const [key, labelKey] = claudeEntry;
+        const remaining = quotaRemainingPercent(claude.windows[key]);
+        tile('Claude ' + (labelKey === 'quota.fiveHour' ? '5h' : '7d'),
+          remaining == null ? '--' : Math.round(remaining) + '%', quotaResetShort(claude.windows[key]),
+          remaining != null && remaining <= 20);
+      } else {
+        tile('Claude', '--', text("终端 claude 回复后更新"));
+      }
     }
     box.dataset.count = String(box.children.length);
   }

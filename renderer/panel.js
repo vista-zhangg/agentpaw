@@ -50,7 +50,7 @@ function renderClaudeQuota(quota) {
   if (!quota) return;
   const card = window.AgentPawQuotaCard;
   const ready = quota.status === 'ready';
-  $('claude-quota-meta').textContent = ready ? card.meta(quota) : text('Claude Code 下一次回复后更新');
+  $('claude-quota-meta').textContent = ready ? card.meta(quota) : text('在终端运行 claude 并收到回复后更新；Claude 桌面应用与 IDE 插件可能不提供');
   if (ready) card.render($('claude-quota-rows'), quota);
   else $('claude-quota-rows').replaceChildren();
 }

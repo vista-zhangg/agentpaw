@@ -5439,26 +5439,17 @@
     "共提醒 {0} 次",
     "{0} reminders",
     "共提醒 {0} 次"
-  ],
+  ]
+,
   [
     "显示 Claude Code 订阅额度",
     "Show Claude Code plan usage",
     "顯示 Claude Code 訂閱額度"
   ],
   [
-    "经 Claude Code 状态栏读取 5h / 7d 额度，仅 Pro / Max 订阅提供。开启后 Claude Code 底部会显示状态栏；已有的状态栏照常显示，关闭时原样恢复。",
-    "Reads 5h / 7d usage from Claude Code's status line (Pro and Max plans only). Claude Code then shows a status line; an existing one keeps working and is restored when you turn this off.",
-    "經 Claude Code 狀態列讀取 5h / 7d 額度，僅 Pro / Max 訂閱提供。開啟後 Claude Code 底部會顯示狀態列；既有的狀態列照常顯示，關閉時原樣還原。"
-  ],
-  [
     "Claude 额度",
     "Claude quota",
     "Claude 額度"
-  ],
-  [
-    "Claude Code 下一次回复后更新",
-    "Updates after Claude Code's next reply",
-    "Claude Code 下一次回覆後更新"
   ],
   [
     "未检测到 Claude Code。",
@@ -5469,11 +5460,6 @@
     "已开启，原有状态栏照常显示。",
     "On. Your existing status line still shows.",
     "已開啟，原有狀態列照常顯示。"
-  ],
-  [
-    "已开启，Claude Code 下一次回复后更新。",
-    "On. Updates after Claude Code's next reply.",
-    "已開啟，Claude Code 下一次回覆後更新。"
   ],
   [
     "设置失败，请重试。",
@@ -5534,5 +5520,35 @@
     "看一遍演示",
     "Watch a demo",
     "看一遍示範"
+  ],
+  [
+    "经 Claude Code 状态栏读取 5h / 7d 额度，仅 Pro / Max 订阅提供，只在终端运行 claude 时更新；Claude 桌面应用与 IDE 插件可能不运行状态栏，此时不会更新。开启后终端底部会显示状态栏；已有的状态栏照常显示，关闭时原样恢复。",
+    "Reads 5h / 7d usage from Claude Code's status line (Pro and Max plans only). It updates only when you run claude in a terminal; the Claude desktop app and IDE extensions may not run the status line, so usage from them may not appear. The terminal then shows a status line; an existing one keeps working and is restored when you turn this off.",
+    "經 Claude Code 狀態列讀取 5h / 7d 額度，僅 Pro / Max 訂閱提供，只在終端機執行 claude 時更新；Claude 桌面應用程式與 IDE 擴充功能可能不執行狀態列，此時不會更新。開啟後終端機底部會顯示狀態列；既有的狀態列照常顯示，關閉時原樣還原。"
+  ],
+  [
+    "在终端运行 claude 并收到回复后更新；Claude 桌面应用与 IDE 插件可能不提供",
+    "Updates after claude replies in a terminal; the Claude desktop app and IDE extensions may not provide it",
+    "在終端機執行 claude 並收到回覆後更新；Claude 桌面應用程式與 IDE 擴充功能可能不提供"
+  ],
+  [
+    "已开启。在终端运行 claude 并收到回复后更新。",
+    "On. Updates after claude replies in a terminal.",
+    "已開啟。在終端機執行 claude 並收到回覆後更新。"
+  ],
+  [
+    "在终端运行 claude 并收到回复后更新",
+    "Updates after claude replies in a terminal",
+    "在終端機執行 claude 並收到回覆後更新"
+  ],
+  [
+    "Claude Code 额度",
+    "Claude Code quota",
+    "Claude Code 額度"
+  ],
+  [
+    "终端 claude 回复后更新",
+    "After a terminal reply",
+    "終端機 claude 回覆後更新"
   ]
 ];});

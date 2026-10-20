@@ -165,6 +165,27 @@ async function main() {
   assert.strictEqual(reloaded.reconcile().enabled, false);
   assert.strictEqual(saved.claudeQuotaEnabled, false);
 
+  // Tray menu: a Claude section only while enabled; a waiting note before data.
+  const vm = require('vm');
+  const mainSource = fs.readFileSync(path.join(root, 'main.js'), 'utf8');
+  const start = mainSource.indexOf('function claudeTrayItems()');
+  const trayFn = mainSource.slice(start, mainSource.indexOf('\nfunction refreshTrayMenu()', start));
+  const trayWorld = (card) => {
+    const world = {
+      claudeQuota: { card: () => card }, codexQuotaTray: require('../backend/codex-quota-tray'),
+      i18n: { text: (s) => s }, t: (key, vars) => `${key}:${vars.label || vars.time}`,
+    };
+    vm.runInNewContext(`${trayFn}; result = claudeTrayItems();`, world);
+    return [...world.result].map((item) => item.type === 'separator' ? '-' : item.label);
+  };
+  assert.deepStrictEqual(trayWorld(null), [], 'no tray section while off');
+  assert.deepStrictEqual(trayWorld({ status: 'idle', windows: {} }), ['-', 'Claude Code 额度', '在终端运行 claude 并收到回复后更新']);
+  assert.deepStrictEqual(trayWorld(statusline.cardState(report, NOW)).slice(1, 4),
+    ['Claude Code 额度', 'tray.quotaWindow:5h', 'tray.quotaWindow:7d']);
+  assert(/claudeQuota\.record\(report\)\) \{ emitStats\(\); refreshTrayMenu\(\); \}/.test(mainSource), 'new data refreshes the tray');
+  const quickView = fs.readFileSync(path.join(root, 'renderer', 'quick-view.js'), 'utf8');
+  assert(quickView.includes('stats.claudeQuota') && quickView.includes('终端 claude 回复后更新'), 'quick view shows a Claude tile');
+
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log('Claude Code plan usage: parsing, statusLine install/restore, relay and switch checks passed');
 }

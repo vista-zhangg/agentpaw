@@ -340,7 +340,7 @@ function renderClaudeQuota(message = '', kind = '') {
   let note = message;
   if (!note && !claudeQuotaState.detected) note = L.text('未检测到 Claude Code。');
   else if (!note && claudeQuotaState.enabled) {
-    note = claudeQuotaState.wrapped ? L.text('已开启，原有状态栏照常显示。') : L.text('已开启，Claude Code 下一次回复后更新。');
+    note = claudeQuotaState.wrapped ? L.text('已开启，原有状态栏照常显示。') : L.text('已开启。在终端运行 claude 并收到回复后更新。');
   }
   flashStatus(claudeQuotaStatusEl, note, kind);
 }
