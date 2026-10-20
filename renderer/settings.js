@@ -76,7 +76,8 @@ initializeChipDisplay();
     if (!today) return;
     $('rest-today-used').textContent = duration(today.usedMinutes || 0);
     $('rest-today-streak').textContent = today.streakMinutes >= 1 ? window.AgentPawI18n.text("已连续 {0} 分钟", [today.streakMinutes]) : '';
-    $('rest-today-done').textContent = `${today.done || 0} / ${today.prompts || 0}`;
+    $('rest-today-done').textContent = String(today.done || 0);
+    $('rest-today-prompts').textContent = window.AgentPawI18n.text("共提醒 {0} 次", [today.prompts || 0]);
     $('rest-today-skipped').textContent = String(today.skipped || 0);
   }
   function render(value, force = false) {

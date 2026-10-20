@@ -54,7 +54,7 @@
     if (open && signature === nextSignature) return;
     signature = nextSignature;
     const names = { water: window.AgentPawI18n.text("喝口水"), stretch: window.AgentPawI18n.text("起身伸个懒腰"), eyes: window.AgentPawI18n.text("看看远处") };
-    title.textContent = pending.kinds.map(kind => names[kind]).filter(Boolean).join('，') + window.AgentPawI18n.text("吧");
+    title.textContent = pending.kinds.map(kind => names[kind]).filter(Boolean).join(/^zh/.test(window.AgentPawI18n.getLanguage()) ? '，' : ', ') + window.AgentPawI18n.text("吧");
     const today = value.rest.today;
     todayLine.hidden = !today;
     if (today) {
