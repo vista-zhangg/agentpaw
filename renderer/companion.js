@@ -28,7 +28,7 @@
   function refresh() {
     const pending = value && value.rest && value.rest.pending;
     const hidden = document.hidden === true || (value && value.visibility && value.visibility.visible === false);
-    const occupied = askActive || actionPopOpen || peekOpen || quotaPopoverOpen || !!g || Date.now() < deferredUntil;
+    const occupied = askActive || actionPopOpen || quotaPopoverOpen || !!g || Date.now() < deferredUntil;
     const blocked = hidden || occupied;
     // A permission may wait for hours while the person works elsewhere. Keep
     // the reminder visible in the capsule without closing or stealing focus

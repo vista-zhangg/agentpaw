@@ -12,7 +12,7 @@ function inspectDock() {
     && bounds.left < rect.right && bounds.right > rect.left
     && bounds.top < rect.bottom && bounds.bottom > rect.top;
   const selectors = '#cat, #sessions, #chip-context, #chip-quota, #chip-tokens, #chip-cost, #rest-pending, '
-    + '#prop.on, #sleep.on .z, #sidekick.on, #think.on, #peek:not(.hidden), #ask:not(.hidden), '
+    + '#prop.on, #sleep.on .z, #sidekick.on, #think.on, #ask:not(.hidden), '
     + '#action-pop:not(.hidden), #quota-popover:not(.hidden), #rest-reminder:not(.hidden)';
   const collisions = [...document.querySelectorAll(selectors)].filter(el => {
     const style = getComputedStyle(el);
@@ -87,7 +87,7 @@ module.exports = async function checkNotepadLayout(win, { stats, defaults, captu
     win.setSize(520,740);
     await settle();
     for (const vertical of ['above','below']) {
-      for (const overlay of minimal?['Peek','ActionPop']:['Peek','QuotaPopover','ActionPop']) {
+      for (const overlay of minimal?['ActionPop']:['QuotaPopover','ActionPop']) {
         await setEdge(vertical,'right');
         await win.webContents.executeJavaScript(`open${overlay}()`);
         await settle();
@@ -103,11 +103,11 @@ module.exports = async function checkNotepadLayout(win, { stats, defaults, captu
   assert.equal(await win.webContents.executeJavaScript('g===null && !chip.classList.contains("dragging")'),true,
     'pressing the notebook badge cannot start a capsule drag or long press');
   await win.webContents.executeJavaScript(`document.getElementById('np-badge').click(); void 0;`);
-  assert.equal(await win.webContents.executeJavaScript('actionPopOpen && !peekOpen'),true,'notebook opens only the action center');
+  assert.equal(await win.webContents.executeJavaScript('actionPopOpen'),true,'the count opens the quick view');
   await win.webContents.executeJavaScript(`notepad.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true})); void 0;`);
-  assert.equal(await win.webContents.executeJavaScript('actionPopOpen'),false,'Enter closes the action center');
+  assert.equal(await win.webContents.executeJavaScript('actionPopOpen'),false,'Enter closes the quick view');
   await win.webContents.executeJavaScript(`notepad.dispatchEvent(new KeyboardEvent('keydown',{key:' ',bubbles:true})); void 0;`);
-  assert.equal(await win.webContents.executeJavaScript('actionPopOpen'),true,'Space opens the action center once');
+  assert.equal(await win.webContents.executeJavaScript('actionPopOpen'),true,'Space opens the quick view once');
   await win.webContents.executeJavaScript(`closeActionPop(); applyStats(${JSON.stringify({ ...stats, chipDisplay: { ...defaults, showCat: false, showTokens: true } })}); void 0;`);
   await win.webContents.executeJavaScript(`
     for (const [key,descriptor] of Object.entries(window.notepadScreenDescriptors)) {

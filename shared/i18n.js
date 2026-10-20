@@ -304,7 +304,6 @@
     'ask.kindPlan': '方案',
     'ask.kindChoice': '选择',
     'ask.needHandling': '需要你处理',
-    'ask.goReply': '💬 去这个会话回复 →',
 
     // ── session labels ──────────────────────────────────────────────────────
     'sess.fallbackName': '会话',
@@ -336,43 +335,14 @@
     'bub.xiabanEvening2': '🌃 工位已由伙伴接管，放心下班，记得按时吃饭！',
     'bub.xiabanEvening3': '🔔 收工收工！再不走，晚饭就要开始等你回复了。',
 
-    // ── left-click work peek ───────────────────────────────────────────────
-    'peek.aria': '工作速览',
-    'peek.close': '关闭工作速览',
+    // ── sessions in the quick view ─────────────────────────────────────────
     'peek.focus': '打开当前会话',
     'peek.focusFailed': '没能打开这个会话，请在对应 Agent 中手动打开',
-    'peek.viewOnly': '该会话没有可用的窗口定位信息，点击查看详情',
-    'peek.panel': '查看详情',
-    'peek.idleTitle': '暂时没有任务',
-    'peek.idleSub': 'AgentPaw正在待命',
-    'peek.sleepingSub': '工位已由伙伴接管',
-    'peek.multiTitle': '{count} 个任务正在进行',
-    'peek.attentionTitle': '{count} 件事需要你处理',
-    'peek.errorTitle': '{count} 个任务遇到问题',
-    'peek.multiSub': '点击任务可定位到对应会话',
-    'peek.multiSubDetails': '部分任务没有窗口定位信息，可点击查看详情',
-    'peek.sessionSub': '{agent} · {project}',
-    'peek.today': '今日 {rounds} 轮 · {tokens} tokens · API 等价 {cost}',
-    'peek.running': '运行中 {running} · 等待你 {waiting} · 今日 {rounds} 轮',
-    'peek.more': '另有 {count} 个任务，可在详情中查看',
-    'peek.elapsed': '会话已持续 {time}',
-    'peek.updated': '{time}前更新',
-    'peek.justNow': '刚刚',
-    'peek.seconds': '{count}秒',
-    'peek.minutes': '{count}分钟',
-    'peek.hours': '{count}小时',
     'peek.errorDetail': '任务执行异常，可打开会话查看',
     'peek.done': '刚完成',
     'peek.interrupted': '已中断',
     'peek.unknownProject': '未命名会话',
 
-
-    // ── action center ───────────────────────────────────────────────────────
-    'action.title': '🗒️ 行动中心',
-    'action.close': '关闭',
-    'action.needYou': '🔔 需要你处理',
-    'action.panel': '📊 详情',
-    'action.notepadTitle': '行动中心',
 
     // ── detail panel ────────────────────────────────────────────────────────
     'panel.waitingSession': '等待会话…',

@@ -33,9 +33,20 @@ function baseStats(over = {}) {
 }
 
 function world() {
-  const w = loadRenderer(['shared/i18n.js', 'shared/states.js', 'shared/pet-assets.js', 'shared/pet-insights.js', 'renderer/pet.js']);
+  const w = loadRenderer(['shared/i18n.js', 'shared/states.js', 'shared/pet-assets.js', 'shared/pet-insights.js', 'renderer/pet.js', 'renderer/quick-view.js']);
   return w;
 }
+// Depth-first search through stub elements by class name.
+function find(el, className) {
+  if (!el) return null;
+  if (el.classList && el.classList.contains(className)) return el;
+  for (const child of el.children || []) {
+    const hit = find(child, className);
+    if (hit) return hit;
+  }
+  return null;
+}
+const flush = async () => { for (let i = 0; i < 6; i++) await Promise.resolve(); };
 const stateClasses = (el) => el.classList.list.filter((c) => STATE_WORDS.includes(c));
 const catSrc = (w) => w.elements('cat-img').getAttribute('src');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -339,68 +350,66 @@ async function main() {
     check('working > loafing', () => assert(w.elements('cat').classList.contains('working')));
   }
 
-  console.log('[R11] 左键工作速览：状态分流、聚焦与拖动不误触');
+  console.log('[R11] 快速视图：左键打开、会话行、就地处理与拖动不误触');
   {
     const w = world();
-    const peek = w.elements('peek');
-    peek.classList.add('hidden');
+    const pop = w.elements('action-pop');
+    pop.classList.add('hidden');
     const started = Date.now() - 65 * 1000;
     const working = baseStats({
       today: { tokens: 126000, cost: 0.84, messages: 18 },
       workingCount: 1,
       sessions: [{
-        project: 'AgentPaw', agent: 'codex', state: 'working', op: '编辑文件',
-        sessionId: 'sess-work', headless: false, createdAt: started, updatedAt: Date.now(), idleMs: 1000,
+        project: 'AgentPaw', agent: 'codex', state: 'working', op: '编辑文件', model: 'gpt-5.5', contextPercent: 32,
+        sessionId: 'sess-work', headless: false, createdAt: started, turnStartedAt: started, updatedAt: Date.now(), idleMs: 1000,
       }],
     });
+    const rowOf = (world, index = 0) => world.elements('ac-session-list').children[index];
     w.handlers.stats(working);
     clickCat(w);
-    check('单击干活中的伙伴打开速览', () => assert(!peek.classList.contains('hidden')));
-    check('速览展示状态、Agent、项目和当前操作', () => {
-      assert.strictEqual(w.elements('peek-title').textContent, '干活中');
-      assert.strictEqual(w.elements('peek-subtitle').textContent, 'Codex · AgentPaw');
-      const row = w.elements('peek-list').children[0];
-      assert(row && row.children[1].children[1].textContent === '编辑文件');
+    check('单击伙伴打开快速视图', () => assert(!pop.classList.contains('hidden')));
+    check('会话行展示项目、模型、状态、当前操作与上下文', () => {
+      const row = rowOf(w);
+      assert.strictEqual(find(row, 'name').textContent, 'AgentPaw');
+      assert.strictEqual(find(row, 'model').textContent, 'gpt-5.5');
+      assert(find(row, 'op').textContent.includes('编辑文件'));
+      assert(find(row, 'ctx').textContent.includes('32%'));
+      assert.strictEqual(find(row, 'time').textContent, '1:05');
+    });
+    check('今日数据：费用两位小数，摘要显示运行中', () => {
+      assert.strictEqual(w.elements('qv-today').children[0].children[1].textContent, '$0.84');
+      assert.strictEqual(w.elements('qv-summary').children[0].textContent, '运行中 1');
     });
     w.handlers.stats({ ...working, sessions: [{ ...working.sessions[0], op: '运行命令', idleMs: 2000 }] });
-    check('速览打开期间快照就地刷新', () => {
-      const row = w.elements('peek-list').children[0];
-      assert.strictEqual(row.children[1].children[1].textContent, '运行命令');
-    });
-    w.elements('peek-focus').dispatch('click');
-    check('主按钮聚焦当前会话', () => {
+    check('快速视图打开期间快照就地刷新', () => assert(find(rowOf(w), 'op').textContent.includes('运行命令')));
+    rowOf(w).dispatch('click');
+    await flush();
+    check('点会话行聚焦该会话并收起', () => {
       assert(w.calls.some(([name, args]) => name === 'focusSession' && args[0] === 'sess-work'));
-      assert(peek.classList.contains('hidden'));
+      assert(pop.classList.contains('hidden'));
     });
 
     const failedFocusWorld = world();
-    failedFocusWorld.elements('peek').classList.add('hidden');
-    failedFocusWorld.elements('bubble').classList.add('hidden');
+    failedFocusWorld.elements('action-pop').classList.add('hidden');
     failedFocusWorld.behavior.focusResult = false;
     failedFocusWorld.handlers.stats(working);
     clickCat(failedFocusWorld);
-    failedFocusWorld.elements('peek-focus').dispatch('click');
-    await Promise.resolve();
-    check('系统无法打开会话时给出可见反馈', () => {
-      assert.strictEqual(
-        failedFocusWorld.elements('bubble-text').textContent,
-        '没能打开这个会话，请在对应 Agent 中手动打开',
-      );
-      assert(!failedFocusWorld.elements('bubble').classList.contains('hidden'));
+    rowOf(failedFocusWorld).dispatch('click');
+    await flush();
+    check('系统无法打开会话时在快速视图里说明', () => {
+      assert.strictEqual(failedFocusWorld.elements('ac-status').textContent, '未能打开会话，请到对应 Agent 中查看');
+      assert(!failedFocusWorld.elements('action-pop').classList.contains('hidden'));
     });
 
     const viewOnlyWorld = world();
-    viewOnlyWorld.elements('peek').classList.add('hidden');
+    viewOnlyWorld.elements('action-pop').classList.add('hidden');
     viewOnlyWorld.handlers.stats({
       ...working,
       sessions: [{ ...working.sessions[0], agent: 'opencode', focusable: false }],
     });
     clickCat(viewOnlyWorld);
-    check('没有定位信息的 Agent 不展示无效打开按钮', () => {
-      assert(viewOnlyWorld.elements('peek-focus').classList.contains('hidden'));
-      assert(viewOnlyWorld.elements('peek-list').children[0].classList.contains('not-focusable'));
-    });
-    viewOnlyWorld.elements('peek-list').children[0].dispatch('click');
+    rowOf(viewOnlyWorld).dispatch('click');
+    await flush();
     check('没有定位信息的任务行改为打开详情', () => {
       assert(viewOnlyWorld.calls.some(([name]) => name === 'openPanel'));
       assert(!viewOnlyWorld.calls.some(([name]) => name === 'focusSession'));
@@ -408,24 +417,23 @@ async function main() {
 
     clickCat(w);
     w.document.dispatch('keydown', { key: 'Escape', preventDefault() {}, stopPropagation() {} });
-    check('Esc 关闭速览', () => assert(peek.classList.contains('hidden')));
+    check('Esc 关闭快速视图', () => assert(pop.classList.contains('hidden')));
 
     const idleWorld = world();
-    idleWorld.elements('peek').classList.add('hidden');
+    idleWorld.elements('action-pop').classList.add('hidden');
     idleWorld.handlers.stats(baseStats({ idleMs: null, today: { tokens: 8000, cost: 0.04, messages: 3 } }));
     clickCat(idleWorld);
-    check('无任务时展示今日小结，不显示无效会话按钮', () => {
-      assert.strictEqual(idleWorld.elements('peek-title').textContent, '暂时没有任务');
-      assert(idleWorld.elements('peek-summary').textContent.includes('今日 3 轮'));
-      assert(idleWorld.elements('peek-focus').classList.contains('hidden'));
+    check('无任务时说明没有进行中的任务，并给出今日数据', () => {
+      assert.strictEqual(idleWorld.elements('qv-summary').children[0].textContent, '没有进行中的任务');
+      assert.strictEqual(idleWorld.elements('qv-today').children[0].children[1].textContent, '$0.04');
+      assert(idleWorld.elements('ac-act-sec').hidden);
     });
 
     const actionWorld = world();
-    actionWorld.elements('peek').classList.add('hidden');
     actionWorld.elements('ask').classList.add('hidden');
     actionWorld.elements('action-pop').classList.add('hidden');
     const choice = (id) => ({
-      kind: 'perm', sessionId: id, project: 'p-' + id, question: '允许运行命令？',
+      kind: 'perm', sessionId: id, project: 'p-' + id, question: '允许运行命令？', agent: 'claude',
       permId: 'perm-' + id, options: [{ key: 'allow', label: '允许' }, { key: 'deny', label: '拒绝' }],
     });
     actionWorld.handlers.stats(baseStats({
@@ -435,48 +443,56 @@ async function main() {
         { project: 'p-b', agent: 'claude', state: 'waiting', sessionId: 'b', headless: false, choice: choice('b') },
       ],
     }));
-    clickCat(actionWorld); // 自动弹出的第一张 ask 卡先关闭
-    clickCat(actionWorld); // 再点按多事项策略打开行动中心
-    check('多个待处理事项优先进入原有行动中心', () => {
+    check('审批到来时仍自动弹出询问卡', () => assert(!actionWorld.elements('ask').classList.contains('hidden')));
+    clickCat(actionWorld); // 关闭自动弹出的询问卡
+    clickCat(actionWorld); // 左键永远打开快速视图
+    check('待处理事项都在快速视图里，摘要先说需要你', () => {
       assert(!actionWorld.elements('action-pop').classList.contains('hidden'));
       assert.strictEqual(actionWorld.elements('ac-acts').children.length, 2);
+      assert.strictEqual(actionWorld.elements('qv-summary').children[0].textContent, '需要你 2');
     });
     actionWorld.window.dispatch('mousemove', { clientX: -1, clientY: -1 });
-    check('移出面板仅恢复点击穿透，不自动关闭行动中心', () => {
+    check('移出面板仅恢复点击穿透，不自动关闭快速视图', () => {
       assert(!actionWorld.elements('action-pop').classList.contains('hidden'));
       assert(vm.runInContext('mouseIgnoring', actionWorld.sandbox));
     });
     actionWorld.window.dispatch('blur');
-    check('点击其他窗口后行动中心收起，不替用户处理待办', () => {
+    check('点击其他窗口后快速视图收起，不替用户处理待办', () => {
       assert(actionWorld.elements('action-pop').classList.contains('hidden'));
       assert(!actionWorld.calls.some(call => call[0] === 'decidePermission'));
     });
     actionWorld.elements('notepad').dispatch('click');
-    check('失焦收起后仍能重新打开，待处理事项完整保留', () => {
+    check('胶囊上的数量可重新打开，待处理事项完整保留', () => {
       assert(!actionWorld.elements('action-pop').classList.contains('hidden'));
       assert.strictEqual(actionWorld.elements('ac-acts').children.length, 2);
     });
+    const allow = find(actionWorld.elements('ac-acts').children[0], 'need-a').children[2];
+    allow.dispatch('click');
+    await flush();
+    check('授权可在快速视图里直接允许', () => {
+      const call = actionWorld.calls.find(([name]) => name === 'decidePermission');
+      assert(call && call[1][0] === 'perm-a' && call[1][1] === 'allow');
+      assert.strictEqual(actionWorld.elements('ac-acts').children.length, 1);
+    });
     for (const [name, open, visible] of [
       ['授权面板', 'showAskPanel()', 'askActive'],
-      ['工作速览', 'openPeek()', 'peekOpen'],
       ['额度面板', 'quotaEl.hidden = false; openQuotaPopover()', 'quotaPopoverOpen'],
     ]) {
       vm.runInContext(`closeActionPop(); ${open}`, actionWorld.sandbox);
       check(`${name}可正常打开`, () => assert(vm.runInContext(visible, actionWorld.sandbox)));
       actionWorld.calls.length = 0;
       vm.runInContext('openActionPop()', actionWorld.sandbox);
-      check(`${name}切换行动中心不主动失焦`, () => {
+      check(`${name}切换到快速视图不主动失焦`, () => {
         assert(!actionWorld.elements('action-pop').classList.contains('hidden'));
         assert(!vm.runInContext(visible, actionWorld.sandbox));
         assert(!actionWorld.calls.some(call => call[0] === 'blurPet'));
       });
       actionWorld.window.dispatch('blur');
-      check(`${name}切换后的行动中心仍可失焦收起`, () =>
+      check(`${name}切换后的快速视图仍可失焦收起`, () =>
         assert(actionWorld.elements('action-pop').classList.contains('hidden')));
     }
 
-  const sameSessionWorld = world();
-    sameSessionWorld.elements('peek').classList.add('hidden');
+    const sameSessionWorld = world();
     sameSessionWorld.elements('ask').classList.add('hidden');
     sameSessionWorld.elements('action-pop').classList.add('hidden');
     const sameA = choice('shared');
@@ -493,26 +509,31 @@ async function main() {
     }));
     clickCat(sameSessionWorld);
     clickCat(sameSessionWorld);
-    check('同一会话的并行权限都出现在行动中心', () => {
+    check('同一会话的并行权限都出现在快速视图', () => {
       assert.strictEqual(sameSessionWorld.elements('ac-acts').children.length, 2);
     });
 
     const singleActionWorld = world();
-    singleActionWorld.elements('peek').classList.add('hidden');
     singleActionWorld.elements('ask').classList.add('hidden');
+    singleActionWorld.elements('action-pop').classList.add('hidden');
     singleActionWorld.handlers.stats(baseStats({
       waitingCount: 1,
       sessions: [{ project: 'p-one', agent: 'claude', state: 'waiting', sessionId: 'one', headless: false, choice: choice('one') }],
     }));
     clickCat(singleActionWorld); // 关闭自动弹出的卡片
-    clickCat(singleActionWorld); // 单事项应回到同一张原生卡片
-    check('单个待处理事项仍使用原有授权/问答卡', () => {
+    clickCat(singleActionWorld); // 单事项也进快速视图，结果可预期
+    check('单个待处理事项也先打开快速视图', () => {
+      assert(singleActionWorld.elements('ask').classList.contains('hidden'));
+      assert(!singleActionWorld.elements('action-pop').classList.contains('hidden'));
+    });
+    find(singleActionWorld.elements('ac-acts').children[0], 'need-a').children[0].dispatch('click');
+    check('展开后在询问卡里完整处理', () => {
       assert(!singleActionWorld.elements('ask').classList.contains('hidden'));
-      assert(singleActionWorld.elements('peek').classList.contains('hidden'));
+      assert(singleActionWorld.elements('action-pop').classList.contains('hidden'));
     });
 
     const dragWorld = world();
-    dragWorld.elements('peek').classList.add('hidden');
+    dragWorld.elements('action-pop').classList.add('hidden');
     dragWorld.handlers.stats(working);
     dragWorld.window.screenX = 100;
     dragWorld.window.screenY = 100;
@@ -529,7 +550,7 @@ async function main() {
       dragCat.dispatch('pointermove', { button: 0, pointerId: 7, screenX: 120, screenY: 110, clientX: 10, clientY: 10 });
     }
     dragCat.dispatch('pointerup', { button: 0, pointerId: 7, screenX: 120, screenY: 110, clientX: 10, clientY: 10 });
-    check('拖动超过 4px 不误打开速览', () => assert(dragWorld.elements('peek').classList.contains('hidden')));
+    check('拖动超过 4px 不误打开快速视图', () => assert(dragWorld.elements('action-pop').classList.contains('hidden')));
     check('窗口自身的重复移动事件被合并且不改变抓取偏移', () => {
       const moves = dragWorld.calls.filter(([name]) => name === 'setWinPos');
       assert.strictEqual(moves.length, 1, 'same-frame feedback must collapse to one move');
@@ -542,7 +563,6 @@ async function main() {
     });
 
     const cancelledWorld = world();
-    cancelledWorld.elements('peek').classList.add('hidden');
     cancelledWorld.handlers.stats(working);
     cancelledWorld.window.screenX = 100;
     cancelledWorld.window.screenY = 100;
@@ -593,7 +613,7 @@ async function main() {
   console.log('[R13] 呼噜工资条：长按触发、活动时让路、同日去重');
   {
     const w = world();
-    w.elements('peek').classList.add('hidden');
+    w.elements('action-pop').classList.add('hidden');
     w.handlers.stats(baseStats({
       today: { tokens: 4200, cost: 0.12, messages: 3, inputTotal: 100, cacheRead: 40 },
       idleMs: null,
@@ -605,7 +625,7 @@ async function main() {
     check('空闲时长按进入工资条', () => {
       assert.strictEqual(w.elements('chip-context').textContent, '🐾 今日工资条');
       assert(w.elements('bubble-text').textContent.includes('呼噜'));
-      assert(w.elements('peek').classList.contains('hidden'), '长按不应同时打开速览');
+      assert(w.elements('action-pop').classList.contains('hidden'), '长按不应同时打开快速视图');
     });
 
     await sleep(1500); // let the first loved transient settle before retrying the hidden action
@@ -775,28 +795,25 @@ async function main() {
     w.handlers.event({ kind: 'completion-summary', count: 2 });
     check('其他任务完成不能盖过等待授权', () => assert(w.elements('cat').classList.contains('waiting')));
     w.elements('notepad').dispatch('click');
-    check('静音权限仍可在行动中心手动处理', () => assert.equal(w.elements('ac-acts').children.length, 1));
+    check('静音权限仍可在快速视图手动处理', () => assert.equal(w.elements('ac-acts').children.length, 1));
     const permissionCard = w.elements('ac-acts').children[0];
     w.handlers.stats(baseStats({ waitingCount: 1, actions: [{ actionId: 'perm-muted', choice, notificationsMuted: true }] }));
     check('快照不重建仍有效的授权按钮', () => assert.strictEqual(w.elements('ac-acts').children[0], permissionCard));
     w.handlers.event({ kind: 'error', text: 'should not cover the center' });
-    check('行动中心打开时新提醒不覆盖当前操作', () => assert(w.elements('bubble').classList.contains('hidden')));
+    check('快速视图打开时新提醒不覆盖当前操作', () => assert(w.elements('bubble').classList.contains('hidden')));
     w.elements('ac-close').dispatch('click');
     w.handlers.stats(baseStats({ sessions: [
       { sessionId: 'ordinary', agent: 'codex', project: 'p', state: 'working' },
       { sessionId: 'followed', agent: 'codex', project: 'p', alias: '修登录', state: 'working', pinned: true },
     ], workingCount: 2 }));
     clickCat(w);
-    check('关注会话优先展示并使用别名', () => assert(w.elements('peek-list').children[0].children[1].children[0].textContent.includes('修登录')));
+    check('关注会话优先展示并使用别名', () => assert.strictEqual(find(w.elements('ac-session-list').children[0], 'name').textContent, '修登录'));
     w.handlers.stats(baseStats({ workingCount: 1, recent: [{ read: false }], sessions: [
       { sessionId: 'past', agent: 'codex', project: 'old', state: 'idle', pinned: true, archived: true },
       { sessionId: 'current', agent: 'codex', project: 'current', state: 'working' },
     ] }));
-    check('历史关注不能遮蔽正在执行的任务', () => assert(w.elements('peek-list').children[0].children[1].children[0].textContent.includes('current')));
-    check('普通未读记录不触发入口晃动和红色警示', () => {
-      assert(!w.elements('notepad').classList.contains('urgent'));
-      assert(!w.elements('np-badge').classList.contains('urgent'));
-    });
+    check('历史关注不能遮蔽正在执行的任务', () => assert.strictEqual(find(w.elements('ac-session-list').children[0], 'name').textContent, 'current'));
+    check('普通未读记录不在胶囊上显示数量', () => assert(w.elements('notepad').classList.contains('hidden')));
   }
 
   console.log(`\n${failures === 0 ? '✅ RENDERER ALL PASS' : '❌ ' + failures + ' FAILURE(S)'}`);

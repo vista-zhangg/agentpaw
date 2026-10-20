@@ -65,6 +65,18 @@ function makeElement(tag, id) {
   el.removeEventListener = () => {};
   el.dispatch = (ev, arg) => { for (const fn of el._listeners[ev] || []) fn(arg || { stopPropagation() {}, preventDefault() {} }); };
   el.appendChild = (c) => { c.parentNode = el; el.children.push(c); return c; };
+  el.append = (...nodes) => {
+    for (const n of nodes) {
+      if (n && typeof n === 'object') el.appendChild(n);
+      else el.textContent += String(n);
+    }
+  };
+  el.after = (n) => {
+    const parent = el.parentNode;
+    if (!parent) return;
+    n.parentNode = parent;
+    parent.children.splice(parent.children.indexOf(el) + 1, 0, n);
+  };
   el.insertBefore = (c, before) => {
     if (c === before) return c;
     c.remove();

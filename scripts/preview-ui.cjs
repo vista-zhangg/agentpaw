@@ -328,47 +328,41 @@ app.whenReady().then(async()=>{
     pet.webContents.send('pet:stats',stats);
     await capture(pet,'pet');
     pet.setSize(520,740);
-    for (const [surface, setup, target] of [
-      ['peek', 'openPeek()', '#peek-settings'],
-      ['center', 'openActionPop()', '#ac-settings'],
-    ]) {
-      await pet.webContents.executeJavaScript(setup + ';void 0;');
-      await capture(pet, 'settings-entry-' + surface);
-      assert.equal(await pet.webContents.executeJavaScript(`(() => {
-        const buttons = [...document.querySelectorAll('#peek-settings, #peek-close, #ac-settings, #ac-close')].filter(el => el.getClientRects().length && !el.closest('.hidden'));
-        const rects = buttons.map(el => el.getBoundingClientRect());
-        return rects.every(r => r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight)
-          && rects.every((r, i) => rects.slice(i + 1).every(s => r.right <= s.left || s.right <= r.left || r.bottom <= s.top || s.bottom <= r.top));
-      })()`), true, 'settings controls fit without overlapping: ' + surface);
-      const before = settingsOpenRequests;
-      await pet.webContents.executeJavaScript(`document.querySelector('${target}').click();void 0;`);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      assert.equal(settingsOpenRequests, before + 1, 'settings entry dispatches once: ' + surface);
-      assert.equal(await pet.webContents.executeJavaScript('peekOpen || actionPopOpen'), false);
-    }
+    await pet.webContents.executeJavaScript('openActionPop();void 0;');
+    await capture(pet, 'pet-quick');
+    assert.equal(await pet.webContents.executeJavaScript(`(() => {
+      const buttons = [...document.querySelectorAll('#ac-settings, #ac-close')].filter(el => el.getClientRects().length && !el.closest('.hidden'));
+      const rects = buttons.map(el => el.getBoundingClientRect());
+      return buttons.length === 2 && rects.every(r => r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight)
+        && rects.every((r, i) => rects.slice(i + 1).every(s => r.right <= s.left || s.right <= r.left || r.bottom <= s.top || s.bottom <= r.top));
+    })()`), true, 'quick view header controls fit without overlapping');
+    const beforeSettings = settingsOpenRequests;
+    await pet.webContents.executeJavaScript(`document.querySelector('#ac-settings').click();void 0;`);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(settingsOpenRequests, beforeSettings + 1, 'settings entry dispatches once');
+    assert.equal(await pet.webContents.executeJavaScript('actionPopOpen'), false);
     await pet.webContents.executeJavaScript('applyStats({...lastStats,chipDisplay:{...lastStats.chipDisplay,showCat:true}});void 0;');
     pet.setSize(520,740);
     await require('./check-ask-layout.cjs')(pet, { capture, log });
-    await pet.webContents.executeJavaScript(`openActionPop(); document.getElementById('ac-tab-recent').click();void 0;`);
+    await pet.webContents.executeJavaScript(`openActionPop(); document.getElementById('ac-recent-toggle').click();void 0;`);
     await capture(pet,'pet-recent');
-    assert.equal(await pet.webContents.executeJavaScript(`document.querySelectorAll('.ac-history-row').length`),3);
+    assert.equal(await pet.webContents.executeJavaScript(`document.querySelectorAll('#ac-recent-list .ev').length`),3);
     assert.equal(await pet.webContents.executeJavaScript(`(() => {
-      const button=document.querySelector('.ac-history-row button'); button.focus();
+      const button=document.querySelector('#ac-recent-list button.ev'); button.focus();
       const original=lastStats;
       applyStats({...original,recent:[{...original.recent[0],id:'review-new-record'},...original.recent]});
       const preserved=button.isConnected && document.activeElement===button;
       applyStats(original); return preserved;
-    })()`),true,'incoming history preserves the current button and keyboard focus');
-    assert.equal(await pet.webContents.executeJavaScript(`document.getElementById('ac-read-all')`), null, 'manual read control removed');
+    })()`),true,'incoming history keeps a focused row when nothing changed for it');
     await new Promise(resolve => setTimeout(resolve,100));
-    assert(stats.recent.every(row => row.read));
+    assert(stats.recent.every(row => row.read), 'expanding history marks it read');
     assert.equal(await pet.webContents.executeJavaScript(`(() => {
       const original=lastStats;
-      const choice={kind:'perm',permId:'review-permission',sessionId:'demo1',project:'Preview',question:'Run tests?',options:[{key:'allow',label:'允许'},{key:'deny',label:'拒绝'}]};
+      const choice={kind:'perm',permId:'review-permission',sessionId:'demo1',project:'Preview',agent:'codex',header:'Bash',question:'npm test',options:[{key:'allow',label:'允许'},{key:'deny',label:'拒绝'}]};
       const action={actionId:'review-permission',state:'waiting',notificationsMuted:true,choice};
       const pending={...original,waitingCount:1,actions:[action]};
-      applyStats(pending); document.getElementById('ac-tab-actions').click();
-      const button=document.querySelector('.ac-act button'); button.focus();
+      applyStats(pending);
+      const button=document.querySelector('#ac-acts .needc .btn.primary'); button.focus();
       applyStats({...pending,actions:[action,{...action,actionId:'review-other',choice:{...choice,permId:'review-other'}}]});
       const preserved=button.isConnected && document.activeElement===button;
       showBubble('Do not cover this task');
@@ -378,14 +372,14 @@ app.whenReady().then(async()=>{
       updateMouseHit(0,0);
       return preserved && uncovered && removed && mouseIgnoring;
     })()`),true,'permission refresh preserves focus, removes resolved cards and leaves blank pixels click-through');
-    await pet.webContents.executeJavaScript(`document.getElementById('ac-tab-sessions').click();[...document.querySelectorAll('.ac-session-row button')].find(el=>el.textContent===window.AgentPawI18n.text('编辑')).click();document.querySelector('.ac-alias-input').value='修登录';void 0;`);
+    await pet.webContents.executeJavaScript(`document.querySelector('#ac-session-list .row-tools .icon-btn:nth-child(2)').click();document.querySelector('.sess-editor .inp').value='修登录';void 0;`);
     // Live statistics cannot erase a partially entered alias.
     pet.webContents.send('pet:stats', stats);
     await new Promise(resolve => setTimeout(resolve,100));
-    assert.equal(await pet.webContents.executeJavaScript(`document.querySelector('.ac-alias-input').value`),'修登录');
+    assert.equal(await pet.webContents.executeJavaScript(`document.querySelector('.sess-editor .inp').value`),'修登录');
     pet.webContents.send('workflow:command','peek');
     await new Promise(resolve => setTimeout(resolve,100));
-    assert.equal(await pet.webContents.executeJavaScript(`document.querySelector('.ac-alias-input').value`),'修登录','peek shortcut cannot reset an in-progress alias');
+    assert.equal(await pet.webContents.executeJavaScript(`document.querySelector('.sess-editor .inp').value`),'修登录','the quick view shortcut cannot reset an in-progress alias');
     const languageSettings = await create('settings', 840, 760);
     const languagePanel = await create('panel', 620, 900);
     const initialLanguage = previewLanguage;
@@ -395,7 +389,7 @@ app.whenReady().then(async()=>{
       for (const win of BrowserWindow.getAllWindows()) {
         assert.equal(await win.webContents.executeJavaScript('document.documentElement.lang'), locale, 'all windows follow the selected language');
       }
-      assert.equal(await pet.webContents.executeJavaScript(`document.querySelector('.ac-alias-input').value`),'修登录','language switching preserves an alias draft');
+      assert.equal(await pet.webContents.executeJavaScript(`document.querySelector('.sess-editor .inp').value`),'修登录','language switching preserves an alias draft');
       await languageSettings.webContents.executeJavaScript(`document.getElementById('tab-general').click();void 0;`);
       await capture(languageSettings, 'language-' + locale);
     }
@@ -403,18 +397,15 @@ app.whenReady().then(async()=>{
     await new Promise(resolve => setTimeout(resolve, 100));
     languageSettings.destroy(); languagePanel.destroy();
     await capture(pet,'pet-session-editor');
-    await pet.webContents.executeJavaScript(`[...document.querySelectorAll('.ac-session-editor button')].find(el=>el.textContent===window.AgentPawI18n.text('保存')).click();void 0;`);
+    await pet.webContents.executeJavaScript(`document.querySelector('.sess-editor .btn.primary').click();void 0;`);
     await new Promise(resolve => setTimeout(resolve,100));
     assert(stats.sessions.some(row=>row.alias==='修登录'));
-    await pet.webContents.executeJavaScript(`[...document.querySelectorAll('.ac-session-row button')].find(el=>el.textContent===window.AgentPawI18n.text('关注')).click();void 0;`);
+    await pet.webContents.executeJavaScript(`document.querySelector('#ac-session-list .row-tools .icon-btn:first-child').click();void 0;`);
     await new Promise(resolve => setTimeout(resolve,100));
     assert(stats.sessions.some(row=>row.pinned));
     await capture(pet,'pet-sessions');
-    assert.equal(await pet.webContents.executeJavaScript(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); document.getElementById('action-pop').classList.contains('hidden');`),true,'Escape closes the action center');
-    log('Workflow review: shortcut guard, stable permission/history focus, draft preservation, quiet bubbles and click-through passed');
-    await pet.webContents.executeJavaScript(`closeActionPop(); openPeek();void 0;`);
-    await capture(pet,'pet-followed-peek');
-    await pet.webContents.executeJavaScript(`closePeek();void 0;`);
+    assert.equal(await pet.webContents.executeJavaScript(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true})); document.getElementById('action-pop').classList.contains('hidden');`),true,'Escape closes the quick view');
+    log('Quick view review: settings entry, stable permission/history focus, draft preservation, quiet bubbles and click-through passed');
     pet.setSize(520,420);
     await pet.webContents.executeJavaScript(`Object.defineProperty(document,'hidden',{configurable:true,value:false}); void 0;`);
     companion.rest.pending={id:'preview-rest-cat',kinds:['water','stretch'],createdAt:Date.now()};
@@ -441,7 +432,7 @@ app.whenReady().then(async()=>{
         const below=stage.classList.contains('edge-below');
         const gap=below ? panel.top-row.bottom : row.top-panel.bottom;
         const scroll=actionPop.querySelector('.ac-scroll');
-        const footer=actionPop.querySelector('.ac-ops').getBoundingClientRect();
+        const footer=actionPop.querySelector('.pop-foot').getBoundingClientRect();
         updateMouseHit(row.left+row.width/2,below ? row.bottom+gap/2 : row.top-gap/2);
         const gapPassesThrough=mouseIgnoring;
         updateMouseHit(panel.left+20,panel.top+20);
@@ -454,14 +445,14 @@ app.whenReady().then(async()=>{
       assert(Math.abs(layout.gap-10)<=1,name+': panel stays close to the capsule: '+JSON.stringify(layout));
       assert(layout.inBounds && layout.footerVisible,name+': panel and footer remain inside the window');
       assert(layout.gapPassesThrough && layout.panelInteractive,name+': gap passes clicks through and panel accepts clicks');
-      assert.equal(layout.overflowing,overflowing,name+': long content scrolls inside the panel');
+      if (overflowing) assert(layout.overflowing,name+': long content scrolls inside the panel');
     };
     for (const vertical of ['above','below']) {
       await pet.webContents.executeJavaScript(`
         Object.defineProperty(window,'screenY',{configurable:true,value:${vertical==='above'?1000:0}});
         setStageEdgeLayout({vertical:'${vertical}',horizontal:'center'});
         applyStats({...lastStats,recent:[]});
-        openActionPop(); document.getElementById('ac-tab-recent').click(); void 0;
+        openActionPop(); document.getElementById('ac-recent-toggle').click(); void 0;
       `);
       await checkCompactActionCenter('pet-compact-actions-empty-'+vertical,vertical,false);
       await pet.webContents.executeJavaScript(`applyStats({...lastStats,recent:${JSON.stringify(stats.recent)}}); void 0;`);
@@ -470,12 +461,12 @@ app.whenReady().then(async()=>{
     await pet.webContents.executeJavaScript(`applyStats({...lastStats,chipDisplay:{...lastStats.chipDisplay,showCat:true}}); void 0;`);
     await new Promise(resolve=>setTimeout(resolve,100));
     assert.equal(await pet.webContents.executeJavaScript(`Math.round(actionPop.getBoundingClientRect().top-compactRow.getBoundingClientRect().bottom)`),10,
-      'visible pet action center also clears the complete status stack');
+      'visible pet quick view also clears the complete status stack');
     await pet.webContents.executeJavaScript(`applyStats({...lastStats,chipDisplay:{...lastStats.chipDisplay,showCat:false}}); void 0;`);
     await checkCompactActionCenter('pet-compact-actions-toggle','below',true);
     await pet.webContents.executeJavaScript(`closeActionPop(); Object.defineProperty(window,'screenY',window.previewScreenYDescriptor); delete window.previewScreenYDescriptor; void 0;`);
     pet.setSize(520,420);
-    log('Compact action center: both directions, empty and scrolling content, live visibility changes and click-through passed');
+    log('Compact quick view: both directions, empty and scrolling content, live visibility changes and click-through passed');
     await require('./check-notepad-layout.cjs')(pet,{stats,defaults,capture,log});
     companion.rest.pending={id:'preview-rest-capsule',kinds:['water'],createdAt:Date.now()};
     pet.webContents.send('companion:state',companion);

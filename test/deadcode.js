@@ -22,8 +22,8 @@ assert(!/renderTodos|todo-block|tp-todo-sec|curTodos|todosProject|todo\.progress
   'generic TODO data/UI path must remain removed');
 assert(!/todopop|todoPopOpen|renderTodoPop|openTodoPop|closeTodoPop|\btp-/.test(runtime),
   'the action center must not regress to the retired generic TODO naming');
-assert(/action\.title/.test(read('renderer/pet.html')) && /action\.needYou/.test(read('renderer/pet.html')),
-  'the live action center must keep its explicit contract');
+assert(/id="action-pop"/.test(read('renderer/pet.html')) && /id="ac-acts"/.test(read('renderer/pet.html')),
+  'the quick view must keep its pending-work container');
 assert(!/DEBUG_STATE|DEBUG_CONFETTI/.test(read('renderer/pet.js')), 'renderer debug switches must stay out of production code');
 
 const assetDir = path.join(root, 'assets', 'cat');

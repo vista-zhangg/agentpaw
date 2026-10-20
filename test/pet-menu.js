@@ -24,13 +24,10 @@ async function main() {
 
   let settingsOpened = 0;
   window.pet.openSettings = () => settingsOpened++;
-  for (const id of ['peek-settings', 'ac-settings']) {
-    vm.runInContext('peekOpen = true; actionPopOpen = true', sandbox);
-    elements(id).dispatch('click');
-    assert.equal(vm.runInContext('peekOpen || actionPopOpen', sandbox), false,
-      'settings entry closes transient surfaces');
-  }
-  assert.equal(settingsOpened, 2, 'both headers open settings');
+  vm.runInContext('actionPopOpen = true', sandbox);
+  elements('ac-settings').dispatch('click');
+  assert.equal(vm.runInContext('actionPopOpen', sandbox), false, 'the settings entry closes the quick view');
+  assert.equal(settingsOpened, 1, 'the quick view header opens settings');
 
   const mainSource = fs.readFileSync(path.join(__dirname, '../main.js'), 'utf8');
   // The menu template itself: verbs for actions, check marks for switches.

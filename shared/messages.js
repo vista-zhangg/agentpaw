@@ -5099,5 +5099,135 @@
     "设置…",
     "Settings…",
     "設定…"
+  ],
+  [
+    "Codex {0} 额度",
+    "Codex {0} quota",
+    "Codex {0} 額度"
+  ],
+  [
+    "{0} 条新",
+    "{0} new",
+    "{0} 筆新"
+  ],
+  [
+    "{0} 轮对话",
+    "{0} rounds",
+    "{0} 輪對話"
+  ],
+  [
+    "不弹出这个项目的任务提醒",
+    "Don't pop up task alerts for this project",
+    "不彈出這個專案的任務提醒"
+  ],
+  [
+    "今日 Token",
+    "Tokens today",
+    "今日 Token"
+  ],
+  [
+    "今日费用",
+    "Cost today",
+    "今日費用"
+  ],
+  [
+    "在详情面板查看",
+    "View in Details",
+    "在詳情面板查看"
+  ],
+  [
+    "展开",
+    "Expand",
+    "展開"
+  ],
+  [
+    "已读状态保存失败，重新展开记录可重试",
+    "Couldn't save read status. Expand the history again to retry.",
+    "已讀狀態儲存失敗，重新展開記錄可重試"
+  ],
+  [
+    "异常 {0}",
+    "{0} failed",
+    "異常 {0}"
+  ],
+  [
+    "按 API 价格估算",
+    "At API prices",
+    "按 API 價格估算"
+  ],
+  [
+    "接入 Agent 后，会话会出现在这里",
+    "Sessions appear here once an agent is connected",
+    "接入 Agent 後，會話會出現在這裡"
+  ],
+  [
+    "改名与静音",
+    "Rename and mute",
+    "改名與靜音"
+  ],
+  [
+    "明细已隐藏，点下面的会话去处理",
+    "Details are hidden. Open the session below to handle it.",
+    "明細已隱藏，點下面的會話去處理"
+  ],
+  [
+    "最近会话",
+    "Recent sessions",
+    "最近會話"
+  ],
+  [
+    "没有进行中的任务",
+    "Nothing running",
+    "沒有進行中的任務"
+  ],
+  [
+    "清空记录",
+    "Clear history",
+    "清空記錄"
+  ],
+  [
+    "约 {0} 用完",
+    "Out ≈ {0}",
+    "約 {0} 用完"
+  ],
+  [
+    "缓存命中 {0}%",
+    "{0}% cache hits",
+    "快取命中 {0}%"
+  ],
+  [
+    "运行中 {0}",
+    "{0} running",
+    "執行中 {0}"
+  ],
+  [
+    "需要你",
+    "Needs you",
+    "需要你"
+  ],
+  [
+    "需要你 {0}",
+    "{0} need you",
+    "需要你 {0}"
+  ],
+  [
+    "需要你处理 {0} 项",
+    "{0} items need you",
+    "需要你處理 {0} 項"
+  ],
+  [
+    "回答",
+    "Answer",
+    "回答"
+  ],
+  [
+    "审阅",
+    "Review",
+    "審閱"
+  ],
+  [
+    "去终端回复",
+    "Reply in terminal",
+    "去終端回覆"
   ]
 ];});

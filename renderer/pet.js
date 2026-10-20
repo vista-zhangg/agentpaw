@@ -300,7 +300,7 @@ function announceXiaban(info) {
   if (!info || xiabanAnnouncedWindow === info.key) return;
   // 用户正在操作卡片/菜单时不抢界面，也不先标记已播报；
   // 下一次状态快照进来后仍可以补播。
-  if (askActive || actionPopOpen || peekOpen) return;
+  if (askActive || actionPopOpen) return;
   const keys = XIABAN_COPY_KEYS[info.period] || XIABAN_COPY_KEYS.evening;
   const key = keys[Math.floor(Math.random() * keys.length)];
   xiabanAnnouncedWindow = info.key;
@@ -405,16 +405,6 @@ const npBadge = document.getElementById('np-badge');
 const actionPop = document.getElementById('action-pop');
 const acActs = document.getElementById('ac-acts');
 const acActSec = document.getElementById('ac-act-sec');
-const peekEl = document.getElementById('peek');
-const peekState = document.getElementById('peek-state');
-const peekTitle = document.getElementById('peek-title');
-const peekSubtitle = document.getElementById('peek-subtitle');
-const peekList = document.getElementById('peek-list');
-const peekSummary = document.getElementById('peek-summary');
-const peekHint = document.getElementById('peek-hint');
-const peekFocus = document.getElementById('peek-focus');
-const peekPanel = document.getElementById('peek-panel');
-const peekClose = document.getElementById('peek-close');
 
 // Keep the non-native details card closed even if a cached/older HTML shell
 // is ever loaded before the renderer finishes its first stats pass.
@@ -644,7 +634,7 @@ function fitRestingFrame(force = false, allowOverlays = false) {
       if (force || allowOverlays) fitPopup(document.getElementById('rest-reminder'));
       return;
     }
-    if (!allowOverlays && (askActive || actionPopOpen || peekOpen || quotaPopoverOpen)) return;
+    if (!allowOverlays && (askActive || actionPopOpen || quotaPopoverOpen)) return;
     const width = desiredRestingWidth();
     const current = Number(window.innerWidth) || CAPSULE_FRAME_MIN_W;
     if (!force && Math.abs(current - width) <= 2) return;
@@ -819,7 +809,6 @@ function showAskPanel() {
   const c = askQueue[askIdx];
   if (!c) { hideAsk(); return; }
   if (quotaPopoverOpen) closeQuotaPopover();
-  if (peekOpen) closePeek();
   const sess = c.sessionId ? ' · #' + String(c.sessionId).slice(-3) : '';
   const queue = askQueue.length > 1 ? `${askIdx + 1}/${askQueue.length} · ` : '';
   askSess.textContent = queue + (c.project || '?') + sess;
@@ -1115,21 +1104,16 @@ function updateNotepad(s) {
   curActions = Array.isArray(s.actions) ? s.actions : [];
   const acts = actionableItems();
   const pendingCount = Math.max(acts.length, (s.waitingCount || 0) + (s.needsinputCount || 0));
-  const unread = (s.recent || []).filter(row => !row.read).length;
-  if (!pendingCount && !unread) {
-    notepad.classList.add('hidden');
-  } else {
-    notepad.classList.remove('hidden');
-    npBadge.textContent = pendingCount || unread;
-    npBadge.classList.toggle('urgent', pendingCount > 0);
-    notepad.setAttribute('aria-label', window.AgentPawI18n.text("行动中心：{0}", [pendingCount ? window.AgentPawI18n.text("{0} 项待处理", [pendingCount]) : window.AgentPawI18n.text("{0} 条未读记录", [unread])]));
-  }
+  notepad.classList.toggle('hidden', !pendingCount);
+  npBadge.textContent = pendingCount || '';
+  notepad.setAttribute('aria-label', window.AgentPawI18n.text("需要你处理 {0} 项", [pendingCount]));
+  notepad.title = notepad.getAttribute('aria-label');
   if (actionPopOpen) { renderActionPop(); fitPopup(actionPop); }
 }
 
 function renderActionPop() {
   const acts = actionableItems();
-  acActSec.classList.toggle('hidden', !acts.length);
+  acActSec.hidden = !acts.length;
   // Reconcile by request, preserving focused buttons while unrelated tasks
   // change. Resolved requests still disappear immediately.
   const next = new Map();
@@ -1150,52 +1134,63 @@ function renderActionPop() {
   if (window.AgentPawTaskCenter) window.AgentPawTaskCenter.render(lastStats);
 }
 
-// 一张「需要你处理」卡片：问题 + 选项按钮(可点即答) + 自定义输入
+// 一张「需要你」卡片：授权可就地允许或拒绝；提问与计划展开成询问卡。
+const ACT_TITLE = { perm: 'ask.kindPerm', continue: 'ask.kindContinue', plan: 'ask.kindPlan' };
 function buildActCard(c) {
   const card = document.createElement('div');
-  card.className = 'ac-act';
-  const kindTag = c.kind === 'perm' ? t('ask.kindPerm')
-    : c.kind === 'continue' ? t('ask.kindContinue')
-      : c.kind === 'plan' ? t('ask.kindPlan') : t('ask.kindChoice');
+  card.className = 'card needc' + (c.kind === 'perm' ? '' : ' inline');
   const head = document.createElement('div');
-  head.className = 'ac-act-proj';
-  head.textContent = `📂 ${c.project || '?'} · ${kindTag}`;
+  head.className = 'need-h';
+  const agent = document.createElement('span');
+  agent.className = 'agent';
+  agent.innerHTML = window.AgentPawIcons?.agent(c.agent) || '';
+  const what = document.createElement('span');
+  what.className = 'what';
+  what.textContent = `${c.project || t('peek.unknownProject')} · ${t(ACT_TITLE[c.kind] || 'ask.kindChoice')}`;
+  what.title = what.textContent;
+  head.append(agent, what);
   card.appendChild(head);
-  const q = document.createElement('div');
-  q.className = 'ac-act-q';
-  q.textContent = (c.header ? '【' + c.header + '】 ' : '') + (c.question || t('ask.needHandling'));
-  card.appendChild(q);
-
-  const opts = document.createElement('div');
-  opts.className = 'ac-act-opts';
+  const button = (label, cls, click) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = cls;
+    b.textContent = label;
+    b.addEventListener('click', (e) => { e.stopPropagation(); click(); });
+    return b;
+  };
   if (c.kind === 'perm' && c.permId) {
-    // 授权：允许/拒绝 → HTTP 原生通道回 CC
-    (c.options || []).forEach((opt) => {
-      const b = document.createElement('button');
-      b.textContent = opt.label;
-      if (opt.desc) b.title = opt.desc;
-      b.addEventListener('click', (e) => { e.stopPropagation(); popPerm(c, opt.key); });
-      opts.appendChild(b);
-    });
+    const code = document.createElement('div');
+    code.className = 'code one';
+    code.textContent = (c.header ? c.header + ' · ' : '') + (c.question || t('ask.needPermQ'));
+    code.title = code.textContent;
+    card.appendChild(code);
+    const actions = document.createElement('div');
+    actions.className = 'need-a';
+    actions.append(
+      button(window.AgentPawI18n.text("展开"), 'linkbtn', () => openChoiceCard(c)),
+      button(t('perm.deny'), 'btn sm', () => popPerm(c, 'deny')),
+      button(t('perm.allow'), 'btn sm primary', () => popPerm(c, 'allow')));
+    card.appendChild(actions);
   } else {
-    // 对话类：选项只读展示 + 「去回复」按钮（桌宠不替你打字）
-    (c.options || []).forEach((opt) => {
-      const label = typeof opt === 'string' ? opt : opt.label;
-      const desc = typeof opt === 'string' ? '' : opt.desc || '';
-      const d = document.createElement('div');
-      d.className = 'ac-act-ro';
-      d.textContent = label;
-      if (desc) d.title = desc;
-      opts.appendChild(d);
-    });
-    const go = document.createElement('button');
-    go.className = 'ac-act-go';
-    go.textContent = t('ask.goReply');
-    go.addEventListener('click', (e) => { e.stopPropagation(); popGoto(c); });
-    opts.appendChild(go);
+    const q = document.createElement('div');
+    q.className = 'need-q';
+    q.textContent = (c.header ? c.header + ' · ' : '') + (c.question || t('ask.needHandling'));
+    q.title = q.textContent;
+    const answerable = c.permId && (c.kind === 'ask' || c.kind === 'plan');
+    card.append(button(window.AgentPawI18n.text(answerable ? (c.kind === 'plan' ? "审阅" : "回答") : "去终端回复"), 'btn sm primary',
+      () => (answerable ? openChoiceCard(c) : popGoto(c))), q);
   }
-  card.appendChild(opts);
   return card;
+}
+
+// 从快速视图展开某一项：关掉快速视图，在询问卡里完整处理。
+function openChoiceCard(choice) {
+  closeActionPop({ keepFocus: true });
+  answered.delete(choiceKey(choice));
+  const i = askQueue.findIndex((c) => choiceKey(c) === choiceKey(choice));
+  if (i >= 0) askIdx = i;
+  else { askQueue.unshift(choice); askIdx = 0; }
+  showAskPanel();
 }
 
 // 授权：回 CC 决策
@@ -1203,7 +1198,7 @@ async function popPerm(choice, key) {
   const msg = key === 'allow' ? t('ask.allowed') : key === 'deny' ? t('ask.denied') : t('ask.remembered');
   await decideChoice(choice, key, msg);
   renderActionPop();
-  maybeCloseEmptyPop();
+  if (actionPopOpen) fitPopup(actionPop);
 }
 // 对话类：定位并唤起该会话窗口
 async function popGoto(choice) {
@@ -1213,11 +1208,7 @@ async function popGoto(choice) {
   if (choice.permId) await decideChoice(choice, 'deny', t('ask.toTerminal'));
   else answered.add(choiceKey(choice));
   requestSessionFocus(choice.sessionId || '');
-  renderActionPop();
-  maybeCloseEmptyPop();
-}
-function maybeCloseEmptyPop() {
-  if (!actionableItems().length) closeActionPop();
+  if (actionPopOpen) closeActionPop();
 }
 
 function openActionPop() {
@@ -1228,7 +1219,6 @@ function openActionPop() {
   // Switching panels keeps focus so the old panel's async blur cannot dismiss
   // the action center immediately after it opens.
   if (askActive) hideAsk({ keepFocus: true });
-  if (peekOpen) closePeek({ keepFocus: true });
   if (quotaPopoverOpen) closeQuotaPopover({ keepFocus: true });
   renderActionPop();
   actionPop.classList.remove('hidden');
@@ -1236,11 +1226,11 @@ function openActionPop() {
   if (window.AgentPawTaskCenter) window.AgentPawTaskCenter.opened();
   fitPopup(actionPop);
 }
-function closeActionPop() {
+function closeActionPop({ keepFocus = false } = {}) {
   actionPop.classList.add('hidden');
   actionPopOpen = false;
   if (window.AgentPawTaskCenter) window.AgentPawTaskCenter.closed();
-  window.pet.blurPet();
+  if (!keepFocus) window.pet.blurPet();
   resetPetSize();
 }
 
@@ -1270,13 +1260,8 @@ function sessionDotClass(s) {
   return s.state || 'idle';
 }
 
-// ---------- 左键工作速览 ----------
-const PEEK_AUTO_CLOSE_MS = 8000;
+// ---------- 会话文字（快速视图共用） ----------
 const PEEK_BUSY_STATES = new Set(['waiting', 'needsinput', 'error', 'working', 'juggling', 'sweeping', 'thinking', 'loafing']);
-let peekOpen = false;
-let peekTimer = null;
-let peekLayoutSig = '';
-let peekPrimarySessionId = '';
 
 function peekAgentLabel(agent) {
   try {
@@ -1285,14 +1270,6 @@ function peekAgentLabel(agent) {
     }
   } catch {}
   return ({ claude: 'Claude', codex: 'Codex', workbuddy: 'WorkBuddy', opencode: 'opencode' })[agent] || 'AI';
-}
-
-function peekTime(ms) {
-  const value = Math.max(0, Number(ms) || 0);
-  if (value < 1000) return t('peek.justNow');
-  if (value < 60 * 1000) return t('peek.seconds', { count: Math.max(1, Math.floor(value / 1000)) });
-  if (value < 60 * 60 * 1000) return t('peek.minutes', { count: Math.max(1, Math.floor(value / 60000)) });
-  return t('peek.hours', { count: Math.max(1, Math.floor(value / 3600000)) });
 }
 
 function peekSessionState(s) {
@@ -1315,192 +1292,11 @@ function peekSessionDetail(s) {
   return key ? t(key) : t('state.idle');
 }
 
-function peekSessionTime(s) {
-  const effective = peekSessionState(s);
-  const turnStartedAt = Number(s && s.turnStartedAt) || 0;
-  if (turnStartedAt > 0 && PEEK_BUSY_STATES.has(effective)) {
-    return t('peek.elapsed', { time: peekTime(Date.now() - turnStartedAt) });
-  }
-  return t('peek.updated', { time: peekTime(s && s.idleMs) });
-}
-
-function peekSessions(stats) {
-  const visible = (stats.sessions || []).filter((s) => s && !s.headless && (s.pinned || s.state !== 'sleeping'));
-  const active = visible.filter((s) => PEEK_BUSY_STATES.has(s.state));
-  const pinned = visible.filter((s) => s.pinned);
-  const list = active.length || pinned.length
-    ? [...new Set([...active, ...pinned])]
-    : visible
-      .filter((s) => s.badge === 'done' || s.badge === 'interrupted')
-      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-      .slice(0, 1);
-  return list.slice().sort((a, b) => {
-    const urgent = s => ['waiting', 'needsinput', 'error'].includes(s.state);
-    if (urgent(a) !== urgent(b)) return urgent(a) ? -1 : 1;
-    if (PEEK_BUSY_STATES.has(a.state) !== PEEK_BUSY_STATES.has(b.state)) return PEEK_BUSY_STATES.has(a.state) ? -1 : 1;
-    if (!!a.pinned !== !!b.pinned) return a.pinned ? -1 : 1;
-    const pa = SESS_SORT[a.state] != null ? SESS_SORT[a.state] : 4;
-    const pb = SESS_SORT[b.state] != null ? SESS_SORT[b.state] : 4;
-    return pa !== pb ? pa - pb : (a.idleMs || 0) - (b.idleMs || 0);
-  });
-}
-
-function makePeekRow(s) {
-  const effective = peekSessionState(s);
-  const focusable = s.focusable !== false;
-  const row = document.createElement('button');
-  row.type = 'button';
-  row.className = 'peek-row' + (focusable ? '' : ' not-focusable');
-  row.title = focusable ? t('peek.focus') : t('peek.viewOnly');
-
-  const dot = document.createElement('span');
-  dot.className = 'peek-row-dot ' + effective;
-  dot.setAttribute('aria-hidden', 'true');
-
-  const main = document.createElement('span');
-  main.className = 'peek-row-main';
-  const project = document.createElement('span');
-  project.className = 'peek-row-project';
-  project.textContent = `${s.pinned ? '★ ' : ''}${peekAgentLabel(s.agent)} · ${s.alias || s.project || t('peek.unknownProject')}`;
-  project.title = project.textContent;
-  const detail = document.createElement('span');
-  detail.className = 'peek-row-detail';
-  detail.textContent = s.archived ? window.AgentPawI18n.text("已结束 · 仍在关注") : peekSessionDetail(s);
-  main.appendChild(project);
-  main.appendChild(detail);
-
-  const time = document.createElement('span');
-  time.className = 'peek-row-time';
-  time.textContent = s.archived ? '' : peekSessionTime(s);
-
-  row.appendChild(dot);
-  row.appendChild(main);
-  row.appendChild(time);
-  row.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const sessionId = s.sessionId || '';
-    closePeek();
-    if (focusable && sessionId) requestSessionFocus(sessionId);
-    else window.pet.openPanel(AGENT);
-  });
-  return row;
-}
-
-function renderPeek(stats) {
-  if (!stats) return;
-  const restingState = stats.idleMs == null || stats.idleMs > IDLE_SLEEP_MS ? 'sleeping' : 'idle';
-  const rows = peekSessions(stats);
-  const attention = (stats.sessions || []).filter((s) => !s.headless && (s.state === 'waiting' || s.state === 'needsinput'));
-  const errors = (stats.sessions || []).filter((s) => !s.headless && s.state === 'error');
-  const running = (stats.sessions || []).filter((s) => !s.headless && ['working', 'juggling', 'sweeping', 'thinking', 'loafing'].includes(s.state));
-  const primary = rows[0] || null;
-  const headlineState = attention.length ? attention[0].state
-      : errors.length ? 'error'
-      : primary ? peekSessionState(primary)
-        : restingState;
-
-  if (attention.length) peekTitle.textContent = t('peek.attentionTitle', { count: attention.length });
-  else if (errors.length) peekTitle.textContent = t('peek.errorTitle', { count: errors.length });
-  else if (running.length > 1) peekTitle.textContent = t('peek.multiTitle', { count: running.length });
-  else if (primary && PEEK_BUSY_STATES.has(primary.state)) peekTitle.textContent = t(SESS_META_KEY[primary.state] || 'state.working');
-  else peekTitle.textContent = t('peek.idleTitle');
-
-  if (rows.length > 1) {
-    peekSubtitle.textContent = rows.some((s) => s.focusable === false)
-      ? t('peek.multiSubDetails')
-      : t('peek.multiSub');
-  }
-  else if (primary && PEEK_BUSY_STATES.has(primary.state)) {
-    peekSubtitle.textContent = t('peek.sessionSub', {
-      agent: peekAgentLabel(primary.agent),
-      project: primary.alias || primary.project || t('peek.unknownProject'),
-    });
-  } else {
-    peekSubtitle.textContent = restingState === 'sleeping' ? t('peek.sleepingSub') : t('peek.idleSub');
-  }
-
-  peekState.className = 'peek-state ' + headlineState;
-  peekList.innerHTML = '';
-  rows.slice(0, 3).forEach((s) => peekList.appendChild(makePeekRow(s)));
-
-  const today = stats.today || {};
-  const rounds = Number(today.messages != null ? today.messages : today.msgs) || 0;
-  if (running.length || attention.length || errors.length) {
-    let summary = t('peek.running', { running: running.length, waiting: attention.length, rounds });
-    if (rows.length > 3) summary += ' · ' + t('peek.more', { count: rows.length - 3 });
-    peekSummary.textContent = summary;
-  } else {
-    peekSummary.textContent = t('peek.today', {
-      rounds,
-      tokens: compactTokens(today.tokens || 0),
-      cost: '$' + (Number(today.cost) || 0).toFixed(3),
-    });
-  }
-
-  const showPurrHint = !running.length && !attention.length && !errors.length;
-  peekHint.hidden = !showPurrHint;
-  if (showPurrHint) peekHint.textContent = t('purr.hint');
-
-  peekPrimarySessionId = primary && primary.focusable !== false && primary.sessionId ? primary.sessionId : '';
-  peekFocus.classList.toggle('hidden', !peekPrimarySessionId);
-  peekPanel.style.flex = peekPrimarySessionId ? '' : '1';
-
-  const layoutSig = [attention.length ? 'attention' : errors.length ? 'error' : running.length ? 'running' : 'idle', Math.min(rows.length, 3), !!peekPrimarySessionId, showPurrHint].join(':');
-  if (peekOpen && layoutSig !== peekLayoutSig) fitPopup(peekEl);
-  peekLayoutSig = layoutSig;
-}
-
-function clearPeekTimer() {
-  if (peekTimer) clearTimeout(peekTimer);
-  peekTimer = null;
-}
-
-function armPeekTimer() {
-  clearPeekTimer();
-  if (peekOpen) peekTimer = setTimeout(closePeek, PEEK_AUTO_CLOSE_MS);
-}
-
-function openPeek() {
-  if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
-  if (!lastStats || askActive || actionPopOpen) return;
-  if (quotaPopoverOpen) closeQuotaPopover();
-  clearTimeout(bubbleTimer);
-  bubbleTimer = null;
-  bubble.classList.add('hidden');
-  renderPeek(lastStats);
-  peekEl.classList.remove('hidden');
-  peekOpen = true;
-  fitPopup(peekEl);
-  armPeekTimer();
-}
-
-function closePeek({ keepFocus = false } = {}) {
-  if (!peekOpen) return;
-  clearPeekTimer();
-  peekEl.classList.add('hidden');
-  peekOpen = false;
-  peekLayoutSig = '';
-  peekPrimarySessionId = '';
-  if (!keepFocus) window.pet.blurPet();
-  if (!askActive && !actionPopOpen) resetPetSize();
-}
-
 function handleCatClick() {
   if (askActive) { hideAsk(); return; }
   if (actionPopOpen) { closeActionPop(); return; }
   if (quotaPopoverOpen) { closeQuotaPopover(); return; }
-  if (peekOpen) { closePeek(); return; }
-
-  const acts = actionableItems();
-  if (acts.length > 1) { openActionPop(); return; }
-  if (acts.length === 1) {
-    const i = askQueue.findIndex((c) => choiceKey(c) === choiceKey(acts[0]));
-    if (i >= 0) askIdx = i;
-    else { askQueue = [acts[0]]; askIdx = 0; }
-    showAskPanel();
-    return;
-  }
-  openPeek();
+  openActionPop();
 }
 
 // 工具 -> 干活动作；道具 emoji 的运动变体
@@ -1736,7 +1532,7 @@ function showBubble(text, holdMs = 3200, force = false) {
     if (!force) return;
     window.AgentPawCompanion.hide();
   }
-  if (!force && (askActive || actionPopOpen || peekOpen || quotaPopoverOpen)) return; // 弹层开着时不用普通气泡盖住它
+  if (!force && (askActive || actionPopOpen || quotaPopoverOpen)) return; // 弹层开着时不用普通气泡盖住它
   // emoji → 内联 SVG（AgentPawIcons 在 emoji 字符与 SVG 之间做安全替换；不可识别字符原样保留）
   if (window.AgentPawIcons && window.AgentPawIcons.hasMappedEmoji(text)) {
     window.AgentPawIcons.setTextWithIcons(bubbleText, text);
@@ -1757,7 +1553,7 @@ const pendingQuotaAlerts = new Map();
 let quotaAlertRetryTimer = null;
 let quotaAlertDisplaying = false;
 function quotaAlertUiBusy() {
-  return document.hidden === true || askActive || actionPopOpen || peekOpen || quotaPopoverOpen
+  return document.hidden === true || askActive || actionPopOpen || quotaPopoverOpen
     || (window.AgentPawCompanion && window.AgentPawCompanion.isOpen())
     || !bubble.classList.contains('hidden');
 }
@@ -1822,7 +1618,7 @@ function requestSessionFocus(sessionId) {
 function hideBubble() {
   bubble.classList.add('hidden');
   // 若没有其它弹层占用大窗口尺寸，恢复原始尺寸（避免 pet 一直停在加大窗口里）
-  if (!askActive && !actionPopOpen && !peekOpen) resetPetSize();
+  if (!askActive && !actionPopOpen) resetPetSize();
 }
 
 const curSkinEl = () => catVisible ? cat : chip;
@@ -1835,8 +1631,6 @@ window.pet.onEvent((ev) => {
     enqueueQuotaAlert(ev);
     return;
   }
-  // 需要人处理或出错时，优先让出工作速览，保持原有卡片/气泡路径。
-  if (peekOpen && (ev.kind === 'waiting' || ev.kind === 'needsinput' || ev.kind === 'error')) closePeek();
   if (quotaPopoverOpen && (ev.kind === 'waiting' || ev.kind === 'needsinput' || ev.kind === 'error')) closeQuotaPopover();
   // 你正在答面板/打字时：新的待答任务只悄悄进队列(不抢面板)，其余动画/彩带/气泡/状态变化一律不打断
   if (isInteracting()) {
@@ -1965,7 +1759,7 @@ function markPurrAnnounced(day) {
 
 function purrCanRun(stats) {
   if (!stats || !petInsights || typeof petInsights.hasActiveWork !== 'function') return false;
-  if (askActive || actionPopOpen || peekOpen || quotaPopoverOpen) return false;
+  if (askActive || actionPopOpen || quotaPopoverOpen) return false;
   // Do not cut across a real completion/error/reply animation.
   if (perfNow() < transientUntil) return false;
   return !petInsights.hasActiveWork(stats, { sleepMs: IDLE_SLEEP_MS });
@@ -1973,7 +1767,7 @@ function purrCanRun(stats) {
 
 function purrEnvironmentClear(stats) {
   if (!stats || !petInsights || typeof petInsights.hasActiveWork !== 'function') return false;
-  if (askActive || actionPopOpen || peekOpen || quotaPopoverOpen) return false;
+  if (askActive || actionPopOpen || quotaPopoverOpen) return false;
   return !petInsights.hasActiveWork(stats, { sleepMs: IDLE_SLEEP_MS });
 }
 
@@ -2030,6 +1824,22 @@ function quotaResetText(w, now = Date.now()) {
   const remainingMs = resetAt - now;
   if (remainingMs <= 0) return t('quota.resetSoon');
   return `${t('quota.resetIn', { time: quotaDurationText(remainingMs) })} · ${quotaDateText(w.resetsAt)}`;
+}
+
+// Short forms for the quick view and quota card: "1h 44m" and "00:52".
+function quotaResetShort(w, now = Date.now()) {
+  if (!w || !Number.isFinite(w.resetsAt)) return t('quota.resetUnknown');
+  const remainingMs = Number(w.resetsAt) * 1000 - now;
+  return remainingMs <= 0 ? t('quota.resetSoon') : t('quota.resetIn', { time: quotaDurationText(remainingMs) });
+}
+
+function quotaClockText(timestampMs) {
+  const date = new Date(Number(timestampMs));
+  if (!Number.isFinite(date.getTime())) return '--';
+  const sameDay = new Date().toDateString() === date.toDateString();
+  return date.toLocaleString(window.AgentPawI18n.getLanguage(), sameDay
+    ? { hour: '2-digit', minute: '2-digit' }
+    : { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function quotaUpdatedText(updatedAt) {
@@ -2216,7 +2026,6 @@ function openQuotaPopover() {
   if (!lastStats || !quotaEl || quotaEl.hidden || askActive) return false;
   if (quotaPopoverOpen) return true;
   if (actionPopOpen) closeActionPop();
-  if (peekOpen) closePeek();
   clearTimeout(bubbleTimer);
   bubbleTimer = null;
   bubble.classList.add('hidden');
@@ -2417,8 +2226,6 @@ function applyStats(s) {
 
   // 选项面板：按快照重建队列（多任务都在、标明项目；防漏事件/启动时已在等待）
   refreshAsk(s);
-  // 速览不冻结状态机：快照到来时就地更新文字，不关闭/重开。
-  if (peekOpen) renderPeek(s);
   if (window.AgentPawCompanion) window.AgentPawCompanion.refresh();
 
   // 你正在看面板/打字 → 不再改打工伙伴状态(别动来动去打断你)，安静等你答完
@@ -2566,7 +2373,7 @@ function finishDrag(el, e, cancelled) {
   try { el.releasePointerCapture(gesture.pid); } catch {}
   try { window.pet.endWinDrag(gesture.id); } catch {}
   if (wasMove) {
-    if (peekOpen) closePeek();
+    if (actionPopOpen) closeActionPop();
     // END_WIN_DRAG is sent after the final position, so the queued size/anchor
     // settlement cannot revive an already released movement gesture.
     setTimeout(() => {
@@ -2681,7 +2488,7 @@ askText.addEventListener('keydown', (e) => {
 askEl.addEventListener('pointerenter', () => { askHover = true; });
 askEl.addEventListener('pointerleave', () => { askHover = false; });
 
-// 记事本：点击开/关 行动中心弹层
+// 胶囊上的数量：点击开/关快速视图
 notepad.addEventListener('click', (e) => { e.stopPropagation(); actionPopOpen ? closeActionPop() : openActionPop(); });
 notepad.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -2689,23 +2496,22 @@ notepad.addEventListener('keydown', (e) => {
   actionPopOpen ? closeActionPop() : openActionPop();
 });
 notepad.addEventListener('contextmenu', (e) => e.stopPropagation());
-document.getElementById('ac-close').addEventListener('click', (e) => { e.stopPropagation(); closeActionPop(); });
-
-actionPop.querySelectorAll('.ac-ops button').forEach((b) => {
-  b.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const op = b.dataset.op;
-    if (op === 'panel') window.pet.openPanel(AGENT);
-    closeActionPop();
-  });
+const acCloseButton = document.getElementById('ac-close');
+acCloseButton.innerHTML = window.AgentPawIcons?.icon('close') || '';
+acCloseButton.addEventListener('click', (e) => { e.stopPropagation(); closeActionPop(); });
+document.getElementById('ac-panel-icon').innerHTML = window.AgentPawIcons?.icon('chart') || '';
+document.getElementById('ac-panel').addEventListener('click', (e) => {
+  e.stopPropagation();
+  window.pet.openPanel(AGENT);
+  closeActionPop();
 });
+actionPop.addEventListener('contextmenu', (e) => e.stopPropagation());
 
 function openPetSettings() {
-  if (peekOpen) closePeek();
   if (actionPopOpen) closeActionPop();
   window.pet.openSettings();
 }
-for (const id of ['peek-settings', 'ac-settings']) {
+for (const id of ['ac-settings']) {
   const button = document.getElementById(id);
   button.innerHTML = window.AgentPawIcons?.icon('settings') || '';
   button.addEventListener('click', (event) => {
@@ -2714,21 +2520,6 @@ for (const id of ['peek-settings', 'ac-settings']) {
   });
 }
 
-peekClose.addEventListener('click', (e) => { e.stopPropagation(); closePeek(); });
-peekFocus.addEventListener('click', (e) => {
-  e.stopPropagation();
-  const sessionId = peekPrimarySessionId;
-  closePeek();
-  requestSessionFocus(sessionId);
-});
-peekPanel.addEventListener('click', (e) => {
-  e.stopPropagation();
-  closePeek();
-  window.pet.openPanel(AGENT);
-});
-peekEl.addEventListener('pointerenter', clearPeekTimer);
-peekEl.addEventListener('pointerleave', armPeekTimer);
-peekEl.addEventListener('contextmenu', (e) => e.stopPropagation());
 quotaEl.addEventListener('click', (e) => { e.stopPropagation(); toggleQuotaPopover(); });
 quotaEl.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -2759,11 +2550,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && quotaPopoverOpen) {
     e.preventDefault();
     closeQuotaPopover();
-    return;
-  }
-  if (e.key === 'Escape' && peekOpen) {
-    e.preventDefault();
-    closePeek();
   }
 });
 
@@ -2772,7 +2558,6 @@ document.addEventListener('keydown', (e) => {
 function openPetMenu() {
   if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
   if (actionPopOpen) closeActionPop({ keepFocus: true });
-  if (peekOpen) closePeek({ keepFocus: true });
   if (quotaPopoverOpen) closeQuotaPopover({ keepFocus: true });
   bubble.classList.add('hidden');
   window.pet.openPetMenu();
@@ -2780,7 +2565,6 @@ function openPetMenu() {
 }
 window.addEventListener('blur', () => {
   if (actionPopOpen) closeActionPop();
-  if (peekOpen) closePeek();
   if (quotaPopoverOpen) closeQuotaPopover();
 });
 
@@ -2812,7 +2596,7 @@ window.addEventListener('blur', () => {
 // The capsule is still the drag handle when the cat is hidden, while the
 // quota group is a deliberate click target in either layout. The rest of the
 // visible capsule remains click-through so hovering it never creates a popup.
-const HIT_SEL = '#cat,#stage.cat-hidden #chip,#chip-quota,#quota-popover,#notepad,#action-pop,#ask,#peek,#rest-reminder,#rest-pending';
+const HIT_SEL = '#cat,#stage.cat-hidden #chip,#chip-quota,#quota-popover,#notepad,#action-pop,#ask,#rest-reminder,#rest-pending';
 let mouseIgnoring = false;
 function setMouseIgnore(on) {
   if (on === mouseIgnoring) return;
@@ -2851,7 +2635,7 @@ window.addEventListener('resize', () => requestAnimationFrame(() => {
   positionQuotaPopoverTip();
   if (actionPopOpen) positionActionPop();
   if (propEl && propEl.classList.contains('on')) positionProp();
-  if (!askActive && !actionPopOpen && !peekOpen && !quotaPopoverOpen) fitRestingFrame();
+  if (!askActive && !actionPopOpen && !quotaPopoverOpen) fitRestingFrame();
 }));
 
 
@@ -2887,6 +2671,5 @@ window.addEventListener('agentpaw:language', () => {
   applyStaticI18n();
   refreshAskLanguage();
   if (lastStats) applyStats(lastStats);
-  if (peekOpen) renderPeek(lastStats);
   if (quotaPopoverOpen) renderQuotaPopover(lastStats);
 });

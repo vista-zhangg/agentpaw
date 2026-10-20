@@ -18,7 +18,7 @@ module.exports = async function checkAskLayout(pet, { capture, log }) {
     ] }],
   };
   const show = async (choice) => {
-    await pet.webContents.executeJavaScript(`closePeek(); closeActionPop(); askQueue=[${JSON.stringify(choice)}]; askIdx=0; elic=null; showAskPanel(); void 0;`);
+    await pet.webContents.executeJavaScript(`closeActionPop(); askQueue=[${JSON.stringify(choice)}]; askIdx=0; elic=null; showAskPanel(); void 0;`);
   };
   const inspect = () => pet.webContents.executeJavaScript(`(() => {
     const rect = askEl.getBoundingClientRect();
