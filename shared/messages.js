@@ -5399,5 +5399,50 @@
     "已连续 {0} 分钟",
     "{0} min without a break",
     "已連續 {0} 分鐘"
+  ],
+  [
+    "通知",
+    "Notifications",
+    "通知"
+  ],
+  [
+    "外观",
+    "Appearance",
+    "外觀"
+  ],
+  [
+    "休息",
+    "Breaks",
+    "休息"
+  ],
+  [
+    "连接",
+    "Connections",
+    "連線"
+  ],
+  [
+    "编辑动画",
+    "Edit animations",
+    "編輯動畫"
+  ],
+  [
+    "静音一个项目",
+    "Mute a project",
+    "靜音一個專案"
+  ],
+  [
+    "从最近的会话中选择…",
+    "Choose from recent sessions…",
+    "從最近的工作階段中選擇…"
+  ],
+  [
+    "什么时候出现",
+    "When it appears",
+    "什麼時候出現"
+  ],
+  [
+    "当前角色：{0}",
+    "Current character: {0}",
+    "目前角色：{0}"
   ]
 ];});

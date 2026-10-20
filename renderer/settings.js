@@ -250,9 +250,11 @@ function applyStaticI18n() {
   }
 }
 
+// "Edit animations" is a subpage of Appearance: its tab stays highlighted.
 function setTab(tabId) {
+  const tabFor = tabId === 'expressions' ? 'appearance' : tabId;
   for (const tab of document.querySelectorAll('.settings-tab')) {
-    const active = tab.dataset.tab === tabId;
+    const active = tab.dataset.tab === tabFor;
     tab.classList.toggle('active', active);
     tab.setAttribute('aria-selected', String(active));
     tab.tabIndex = active ? 0 : -1;
@@ -527,7 +529,7 @@ function renderUpdateState(next) {
 
   if (state.mode === 'installer') {
     updateModeDescription.textContent = t('settings.installerUpdateDescription');
-    updateHint.textContent = t('settings.updateInstallerHint');
+    updateHint.textContent = '';
   } else if (state.mode === 'portable') {
     updateModeDescription.textContent = t('settings.portableUpdateDescription');
     updateHint.textContent = t('settings.updatePortableHint');
@@ -828,7 +830,9 @@ function renderCharacters() {
   });
   $('character-list').replaceChildren(...cards.filter(c => c.builtin).map(c => c.button), add,
     ...cards.filter(c => !c.builtin).map(c => c.button));
-  $('character-current').textContent = window.AgentPawI18n.text("正在编辑：{0}", [character.canDelete ? character.name : window.AgentPawI18n.text(character.name)]);
+  const characterName = character.canDelete ? character.name : window.AgentPawI18n.text(character.name);
+  $('character-current').textContent = window.AgentPawI18n.text("当前角色：{0}", [characterName]);
+  $('expressions-character').textContent = '· ' + characterName;
   $('character-credit').textContent = character.credit || '';
   $('character-credit').hidden = !character.credit;
   $('character-remove').hidden = !character.canDelete;
@@ -969,6 +973,8 @@ $('character-remove').addEventListener('click', () => {
   if (assetBusy || !character.canDelete || !window.confirm(window.AgentPawI18n.text("从角色列表移除“{0}”吗？\n当前会切回打工猫，角色文件将保留在本机归档中。", [character.name]))) return;
   runCharacterAction(() => window.pet.removePetCharacter(character.id), window.AgentPawI18n.text("角色已移除，已切回打工猫。"));
 });
+$('edit-animations').addEventListener('click', () => { setTab('expressions'); $('expressions-back').focus(); });
+$('expressions-back').addEventListener('click', () => { setTab('appearance'); $('edit-animations').focus(); });
 const settingsTabs = [...document.querySelectorAll('.settings-tab')];
 for (const tab of settingsTabs) {
   tab.addEventListener('click', () => setTab(tab.dataset.tab));

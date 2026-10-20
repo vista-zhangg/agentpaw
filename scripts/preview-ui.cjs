@@ -39,6 +39,8 @@ const { createTaskCenter, projectKey } = require('../backend/task-center');
 const workflowModel = require('../shared/workflow-preferences');
 const taskCenter = createTaskCenter();
 let workflow = { notifications: workflowModel.notifications(), shortcuts: workflowModel.shortcuts(), shortcutErrors: {} };
+const workflowView = () => ({ ...workflow, projectCandidates: taskCenter.projects()
+  .filter(row => !workflow.notifications.mutedProjects.some(item => item.key === row.key)) });
 let petPreview = null;
 sessions.forEach(row => { row.sessionId = row.id; row.focusable = true; row.projectKey = projectKey({ cwd: 'D:/preview/' + row.project }); });
 const daily = {};
@@ -63,7 +65,8 @@ for (const [index, kind] of ['done', 'failed', 'attention'].entries()) {
   taskCenter.record({ ...sessions[index % 2], kind, eventKey: 'preview-' + index, ts: Date.now() });
 }
 refreshWorkflow();
-let companion = { quietMinutes: 30, rest: { preferences: { ...require('../shared/rest-preferences').DEFAULTS }, pending: null },
+let companion = { quietMinutes: 30, rest: { preferences: { ...require('../shared/rest-preferences').DEFAULTS }, pending: null,
+  today: { usedMinutes: 312, streakMinutes: 52, prompts: 6, done: 3, skipped: 1 } }, // example values
   visibility: { visible: true, autoHideFullscreen: true, quietUntil: 0 } };
 const report = { hooksEnabled:true, summary:{detected:4,ready:4,needsRepair:0,repairable:0}, integrations: ['Claude Code','Codex','WorkBuddy','opencode'].map((label,i)=>({label,detected:i<4,mode:i===1?'watcher':i===3?'plugin':'hook',state:i<4?'ready':'not-detected',lastEventAt:i<4?Date.now()-120000:null})) };
 const handlers = {
@@ -74,12 +77,15 @@ const handlers = {
     for (const win of BrowserWindow.getAllWindows()) win.webContents.send('language:changed', value);
     return { ok: true, language: value };
   },
-  'workflow:get-preferences': () => workflow,
+  'workflow:get-preferences': () => workflowView(),
   'workflow:set-preferences': (_, patch) => {
-    workflow = { ...workflow, notifications: workflowModel.notifications({ ...workflow.notifications, ...patch.notifications }),
+    let mutedProjects = workflow.notifications.mutedProjects.filter(row => row.key !== patch.unmuteProject);
+    const project = patch.muteProject && taskCenter.projects(200).find(row => row.key === patch.muteProject);
+    if (project) mutedProjects = [...mutedProjects, project];
+    workflow = { ...workflow, notifications: workflowModel.notifications({ ...workflow.notifications, ...patch.notifications, mutedProjects }),
       shortcuts: patch.shortcuts ? workflowModel.shortcuts(patch.shortcuts) : workflow.shortcuts };
     refreshWorkflow();
-    return { ok: true, ...workflow };
+    return { ok: true, ...workflowView() };
   },
   'workflow:update-session': (_, id, patch) => { const result = taskCenter.update(id, patch); refreshWorkflow(); return result; },
   'workflow:mark-read': (_, ids) => { const ok = taskCenter.markRead(ids); refreshWorkflow(); return { ok }; },
@@ -163,7 +169,7 @@ app.whenReady().then(async()=>{
     log('settings loaded');
     if (characterStore) {
       const mouseId = characterStore.activeId();
-      await settings.webContents.executeJavaScript(`document.getElementById('tab-expressions').click(); window.confirm=()=>true; void 0;`);
+      await settings.webContents.executeJavaScript(`document.getElementById('tab-appearance').click(); window.confirm=()=>true; void 0;`);
       const addCard = await settings.webContents.executeJavaScript(`(() => {
         const cards = [...document.querySelectorAll('#character-list > button')];
         const add = document.getElementById('character-add'); add.click();
@@ -197,15 +203,29 @@ app.whenReady().then(async()=>{
       assert.deepEqual(bad, [], 'role and state GIFs decoded');
       log('Character switching, GIF append and reset passed');
     }
-    for(const tab of ['general','workflow','companion','appearance','integrations','updates','expressions']) {
+    for(const tab of ['general','workflow','appearance','companion','integrations']) {
       await settings.webContents.executeJavaScript(`document.getElementById('tab-${tab}').click()`);
       result.push({page:tab,...await dimensions(settings)});
       await checkReadable(settings);
       await capture(settings,'settings-'+tab);
     }
+    // "Edit animations" is a subpage of Appearance with a back button.
+    await settings.webContents.executeJavaScript(`document.getElementById('tab-appearance').click(); document.getElementById('edit-animations').click(); void 0;`);
+    assert.equal(await settings.webContents.executeJavaScript(`[!document.getElementById('panel-expressions').hidden, document.getElementById('tab-appearance').getAttribute('aria-selected'), document.activeElement.id].join()`),
+      'true,true,expressions-back', 'edit animations opens as a subpage of Appearance');
+    result.push({page:'expressions',...await dimensions(settings)});
+    await checkReadable(settings);
+    await capture(settings,'settings-expressions');
+    await settings.webContents.executeJavaScript(`document.getElementById('expressions-back').click(); void 0;`);
+    assert.equal(await settings.webContents.executeJavaScript(`!document.getElementById('panel-appearance').hidden`), true, 'back returns to Appearance');
     await settings.webContents.executeJavaScript(`document.getElementById('tab-workflow').click(); document.getElementById('notify-attention').click();`);
     await new Promise(resolve => setTimeout(resolve,100));
     assert.equal(workflow.notifications.mode, 'attention');
+    const muteKey = await settings.webContents.executeJavaScript(`(() => { const s=document.getElementById('mute-project-select'); const key=s.options[1]&&s.options[1].value; if (key) { s.value=key; s.dispatchEvent(new Event('change')); } return key||''; })()`);
+    assert(muteKey, 'recent projects can be muted from Settings');
+    await new Promise(resolve => setTimeout(resolve,100));
+    assert(workflow.notifications.mutedProjects.some(row => row.key === muteKey && row.label), 'muted project keeps its observed name');
+    await capture(settings,'settings-workflow-muted');
     assert.equal(await settings.webContents.executeJavaScript(`(() => {
       const input=document.getElementById('shortcut-peek'); input.focus();
       input.dispatchEvent(new KeyboardEvent('keydown',{key:'c',code:'KeyC',ctrlKey:true,bubbles:true}));
@@ -225,6 +245,8 @@ app.whenReady().then(async()=>{
     assert.equal(companion.quietMinutes,47,'custom quiet duration saved');
     assert.equal(companion.visibility.autoHideFullscreen,false,'fullscreen can be disabled');
     await capture(settings,'settings-companion-lower');
+    await settings.webContents.executeJavaScript(`document.getElementById('tab-appearance').click(); document.getElementById('fullscreen-toggle').scrollIntoView({block:'center'}); void 0;`);
+    await capture(settings,'settings-appearance-lower');
     await settings.webContents.executeJavaScript(`document.getElementById('tab-appearance').click()`);
     for(const key of ['showCat','showStatus','showQuota','showTokens','showCost']) {
       const before=chipDisplay[key];
@@ -235,7 +257,7 @@ app.whenReady().then(async()=>{
       assert.equal(await settings.webContents.executeJavaScript(`document.getElementById('preview-${field}').hidden`),before,'preview follows '+key);
     }
     await settings.webContents.executeJavaScript(`document.getElementById('tab-appearance').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))`);
-    assert.equal(await settings.webContents.executeJavaScript('document.activeElement.id'),'tab-integrations');
+    assert.equal(await settings.webContents.executeJavaScript('document.activeElement.id'),'tab-companion');
     await settings.webContents.executeJavaScript(`document.getElementById('tab-appearance').click()`);
     // Every supported combination must keep the preview within its card.
     for (let mask=0;mask<32;mask++) {
@@ -243,9 +265,9 @@ app.whenReady().then(async()=>{
       await settings.webContents.executeJavaScript(`renderChipPreview(${JSON.stringify(value)})`);
       assert(await settings.webContents.executeJavaScript(`(() => {const r=document.querySelector('.preview-compact').getBoundingClientRect();const p=document.querySelector('.capsule-preview').getBoundingClientRect();return r.width<=p.width-30})()`),'preview fits '+mask);
     }
-    for (const tab of ['general','workflow','companion','appearance','integrations','updates','expressions']) {
+    for (const tab of ['general','workflow','appearance','companion','integrations','expressions']) {
       settings.setSize(720,620);
-      await settings.webContents.executeJavaScript(`document.getElementById('tab-${tab}').click()`);
+      await settings.webContents.executeJavaScript(tab === 'expressions' ? `document.getElementById('edit-animations').click()` : `document.getElementById('tab-${tab}').click()`);
       result.push({page:tab+'-small',...await dimensions(settings)});
       await checkReadable(settings);
     }

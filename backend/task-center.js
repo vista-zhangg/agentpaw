@@ -134,6 +134,19 @@ function createTaskCenter({ file, now = Date.now } = {}) {
       recent = previous;
       return false;
     },
+    // Projects seen in live sessions or recent history, newest first.
+    projects(limit = 20) {
+      const seen = new Map();
+      const add = (row, at) => {
+        const meta = metadata(row);
+        if (!meta || !meta.project) return;
+        const old = seen.get(meta.projectKey);
+        if (!old || old.at < at) seen.set(meta.projectKey, { key: meta.projectKey, label: meta.project, at });
+      };
+      for (const row of sessions.values()) add(row, Number(row.updatedAt) || now());
+      for (const row of recent) add(row, row.at);
+      return [...seen.values()].sort((a, b) => b.at - a.at).slice(0, limit).map(({ key, label }) => ({ key, label }));
+    },
     markSessionRead(sessionId) {
       if (!recent.some(row => row.sessionId === sessionId && !row.read)) return true;
       const previous = recent;

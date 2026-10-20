@@ -975,9 +975,12 @@ function routeTaskEvent(event) {
 
 function workflowSettings() {
   const value = config.get();
+  const muted = new Set(value.notifications.mutedProjects.map(row => row.key));
   return { notifications: { ...value.notifications, mutedProjects: value.notifications.mutedProjects.map(row => ({
     ...row, label: value.privacyMode ? t('privacy.project') : row.label,
-  })) }, shortcuts: value.shortcuts, shortcutErrors: workflowShortcuts ? workflowShortcuts.errors() : {}, privacyMode: value.privacyMode };
+  })) }, shortcuts: value.shortcuts, shortcutErrors: workflowShortcuts ? workflowShortcuts.errors() : {}, privacyMode: value.privacyMode,
+    // Recent projects that can be muted from Settings; names stay hidden in privacy mode.
+    projectCandidates: value.privacyMode || !taskCenter ? [] : taskCenter.projects().filter(row => !muted.has(row.key)) };
 }
 
 function publishWorkflowSettings() {
@@ -1026,10 +1029,17 @@ function registerWorkflowIpc() {
       if (!result.ok) return result;
     }
     const previous = config.get().notifications;
-    const notifications = workflowPreferences.notifications({ ...previous, ...value.notifications,
-      // Labels originate in observed sessions, including while privacy mode is on.
-      mutedProjects: value.unmuteProject ? previous.mutedProjects.filter(row => row.key !== value.unmuteProject) : previous.mutedProjects,
-    });
+    let mutedProjects = value.unmuteProject ? previous.mutedProjects.filter(row => row.key !== value.unmuteProject) : previous.mutedProjects;
+    if (typeof value.muteProject === 'string') {
+      // Labels originate in observed sessions, never in the settings renderer.
+      const project = taskCenter && taskCenter.projects(200).find(row => row.key === value.muteProject);
+      if (!project) return { ok: false, message: i18n.text("会话已不可用，请刷新后重试") };
+      if (!mutedProjects.some(row => row.key === project.key)) {
+        if (mutedProjects.length >= 100) return { ok: false, message: i18n.text("最多静音 100 个项目，请先在设置中移除不再使用的项目") };
+        mutedProjects = [...mutedProjects, project];
+      }
+    }
+    const notifications = workflowPreferences.notifications({ ...previous, ...value.notifications, mutedProjects });
     config.save({ notifications, ...(value.shortcuts ? { shortcuts: workflowPreferences.shortcuts(value.shortcuts) } : {}) });
     publishWorkflowSettings();
     return { ok: true, ...workflowSettings() };

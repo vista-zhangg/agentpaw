@@ -120,7 +120,6 @@
     'settings.updateFailed': '检查更新失败：{message}',
     'settings.updateDevelopment': '开发模式无法检查发布版本',
     'settings.updateUnsupported': '当前系统不支持自动更新',
-    'settings.updateInstallerHint': '自动更新不会强制退出；下载完成后由你决定何时重启安装。',
     'settings.updatePortableHint': 'ZIP 免安装版不会自动覆盖当前目录，下载后请解压新版。',
     'update.readyTitle': 'AgentPaw更新已就绪',
     'update.readyMessage': 'AgentPaw {version} 已下载完成',

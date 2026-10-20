@@ -12,7 +12,7 @@
   const status = get('workflow-status');
   function setBusy(next) {
     busy = next;
-    document.querySelectorAll('.workflow-modes button, #workflow-agents button, #workflow-projects button, .workflow-shortcuts input, #shortcut-disable')
+    document.querySelectorAll('.workflow-modes button, #workflow-agents button, #workflow-projects button, #mute-project-select, .workflow-shortcuts input, #shortcut-disable')
       .forEach(control => { control.disabled = next; });
   }
   function render(next) {
@@ -37,6 +37,16 @@
       restore.addEventListener('click', () => save({ unmuteProject: row.key }));
       card.appendChild(name); card.appendChild(restore); projects.appendChild(card);
     }
+    // Mute a project seen in recent sessions; names never come from this page.
+    const select = get('mute-project-select');
+    const candidates = next.projectCandidates || [];
+    select.closest('.setting-card').hidden = !candidates.length;
+    while (select.options.length > 1) select.remove(1);
+    for (const row of candidates) {
+      const option = document.createElement('option'); option.value = row.key; option.textContent = row.label;
+      select.appendChild(option);
+    }
+    select.value = '';
     for (const key of model.SHORTCUT_ACTIONS) {
       if (!shortcutDirty) get('shortcut-' + key).value = next.shortcuts[key];
       get('shortcut-' + key + '-error').textContent = next.shortcutErrors[key] || '';
@@ -46,7 +56,7 @@
   async function save(patch, shortcut = false) {
     if (busy || !value) return;
     setBusy(true);
-    const feedback = shortcut ? get('shortcut-status') : status;
+    const feedback = shortcut ? get('shortcut-status') : patch.muteProject || patch.unmuteProject ? get('mute-project-status') : status;
     try {
       const result = await window.pet.setWorkflowPreferences(patch);
       if (!result || !result.ok) {
@@ -58,6 +68,7 @@
     } catch (error) { flashStatus(feedback, error.message || window.AgentPawI18n.text("保存失败，请重试"), 'error'); }
     finally { setBusy(false); }
   }
+  get('mute-project-select').addEventListener('change', event => { if (event.target.value) save({ muteProject: event.target.value }); });
   for (const mode of ['standard', 'attention']) get('notify-' + mode).addEventListener('click', () => save({ notifications: { mode } }));
   for (const key of window.AgentPawAgents.SHORT_KEYS) {
     const card = document.createElement('div'); card.className = 'setting-card';

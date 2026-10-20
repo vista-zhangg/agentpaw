@@ -12,7 +12,7 @@ const css = read('renderer/settings.css');
 const main = read('main.js');
 const preload = read('preload.js');
 
-for (const id of ['tab-expressions', 'asset-gallery', 'asset-inspector', 'asset-add', 'asset-replace', 'asset-remove',
+for (const id of ['edit-animations', 'expressions-back', 'asset-gallery', 'asset-inspector', 'asset-add', 'asset-replace', 'asset-remove',
   'asset-reset', 'asset-variants', 'remove-bg-toggle']) {
   assert(html.includes(`id="${id}"`), `settings must expose ${id}`);
 }
