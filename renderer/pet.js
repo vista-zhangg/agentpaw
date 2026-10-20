@@ -1001,7 +1001,7 @@ function renderContinue(c) {
 function renderPlan(c) {
   clearAskBody();
   askLabel.textContent = t('ask.planLabel');
-  askQhead.textContent = c.project ? '📂 ' + c.project : '';
+  askQhead.textContent = c.project || '';
   askQ.textContent = c.question || t('ask.planQ');
   const approve = document.createElement('button');
   approve.className = 'ask-opt act allow';
