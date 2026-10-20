@@ -80,7 +80,12 @@ assert(/tray\.setToolTip\(t\('tray\.tooltip'\)\)/.test(main), 'tray tooltip must
 const tip = i18n.DICT['zh-Hans']['tray.tooltip'];
 assert(tip.includes(BRAND.displayName) && tip.includes(BRAND.name), 'tray tooltip must use the canonical brand');
 assert(read('renderer/panel.html').includes('AgentPaw · Details'), 'detail title must use the canonical brand');
-assert(readme.includes(`产品名称和所有对外发布物统一使用 **${BRAND.fullName}**`));
+for (const text of [readme, readmeEn]) assert(text.includes(`<h1>${BRAND.fullName}</h1>`), 'README title must use the canonical brand');
+for (const file of ['README.md', 'README_ZH_HANS.md', 'README_ZH_HANT.md', 'README_FR.md']) {
+  for (const [, image] of read(file).matchAll(/src="(docs\/images\/[^"]+)"/g)) {
+    assert(fs.existsSync(path.join(root, image)), `${file} references a missing screenshot: ${image}`);
+  }
+}
 
 const publicFiles = [
   'README.md', 'README_ZH_HANS.md', 'docs/介绍.md', 'docs/LOCAL_DEPLOYMENT.md', 'STATES.md',

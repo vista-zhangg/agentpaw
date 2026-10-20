@@ -31,9 +31,11 @@ app.on('window-all-closed', () => {});
 const defaults = { showCat: true, showStatus: true, showQuota: true, showTokens: false, showCost: true };
 let chipDisplay = { ...defaults };
 const today = { cost: 8.426, tokens: 1286400, input: 362400, output: 86400, inputTotal: 1200000, cacheRead: 837600, messages: 42 };
+const zhDemo = previewLanguage.startsWith('zh');
+const demoText = (en, zh) => zhDemo ? zh : en;
 const sessions = [
-  { id: 'demo1', agent: 'codex', state: 'working', project: 'AgentPaw', op: '调整详情面板与设置页面', model: 'gpt-5.5', createdAt: Date.now(), turnStartedAt: Date.now()-124000, contextPercent: 32 },
-  { id: 'demo2', agent: 'claude', state: 'thinking', project: 'Design system', op: '检查组件与交互细节', model: 'claude-sonnet-4', createdAt: Date.now(), contextPercent: 18 },
+  { id: 'demo1', agent: 'codex', state: 'working', project: 'AgentPaw', op: demoText('Refine the details panel and settings', '调整详情面板与设置页面'), model: 'gpt-5.5', createdAt: Date.now(), turnStartedAt: Date.now()-124000, contextPercent: 32 },
+  { id: 'demo2', agent: 'claude', state: 'thinking', project: 'Design system', op: demoText('Review components and interactions', '检查组件与交互细节'), model: 'claude-sonnet-4', createdAt: Date.now(), contextPercent: 18 },
 ];
 const { createTaskCenter, projectKey } = require('../backend/task-center');
 const workflowModel = require('../shared/workflow-preferences');
@@ -48,7 +50,7 @@ for (let i = 1; i < 30; i++) { const date = new Date(); date.setDate(date.getDat
 const stats = { today, sessions, active: sessions[0], lifetime: { cost: 136.72, tokens: 22460000, messages: 628 },
   byModel: { 'gpt-5.5': { tokens: 824000, cost: 5.642 }, 'claude-sonnet-4': { tokens: 462400, cost: 2.784 } },
   hourlyTok: Array.from({length:24}, (_,i) => i<7 || i>21 ? 0 : 12000+(i*91317)%200000), hourly: Array.from({length:24}, (_,i) => i<7 || i>21 ? 0 : .12+(i*.371)%1.4), daily,
-  lastOps: [{ icon:'◈', detail:'更新界面样式', project:'AgentPaw', ts:Date.now() },{ icon:'↗', detail:'检查交互行为', project:'AgentPaw', ts:Date.now()-13000 }],
+  lastOps: [{ icon:'◈', detail:demoText('Update interface styles', '更新界面样式'), project:'AgentPaw', ts:Date.now() },{ icon:'↗', detail:demoText('Check interaction behavior', '检查交互行为'), project:'AgentPaw', ts:Date.now()-13000 }],
   idleMs: 0, bg: {}, chipDisplay,
   codexQuota: { status:'ready', updatedAt:Date.now(), windows:{ fiveHour:{ remainingPercent:76, usedPercent:24, resetsAt:Math.floor(Date.now()/1000)+6200 }, weekly:{ remainingPercent:92,usedPercent:8,resetsAt:Math.floor(Date.now()/1000)+320000 } },
     forecast: { fiveHour: { status:'ready', ratePerHour:52, exhaustAt:Date.now()+5260e3, earlyMs:940e3, remainingAtReset:0 }, weekly: { status:'ready', ratePerHour:.4, exhaustAt:null, earlyMs:0, remainingAtReset:56 } } }
@@ -365,7 +367,7 @@ app.whenReady().then(async()=>{
     assert.equal(await pet.webContents.executeJavaScript('actionPopOpen'), false);
     await pet.webContents.executeJavaScript('applyStats({...lastStats,chipDisplay:{...lastStats.chipDisplay,showCat:true}});void 0;');
     pet.setSize(520,740);
-    await require('./check-ask-layout.cjs')(pet, { capture, log });
+    await require('./check-ask-layout.cjs')(pet, { capture, log, language: previewLanguage });
     await pet.webContents.executeJavaScript(`openActionPop(); document.getElementById('ac-recent-toggle').click();void 0;`);
     await capture(pet,'pet-recent');
     assert.equal(await pet.webContents.executeJavaScript(`document.querySelectorAll('#ac-recent-list .ev').length`),3);

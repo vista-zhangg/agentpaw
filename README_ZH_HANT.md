@@ -1,9 +1,13 @@
 <div align="center">
-  <img src="assets/agentpaw-icon.png" width="112" alt="AgentPaw AI 桌面夥伴圖示">
-  <h1>AgentPaw — Codex / Claude Code 桌面寵物</h1>
-  <p><strong>把喜歡的 GIF 變成桌面夥伴，隨時掌握 AI 任務進度與使用額度。</strong></p>
-  <p>多角色桌面寵物 · 自訂 GIF · AI 程式開發任務提醒 · Codex 訂閱額度監控 · Token 統計 · 休息提醒</p>
-  <p>支援 Codex、Claude Code、WorkBuddy、opencode。</p>
+  <img src="assets/agentpaw-icon.png" width="112" alt="AgentPaw 圖示">
+  <h1>AgentPaw</h1>
+  <p><strong>把你喜歡的 GIF 變成桌面夥伴，讓 AI 程式開發任務和額度一眼可見。</strong></p>
+  <p>Claude Code 需要授權時它舉手，Codex 額度與 Token 用量隨時看，<br>時間到了還提醒你喝口水——Windows 桌寵，任何 GIF 都能當角色。</p>
+  <p>支援 <strong>Codex</strong> · <strong>Claude Code</strong> · <strong>WorkBuddy</strong> · <strong>opencode</strong></p>
+
+  <p>
+    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BC%89%20Windows%20%E7%89%88-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="下載 Windows 版"></a>
+  </p>
   <p>
     <a href="README.md">English</a> ·
     <a href="README_ZH_HANS.md">简体中文</a> ·
@@ -11,56 +15,54 @@
     <a href="README_FR.md">Français</a>
   </p>
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><strong>下載 Windows 安裝程式</strong></a> ·
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v2.0.0">2.0.0 更新說明</a> ·
-    <a href="docs/介绍.md">完整使用指南（簡體中文）</a>
-  </p>
-  <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="僅支援 Windows x64">
-    <img src="https://img.shields.io/badge/version-2.0.0-F6A04A" alt="Version 2.0.0">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
+    <img src="https://img.shields.io/badge/data-local--first-F6A04A" alt="本機優先">
   </p>
 </div>
 
-> [!IMPORTANT]
-> 目前**僅支援 Windows x64**，不支援 macOS、Linux 或 Windows on ARM。應用程式介面支援 English、简体中文與繁體中文，預設 English。Windows 安裝程式尚未進行商業程式碼簽章，首次執行時可能出現 SmartScreen 提示。
+<table>
+  <tr>
+    <td align="center" valign="bottom" width="33%"><img src="docs/images/zh/quick-view.png" alt="快速檢視：進行中的任務、費用、Token 與 Codex 額度"><br><sub><strong>快速檢視</strong>：點一下夥伴</sub></td>
+    <td align="center" valign="bottom" width="33%"><img src="docs/images/zh/approval.png" alt="在桌寵上直接允許 Claude Code 的授權請求"><br><sub><strong>就地授權</strong>：Enter 允許</sub></td>
+    <td align="center" valign="bottom" width="33%"><img src="docs/images/zh/quota.png" alt="Codex 5h / 7d 額度與用完預測"><br><sub><strong>Codex 額度</strong>：含用完預測</sub></td>
+  </tr>
+</table>
+<p align="center"><sub>截圖為簡體中文介面；應用程式介面支援 English、简体中文與繁體中文。</sub></p>
 
-**AgentPaw**是獨立的開放原始碼專案，與 OpenAI、Anthropic 無隸屬關係。專案免費且非營利，供個人桌面陪伴、學習與交流使用，不販售角色素材或付費下載。
+## 為什麼用 AgentPaw
 
-## 可以做什麼
+- **不用再盯著終端機。** AI 工作時它也在忙，需要你時舉手，一輪結束時提醒。四種工具的多個工作階段彙整在同一處。
+- **不切視窗就能授權。** 直接在桌寵上允許或拒絕 Claude Code 的請求；方案以 Markdown 排版顯示，看完再批准或附意見退回。
+- **額度用完前就知道。** Codex 5h / 7d 剩餘額度、重設時間與用完預測，不必開啟 Codex；所有工具的 Token、快取與費用統計都在一起。
+- **做成你自己的夥伴。** 內建四個角色，也能用任何 GIF 建立新角色；每個狀態都能配自己的動畫。
 
-讓 Codex 任務進度、5 小時／7 天訂閱額度與 Token 用量常駐桌面，並彙整其他 AI 程式開發工具的本機工作階段。工作時顯示狀態，需要你回應時提醒，任務完成時通知；沒有 AI 任務執行時，也能提醒你喝水、伸展與休息。
+它也照顧你：喝水、伸展與遠眺提醒依你使用電腦的時間計算，與 AI 是否在執行無關。
 
-- **一個夥伴，四種 Agent**：支援 Codex、Claude Code、WorkBuddy、opencode。
-- **角色與自訂 GIF**：內建打工貓、奶茶鼠、小蜜蜂蜜蜜與線條小狗。可用一張待命 GIF 建立自己的角色，或匯入整套[角色包](docs/character-packs.md)；各角色的動作、輪換與還原設定獨立保存。
-- **任務狀態與授權**：顯示工作、思考、並行、等待授權、等待回覆、完成與錯誤等狀態。Claude Code 支援的授權請求可直接在桌面夥伴上允許、拒絕或始終允許；其他工具提供唯讀提醒。
-- **授權卡片**：Enter 允許、Esc 留待稍後；方案評審以 Markdown 排版顯示，可批准或附意見退回。
-- **快速檢視與提醒**：左鍵點夥伴，一處看到需要你的事項（可就地允許）、進行中的任務（模型、耗時、上下文占比）、最近工作階段與近 7 天記錄；完成的任務在你開啟前會一直標在膠囊上。可選標準或僅需處理的通知，依工具或專案靜音，設定工作階段別名與關注；全域快捷鍵預設停用，可自行設定。
-- **額度與用量**：托盤選單與膠囊上的 5h / 7d 顯示剩餘額度、重設時間與用完預測。詳細面板提供工具與週期篩選、按日與按小時圖表、活躍時段、快取與模型資訊，以及歷史累計。
-- **隱私與接入檢查**：可一鍵隱藏敏感明細，並在設定中檢查、修復或移除 AgentPaw 管理的工具接入。
-- **工作與休息節奏**：支援喝水、伸展與遠眺提醒，可調整間隔、延後提醒或今天略過。全螢幕時自動隱藏，也可暫時安靜；角色與精簡膠囊模式共用設定。
+## 30 秒上手
+
+1. 從[最新 Release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) 下載 `AgentPaw-<version>-Windows-x64.exe` 並執行。
+2. 安裝程式尚未進行商業程式碼簽章。若出現 SmartScreen 提示，點 **其他資訊 → 仍要執行**。
+3. 完成。AgentPaw 會自動辨識你已在使用的工具並接入，無需設定；之後可在應用程式內直接更新。
+
+> [!NOTE]
+> AgentPaw 目前**僅支援 Windows x64**，不支援 macOS、Linux 或 Windows on ARM。
+
+## 角色
+
+內建打工貓、奶茶鼠、小蜜蜂蜜蜜與線條小狗。在「設定」→「外觀」中，可用一張待命 GIF 建立自己的角色，或匯入整套[角色包](docs/character-packs.md)；每個狀態都能新增輪換、替換或還原預設。
 
 | 打工貓 · 工作中 | 奶茶鼠 · 工作中 | 小蜜蜂蜜蜜 · 打招呼 | 線條小狗 · 工作中 |
 | --- | --- | --- | --- |
 | ![打工貓](assets/cat/cat-working.gif) | ![奶茶鼠](assets/characters/milktea-mouse/13.gif) | ![小蜜蜂蜜蜜](assets/characters/mimi-bee/01.gif) | ![線條小狗](assets/characters/line-dog/set2-18.gif) |
 
-## 安裝與升級
-
-從[最新 Release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) 下載 `AgentPaw-2.0.0-Windows-x64.exe`，執行安裝程式後啟動 AgentPaw。已安裝的使用者可透過應用程式內更新升級，或執行新版安裝程式；現有設定與本機用量紀錄會保留。
-
-Release 提供 Windows x64 EXE 安裝程式；`latest.yml` 供自動更新使用，無須手動下載。不提供 ZIP 可攜版。原始碼啟動與 npm 指令僅供開發者使用，請參閱[本機開發與打包手冊](docs/LOCAL_DEPLOYMENT.md)。
-
 ## 資料與隱私
 
-程式名稱為 `AgentPaw.exe`，設定、角色與用量紀錄保存在 `~/.agentpaw/`。升級遷移舊版資料時會保留原目錄作為復原備份。
-
-工作階段與用量資料在本機讀取及處理。models.dev 僅提供公開價格表；Codex 訂閱額度透過 Codex 自己的 App Server 讀取，認證由 Codex 負責，AgentPaw 不讀取 `~/.codex/auth.json` 的內容。隱私模式會遮蔽畫面上的敏感資訊，本機監控與統計仍持續運作。
-
-面板金額是記錄或換算的參考值，不等同於訂閱帳單或最終結算。完整說明見[隱私與資料邊界](docs/PRIVACY.md)。
+資料都留在本機：工作階段資料只在本機讀取與處理，設定與用量紀錄保存在 `~/.agentpaw/`。唯一的下載是 models.dev 的公開價格表。Codex 額度透過 Codex 自己的 App Server 讀取，認證由 Codex 負責；AgentPaw 不讀取 `~/.codex/auth.json`。面板金額依公開 API 單價估算，不等同於訂閱帳單。完整說明見[隱私與資料邊界](docs/PRIVACY.md)。
 
 ## 授權、署名與貢獻
 
-本專案基於 [LLMPET](https://github.com/myunwang/LLMPET) 二次開發，保留上游 MIT 授權與原始版權聲明，見 [LICENSE](LICENSE)。第三方角色素材不包含在程式碼的 MIT 授權內；原創作者、來源與使用範圍見[角色素材總覽](assets/CREDITS.md)、[打工貓](assets/cat/CREDITS.md)、[奶茶鼠](assets/characters/milktea-mouse/CREDITS.md)、[小蜜蜂蜜蜜](assets/characters/mimi-bee/CREDITS.md)及[線條小狗](assets/characters/line-dog/CREDITS.md)。自行匯入素材時，請確認使用授權。
+AgentPaw 是獨立、免費、非營利的開放原始碼專案，與 OpenAI、Anthropic 無隸屬關係。本專案基於 [LLMPET](https://github.com/myunwang/LLMPET) 二次開發，保留上游 MIT 授權與原始版權聲明，見 [LICENSE](LICENSE)。第三方角色素材不包含在程式碼的 MIT 授權內；原創作者、來源與使用範圍見[角色素材總覽](assets/CREDITS.md)、[打工貓](assets/cat/CREDITS.md)、[奶茶鼠](assets/characters/milktea-mouse/CREDITS.md)、[小蜜蜂蜜蜜](assets/characters/mimi-bee/CREDITS.md)及[線條小狗](assets/characters/line-dog/CREDITS.md)。自行匯入素材時，請確認使用授權。
 
 歡迎透過 [Issues](https://github.com/vista-zhangg/codex-desktop-pet/issues) 回報問題，或依[貢獻指南](CONTRIBUTING.md)提交改進。詳細接入矩陣與工作原理請參閱[簡體中文 README](README_ZH_HANS.md)。

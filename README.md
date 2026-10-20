@@ -1,10 +1,13 @@
 <div align="center">
-  <img src="assets/agentpaw-icon.png" width="112" alt="AgentPaw AI desktop companion icon">
-  <h1>AgentPaw — AI Desktop Companion</h1>
-  <p><strong>A customizable Windows AI desktop pet, coding agent companion, and usage monitor for Codex and Claude Code.</strong></p>
-  <p>Codex task notifications, subscription quota monitoring, token usage, and water and stretch reminders.</p>
-  <p>Supports Codex, Claude Code, WorkBuddy, and opencode.</p>
+  <img src="assets/agentpaw-icon.png" width="112" alt="AgentPaw icon">
+  <h1>AgentPaw</h1>
+  <p><strong>A desktop pet that keeps an eye on your AI coding agents.</strong></p>
+  <p>It raises a paw when Claude Code needs approval, shows your Codex quota and token usage at a glance,<br>and reminds you to drink water — on Windows, with any GIF as your pet.</p>
+  <p>Works with <strong>Codex</strong> · <strong>Claude Code</strong> · <strong>WorkBuddy</strong> · <strong>opencode</strong></p>
 
+  <p>
+    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><img src="https://img.shields.io/badge/Download%20for%20Windows-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="Download for Windows"></a>
+  </p>
   <p>
     <a href="README.md">English</a> ·
     <a href="README_ZH_HANS.md">简体中文</a> ·
@@ -12,53 +15,42 @@
     <a href="README_FR.md">Français</a>
   </p>
   <p>
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/latest"><strong>Download for Windows</strong></a> ·
-    <a href="https://github.com/vista-zhangg/codex-desktop-pet/releases/tag/v2.0.0">2.0.0 release notes</a> ·
-    <a href="docs/介绍.md">User guide (中文)</a>
-  </p>
-
-  <p>
     <a href="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml"><img src="https://github.com/vista-zhangg/codex-desktop-pet/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
     <img src="https://img.shields.io/badge/platform-Windows%20x64-0078D4?logo=windows" alt="Windows x64 only">
-    <img src="https://img.shields.io/badge/version-2.0.0-F6A04A" alt="Version 2.0.0">
     <a href="LICENSE"><img src="https://img.shields.io/badge/code%20license-MIT-2EA44F" alt="MIT License"></a>
+    <img src="https://img.shields.io/badge/data-local--first-F6A04A" alt="Local-first">
   </p>
 </div>
 
-> [!IMPORTANT]
-> AgentPaw currently supports **Windows x64 only**. macOS, Linux, and Windows on ARM are not supported. Project introductions are available in Simplified Chinese, Traditional Chinese, English, and French; the application UI supports English, Simplified Chinese and Traditional Chinese, with English as the default. The Windows binaries are not commercially code-signed yet, so SmartScreen may display a warning on first launch.
+<table>
+  <tr>
+    <td align="center" valign="bottom" width="33%"><img src="docs/images/en/quick-view.png" alt="Quick view: running tasks, cost, tokens and Codex quota"><br><sub><strong>Quick view</strong> — click the pet</sub></td>
+    <td align="center" valign="bottom" width="33%"><img src="docs/images/en/approval.png" alt="Approve a Claude Code request from the pet"><br><sub><strong>Approve from the pet</strong> — Enter allows</sub></td>
+    <td align="center" valign="bottom" width="33%"><img src="docs/images/en/quota.png" alt="Codex 5h and 7d quota with run-out forecast"><br><sub><strong>Codex quota</strong> — with run-out forecast</sub></td>
+  </tr>
+</table>
 
-**AgentPaw** is an independent open-source project, not affiliated with OpenAI or Anthropic. It combines a Codex desktop pet, Claude Code companion, task notifications, and an agent usage monitor. The executable is `AgentPaw.exe`; data lives in `~/.agentpaw/`. First launch copies settings, characters, and history from earlier versions while keeping the original data as a recovery backup.
+## Why AgentPaw
 
-## What it does
+- **Stop checking the terminal.** The pet works while your agent works, raises a paw when it needs you, and celebrates when a turn is done. Several sessions across four tools show up in one place.
+- **Approve without switching windows.** Allow or deny Claude Code requests right on the pet, and review plans as formatted Markdown before approving them.
+- **Know your quota before it runs out.** Codex 5h / 7d quota, reset times and a run-out forecast — no need to open Codex. Token, cache and cost statistics cover every tool.
+- **Make it yours.** Four built-in characters, or turn any GIF into a pet. Every state — working, thinking, waiting, done, error, sleeping — can use its own animations.
 
-**Free and non-profit, built for personal desktop companionship, learning, and sharing.** No paid character packs or paid downloads. Third-party artwork is separate from the MIT-licensed code; see [creator accounts, credits, and artwork terms](assets/CREDITS.md).
+It also looks after you: water, stretch and eye-rest reminders follow your time at the computer, whether or not an AI task is running.
 
-Keep Codex progress, 5h / 7d subscription quota, and token usage on your desktop, alongside sessions from your other AI coding tools. AgentPaw asks for attention when a task needs you and celebrates completed turns. Water, stretch, and eye-rest reminders follow your time at the computer even when no AI task is running, in both character and compact capsule modes.
+## Get started
 
-- **One companion, four agents** — Codex, Claude Code, WorkBuddy, and opencode.
-- **Multiple characters and custom GIF pets** — switch characters, create one from an idle GIF, or import an entire state pack. Each character keeps independent edits and reset defaults.
-- **Status at a glance** — working, thinking, parallel tasks, compaction, permission waits, user input, completion, errors, breaks, and sleep; background tasks and scheduled wakeups stay active until they actually clear.
-- **Custom expressions** — browse every state GIF, add rotating variants, replace or remove a selected item, or restore defaults.
-- **Approval cards** — allow or deny supported Claude Code requests right from the pet (Enter allows, Esc saves it for later), and review plans as formatted Markdown before approving or sending them back with notes.
-- **Calmer task notifications** — choose Standard or Needs attention only, combine completion notices, defer transient failures, and mute an agent or project while keeping permission cards available.
-- **Quick view** — click the companion for one place with what needs you (approve on the spot), what is running with model, elapsed time and context use, recent sessions, and the last 7 days. Finished tasks stay marked on the capsule until you open them. Follow, rename, or mute a project in place; global shortcuts are optional and off by default.
-- **Unified usage view** — tokens, cache ratios and reads/writes, context windows, models, and reference costs, with tool and period filters, daily and hourly charts, active hours, a Codex quota forecast, and lifetime totals.
-- **Check Codex quota without opening Codex** — startup automatically discovers the native Codex Desktop CLI. The tray uses the independent AgentPaw brand icon; right-click the AgentPaw tray icon to see the masked current account, 5h / 7d remaining quota, reset times, and the last update, or click the 5h / 7d badges on the capsule for reset times and a run-out forecast. Missing windows stay `--`, with no manual setup required.
-- **Integration health and repair** — verify all four agents, then repair or remove AgentPaw-managed integrations from Settings.
-- **One-click privacy mode** — tick Privacy mode in the companion's right-click menu, or use Settings, while keeping essential state and usage visible.
-- **Local-first operation** — conversations and usage stay on the machine; models.dev supplies public pricing while Codex authenticates and reads its own subscription quota.
-- **Desktop-friendly controls** — drag, edge snapping, quick view, a right-click menu for details, privacy, fullscreen hiding and quiet time, system tray, auto-start, and scheduled break animations.
-- **Reminders for your workday** — water, stretch, and eye-rest reminders run independently of AI activity in both character and capsule modes. Set each interval and snooze duration, turn reminders on or off individually or together, or skip a reminder for today. The break card shows how long you have been at it, and Settings shows today's usage, completed and skipped breaks.
-- **Fullscreen and temporary quiet** — hide automatically during fullscreen use and restore afterward, or stay quiet for 15 / 30 / 60 minutes or a custom duration. Both modes share the existing window-hiding behavior while monitoring continues in the background. A manually hidden companion stays hidden until you explicitly show it.
+1. Download `AgentPaw-<version>-Windows-x64.exe` from the [latest release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest) and run it.
+2. The installer is not commercially code-signed yet. If Windows SmartScreen appears, choose **More info → Run anyway**.
+3. That's it. AgentPaw detects the agents you already use and connects to them automatically; no configuration is needed. Updates install from inside the app.
 
-## Real state examples
+> [!NOTE]
+> AgentPaw supports **Windows x64 only**; macOS, Linux and Windows on ARM are not supported. The app UI is available in English, Simplified Chinese and Traditional Chinese.
 
-Built-in characters include **Salary Cat**, **Milk Tea Mouse (BOBARAT)**, **Mimi Bee (小蜜蜂蜜蜜)**, and **Line Dog (线条小狗 / Maltese)**. Milk Tea Mouse was created by **Achi (阿翅)**; the official account is **奶茶鼠的想法**. See [full attribution](assets/characters/milktea-mouse/CREDITS.md). Mimi Bee was created by **花栗鼠发发**, formerly known as **花栗鼠 Toby**; see [creator credits and sources](assets/characters/mimi-bee/CREDITS.md). Custom character packs use the same task states.
+## Characters
 
-Milk Tea Mouse includes **83 built-in GIFs** across 16 states, including dedicated sleep, doze, and yawn animations. Each state remains independently editable.
-
-Line Dog includes **58 animations** selected from WeChat sticker packs 1–4. Created by **Moonlab Studio (moonlab_studio)**; the official Chinese account is **线条小狗Maltese**. See [creator credits and artwork notes](assets/characters/line-dog/CREDITS.md).
+Built-in characters include **Salary Cat**, **Milk Tea Mouse (BOBARAT)**, **Mimi Bee (小蜜蜂蜜蜜)** and **Line Dog (线条小狗 / Maltese)**. Milk Tea Mouse alone has 83 animations across 16 states, including sleep, doze and yawn.
 
 | Salary Cat · Working | Milk Tea Mouse · Working | Mimi Bee · Greeting | Line Dog · Working |
 | --- | --- | --- | --- |
@@ -66,34 +58,48 @@ Line Dog includes **58 animations** selected from WeChat sticker packs 1–4. Cr
 
 <table>
   <tr>
-    <td align="center"><img src="assets/cat/cat-working.gif" width="132" alt="Working"><br><strong>Working</strong><br><sub>A tool is running</sub></td>
-    <td align="center"><img src="assets/cat/cat-thinking.gif" width="132" alt="Thinking"><br><strong>Thinking</strong><br><sub>The model is reasoning</sub></td>
-    <td align="center"><img src="assets/cat/cat-juggling.gif" width="132" alt="Parallel tasks"><br><strong>Parallel</strong><br><sub>Several tasks are active</sub></td>
-    <td align="center"><img src="assets/cat/cat-waiting.gif" width="132" alt="Permission required"><br><strong>Permission</strong><br><sub>Your decision is required</sub></td>
+    <td align="center"><img src="assets/cat/cat-working.gif" width="120" alt="Working"><br><strong>Working</strong><br><sub>A tool is running</sub></td>
+    <td align="center"><img src="assets/cat/cat-thinking.gif" width="120" alt="Thinking"><br><strong>Thinking</strong><br><sub>The model is reasoning</sub></td>
+    <td align="center"><img src="assets/cat/cat-juggling.gif" width="120" alt="Parallel tasks"><br><strong>Parallel</strong><br><sub>Several tasks are active</sub></td>
+    <td align="center"><img src="assets/cat/cat-waiting.gif" width="120" alt="Permission required"><br><strong>Permission</strong><br><sub>Your decision is required</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="assets/cat/cat-happy.gif" width="132" alt="Completed"><br><strong>Completed</strong><br><sub>A turn has finished</sub></td>
-    <td align="center"><img src="assets/cat/cat-error.gif" width="132" alt="Error"><br><strong>Error</strong><br><sub>A session needs attention</sub></td>
-    <td align="center"><img src="assets/cat/cat-loafing.gif" width="132" alt="Between tools"><br><strong>Between tools</strong><br><sub>Waiting for the next event</sub></td>
-    <td align="center"><img src="assets/cat/cat-sleeping.gif" width="132" alt="Resting"><br><strong>Resting</strong><br><sub>No active task</sub></td>
+    <td align="center"><img src="assets/cat/cat-happy.gif" width="120" alt="Completed"><br><strong>Completed</strong><br><sub>A turn has finished</sub></td>
+    <td align="center"><img src="assets/cat/cat-error.gif" width="120" alt="Error"><br><strong>Error</strong><br><sub>A session needs attention</sub></td>
+    <td align="center"><img src="assets/cat/cat-loafing.gif" width="120" alt="Between tools"><br><strong>Between tools</strong><br><sub>Waiting for the next event</sub></td>
+    <td align="center"><img src="assets/cat/cat-sleeping.gif" width="120" alt="Resting"><br><strong>Resting</strong><br><sub>No active task</sub></td>
   </tr>
 </table>
 
-> Third-party characters are not covered by the code's MIT License. See [cat artwork attribution](assets/cat/CREDITS.md), [milk tea mouse artwork notes](assets/characters/milktea-mouse/CREDITS.md), [Mimi Bee artwork notes](assets/characters/mimi-bee/CREDITS.md), and [Line Dog artwork notes](assets/characters/line-dog/CREDITS.md). The application icon is independent of character artwork.
+### Bring your own GIF
 
-## Custom state expressions
+Open Settings → **Appearance**, then create a pet from a single idle GIF or [import a full character pack](docs/character-packs.md). For each state you can add rotating variants, replace or remove an item, or restore the defaults.
 
-Open Settings → **Characters & expressions**, choose a character, and browse every work, feedback, and ambient state. You can also create a custom pet or [import a character pack](docs/character-packs.md). For the selected state you can:
+<p align="center"><img src="docs/images/en/expressions.png" width="640" alt="Edit the animations of every state in Settings"></p>
 
-- keep the current expressions and **add a rotating variant**;
-- select any built-in or custom GIF in the playlist and replace or remove only that item; built-in files and imported source files are never deleted;
-- keep at least one GIF per state, or restore all of the state's built-in defaults at once.
+GIFs are fitted to a 120 × 120 canvas; transparent backgrounds are kept and a detached solid-color border is removed when that is safe. Limits: 12 MB, 2048 × 2048, 180 frames and 60 seconds per GIF, up to 20 custom animations per state. AgentPaw stores a processed copy in `~/.agentpaw/pet-assets` and never changes the source file. You are responsible for the rights to the GIFs you import.
 
-Imports are fitted to AgentPaw's 120 × 120 pet canvas. Transparent backgrounds are preserved, while a detached solid-color border is removed when it can be detected safely. Complex backgrounds are kept to avoid damaging the subject, with a warning shown in Settings. Limits are 12 MB, 2048 × 2048, 180 frames, and 60 seconds per GIF; each state accepts up to 20 custom expressions.
+## Usage at a glance
 
-AgentPaw stores only a processed copy under `~/.agentpaw/pet-assets` for the current user. It never changes or deletes the source file, and saved expressions update the visible pet immediately without a restart. Users are responsible for the rights to assets they import.
+<p align="center"><img src="docs/images/en/usage.png" width="560" alt="Details panel with Codex quota, running tasks and 7-day usage"></p>
 
-## Support matrix
+The details panel brings tokens, cache hit rate, context windows, models and reference costs from every tool together, with tool and period filters, daily and hourly charts, active hours and lifetime totals. Costs are estimates at public API prices, not your subscription bill.
+
+<details>
+<summary><strong>All features</strong></summary>
+
+- **Status at a glance** — working, thinking, parallel tasks, compaction, permission waits, user input, completion, errors, breaks and sleep; background tasks and scheduled wakeups stay active until they actually clear.
+- **Calmer notifications** — choose Standard or Needs attention only, combine completion notices, defer transient failures, and mute an agent or project while keeping permission cards available.
+- **Quick view** — what needs you (approve on the spot), what is running with model, elapsed time and context use, recent sessions and the last 7 days. Finished tasks stay marked on the capsule until you open them. Follow, rename or mute a project in place.
+- **Codex quota in the tray** — right-click the tray icon for the masked current account, 5h / 7d remaining quota, reset times and last update. Missing windows show `--`.
+- **Integration health** — verify all four agents, then repair or remove AgentPaw-managed integrations from Settings.
+- **Privacy mode** — one click in the right-click menu hides sensitive details while keeping essential state visible.
+- **Breaks** — water, stretch and eye-rest reminders with their own intervals and snooze; skip for today; see today's usage, completed and skipped breaks.
+- **Stays out of the way** — hides during fullscreen apps, quiet for 15 / 30 / 60 minutes or a custom duration, compact capsule mode, edge snapping, optional global shortcuts (off by default), auto-start.
+
+</details>
+
+## Supported agents
 
 | Agent | Integration | External configuration | In-pet approval |
 | --- | --- | --- | --- |
@@ -102,33 +108,16 @@ AgentPaw stores only a processed copy under `~/.agentpaw/pet-assets` for the cur
 | WorkBuddy | Hooks, transcripts, and usage fields | Installs a merge-safe hook only when WorkBuddy is detected | Read-only alerts |
 | opencode | Official plugin mechanism, events, and usage file | Installs/removes one standalone plugin file | Read-only alerts |
 
-On first launch, AgentPaw only integrates with tools already used by the current Windows account. It does not create configuration folders for undetected agents. Codex is always read-only and requires no hook.
-
-## Install and run
-
-### Release builds
-
-Download the installer from the [latest release](https://github.com/vista-zhangg/codex-desktop-pet/releases/latest):
-
-- `AgentPaw-<version>-Windows-x64.exe` — the only supported Windows x64 NSIS installer.
-
-Starting with 1.7.0, releases do not offer source/npm deployment or a portable ZIP. Install the EXE before use; do not run the app directly from an archive or source checkout.
-
-### Development and contribution
-
-Source startup, testing, and local packaging commands are for developers and contributors only; see the [local development and packaging guide](docs/LOCAL_DEPLOYMENT.md).
+On first launch AgentPaw only connects to tools the current Windows account already uses, and never creates configuration folders for agents it does not detect.
 
 ## Data and privacy
 
-- Configuration, runtime tokens, pricing cache, and usage ledgers live in `~/.agentpaw/`.
-- Session data from Claude Code, Codex, WorkBuddy, and opencode is read and processed locally.
+- Everything stays on your machine. Session data is read and processed locally; configuration and usage ledgers live in `~/.agentpaw/`.
 - The local HTTP service binds to loopback only, and write endpoints require a fresh per-run token.
-- models.dev synchronization downloads a public price list only; transcripts, rollouts, permission contents, and usage statistics are not uploaded.
-- Codex quota uses one long-lived `codex app-server --stdio` connection. AgentPaw confirms the current account with `account/read` before reading quota and listening for updates. Codex owns authentication and upstream requests; AgentPaw does not read the contents of `~/.codex/auth.json` or call ChatGPT web endpoints. With file auth, replacing `auth.json` triggers an immediate reconnect. Keyring, auto, and ephemeral auth have no watchable file-event contract, so account changes converge through App Server account notifications, periodic `account/read`, and scheduled connection recycling. The UI therefore represents the account visible to AgentPaw's own App Server connection; it does not promise that a non-file auth switch in another process is detected immediately by the file watcher.
-- Privacy mode from the cat menu or Settings masks on-screen details only; local monitoring and usage accounting continue, and pending items return when it is disabled.
-- Displayed cost is an estimate based on public API prices, not a subscription bill or a provider’s final invoice.
+- The only download is the public price list from models.dev. Transcripts, permission contents and usage statistics are never uploaded.
+- Codex quota is read through Codex's own App Server, which handles authentication. AgentPaw does not read `~/.codex/auth.json` or call ChatGPT web endpoints.
 
-See [Privacy and data boundaries](docs/PRIVACY.md) for the complete bilingual policy.
+See [Privacy and data boundaries](docs/PRIVACY.md) for the full policy.
 
 ## How it works
 
@@ -141,33 +130,23 @@ opencode plugin ──┤
 Codex App Server ─────> tray context menu (5h / 7d) + low-quota bubble
 ```
 
-The main process owns watcher lifecycles, the tray, and windows. The backend state machine aggregates concurrent sessions. Renderers only receive a reduced status and event protocol. State vocabulary and priority are defined once in [`shared/states.js`](shared/states.js).
+The main process owns watcher lifecycles, the tray and windows. The backend state machine aggregates concurrent sessions, and renderers only receive a reduced status and event protocol. State vocabulary and priority are defined once in [`shared/states.js`](shared/states.js); see the [state machine specification](STATES.md).
 
 ## Documentation
 
-- [Chinese user guide](docs/介绍.md)
-- [Chinese local deployment and packaging guide](docs/LOCAL_DEPLOYMENT.md)
+- [User guide (Chinese)](docs/介绍.md)
+- [Character packs](docs/character-packs.md)
+- [Local development and packaging (Chinese)](docs/LOCAL_DEPLOYMENT.md)
 - [Release process and compatibility policy](docs/RELEASE.md)
-- [State machine and rendering specification](STATES.md)
-- [Privacy and data boundaries — bilingual](docs/PRIVACY.md)
-- [Contributing guide — bilingual](CONTRIBUTING.md)
-- [Security policy — bilingual](SECURITY.md)
+- [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md)
 
 ## Origin and licensing
 
-AgentPaw is derived from [LLMPET](https://github.com/myunwang/LLMPET), with substantial work on Windows desktop behavior, multi-agent integrations, unified usage reporting, settings, and project structure.
+AgentPaw is an independent, free and non-profit open-source project, not affiliated with OpenAI or Anthropic. It is derived from [LLMPET](https://github.com/myunwang/LLMPET), with substantial work on Windows desktop behavior, multi-agent integrations, unified usage reporting, settings and project structure.
 
-- Source code is released under the [MIT License](LICENSE).
-- The root license retains the upstream `Copyright (c) 2026 myunwang` notice.
-- AgentPaw modifications remain copyright of their respective contributors.
-- Third-party character GIFs and derived avatars remain the property of their respective owners and are not covered by the code's MIT License. Original attribution is retained in the asset directories.
+- Source code is released under the [MIT License](LICENSE); the root license retains the upstream `Copyright (c) 2026 myunwang` notice.
+- Third-party character artwork is not covered by the MIT License and remains the property of its creators: Milk Tea Mouse by **Achi (阿翅)**, Mimi Bee by **花栗鼠发发**, Line Dog by **Moonlab Studio**. See the [credits overview](assets/CREDITS.md) and the notes for [Salary Cat](assets/cat/CREDITS.md), [Milk Tea Mouse](assets/characters/milktea-mouse/CREDITS.md), [Mimi Bee](assets/characters/mimi-bee/CREDITS.md) and [Line Dog](assets/characters/line-dog/CREDITS.md). No characters or downloads are sold.
 
 ## Contributing
 
-Bug reports, Windows compatibility improvements, and new agent integrations are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
-
----
-
-<div align="center">
-  <sub>Codex desktop pet &amp; companion · Windows x64 · Local-first · Four AI coding tools.</sub>
-</div>
+Bug reports, Windows compatibility fixes, new agent integrations and character packs are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). If AgentPaw keeps you company, a ⭐ helps others find it.
