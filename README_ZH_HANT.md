@@ -6,7 +6,7 @@
   <p>支援 <strong>Codex</strong> · <strong>Claude Code</strong> · <strong>WorkBuddy</strong> · <strong>opencode</strong></p>
 
   <p>
-    <a href="https://github.com/vista-zhangg/agentpaw/releases/latest"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BC%89%20Windows%20%E7%89%88-2.0.0-0078D4?style=for-the-badge&logo=windows" alt="下載 Windows 版"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/releases/latest"><img src="https://img.shields.io/badge/%E4%B8%8B%E8%BC%89%20Windows%20%E7%89%88-2.1.0-0078D4?style=for-the-badge&logo=windows" alt="下載 Windows 版"></a>
   </p>
   <p>
     <a href="README.md">English</a> ·
