@@ -19,6 +19,7 @@ const {
   clearRuntimeConfig,
   tokenFromHeaders,
   serverHeaders,
+  CLAUDE_QUOTA_PATH,
 } = require('./transport');
 const { isKnownAgentId } = require('../shared/agents');
 const env = require('./env');
@@ -28,6 +29,8 @@ const env = require('./env');
 // Stop for long Chinese replies (completion state + 💬 bubble lost). 16KB clears
 // the worst case with headroom; everything else in the body is small.
 const MAX_STATE_BODY_BYTES = 16 * 1024;
+const MAX_QUOTA_BODY_BYTES = 2 * 1024;
+const { normalizeReport } = require('./claude-statusline');
 const MAX_PERMISSION_BODY_BYTES = 1024 * 1024; // tool_input can be large
 const ASSISTANT_LAST_OUTPUT_MAX = 2400;
 
@@ -162,6 +165,18 @@ function createServer(deps) {
     } catch {
       return false;
     }
+  }
+
+  function handleClaudeQuotaPost(req, res) {
+    readBody(req, MAX_QUOTA_BODY_BYTES, (body) => {
+      if (body === null) { res.writeHead(413); res.end('quota payload too large'); return; }
+      let report = null;
+      try { report = normalizeReport(JSON.parse(body)); } catch {}
+      if (!report) { res.writeHead(400, serverHeaders()); res.end('bad quota'); return; }
+      if (typeof deps.onClaudeQuota === 'function') deps.onClaudeQuota(report);
+      res.writeHead(204, serverHeaders());
+      res.end();
+    });
   }
 
   function handleStatePost(req, res) {
@@ -335,6 +350,10 @@ function createServer(deps) {
     if (req.method === 'POST' && req.url === '/state') {
       if (!stateAuthorized(req)) { res.writeHead(403, serverHeaders()); res.end('forbidden'); return; }
       return handleStatePost(req, res);
+    }
+    if (req.method === 'POST' && req.url === CLAUDE_QUOTA_PATH) {
+      if (!stateAuthorized(req)) { res.writeHead(403, serverHeaders()); res.end('forbidden'); return; }
+      return handleClaudeQuotaPost(req, res);
     }
     if (req.method === 'POST' && permissionAuthorized(req)) return handlePermissionPost(req, res);
     if (req.method === 'POST' && String(req.url || '').startsWith('/permission')) {

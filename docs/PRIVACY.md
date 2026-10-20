@@ -28,6 +28,8 @@ AgentPaw 将配置、窗口位置、运行时令牌、模型价格缓存、用�
 
 Codex 订阅额度通过官方 `codex app-server --stdio` 读取。AgentPaw 完成 App Server 初始化后先调用 `account/read`，再调用 `account/rateLimits/read` 并监听 `account/updated` 与 `account/rateLimits/updated`；认证和上游访问由 Codex 负责。AgentPaw 只监听 `~/.codex/auth.json` 目录项的替换，将它作为 file auth 的快速重连信号，且不打开或解析凭据文件。keyring / auto / ephemeral 没有对应的文件 watcher 保证，账户变化依靠 App Server 通知、周期性 `account/read` 与定期重建连接收敛；界面表示 AgentPaw 自己这条连接当前可见的账户。AgentPaw 不保存 Codex 邮箱或凭据，也不调用 ChatGPT 网页接口。退出 AgentPaw 时会终止它启动的 App Server 子进程。
 
+Claude Code 订阅额度是可选功能，默认关闭。在设置“连接”中开启后，AgentPaw 把 `~/.claude/settings.json` 的 `statusLine` 设为本项目的中继命令；原有的 statusLine 保存在 `~/.agentpaw/claude-statusline.json`，中继照常执行并显示它的输出，关闭或卸载接入时原样恢复。中继只读取 Claude Code 官方文档列出的 `rate_limits.five_hour` 与 `rate_limits.seven_day`（已用百分比与重置时间，仅 Pro / Max 订阅提供），只发给本机 loopback 服务，最近一次结果保存在 `~/.agentpaw/claude-quota.json`。AgentPaw 不读取 Claude Code 的凭据文件，也不调用 Anthropic 的未公开接口。
+
 本地服务只监听 loopback。写接口校验 Host、Origin、请求体大小、字段形状和每次运行随机生成的令牌。
 
 ### 计费说明
@@ -71,6 +73,8 @@ Task notification preferences, muted project directory hashes and display names,
 During normal operation, AgentPaw may download the public model price list from [models.dev](https://models.dev). On Windows it uses Electron's network stack and follows the system proxy or PAC configuration; it syncs at startup, refreshes every 24 hours after success, and retries transient failures. Transcripts, rollouts, permission contents, and usage statistics are not attached to that request. Set `AGENTPAW_NO_NET=1` to disable both pricing synchronization and the Codex quota upstream connection; GitHub update checks in installed builds are controlled separately by the automatic-update setting, and manual update checks still use the network. Quota displays `--`.
 
 Codex subscription quota is read through the official `codex app-server --stdio` transport. AgentPaw initializes App Server, calls `account/read` before `account/rateLimits/read`, and listens for both account and rate-limit updates; Codex owns authentication and upstream access. AgentPaw watches replacement of the `~/.codex/auth.json` directory entry only as a fast reconnect signal for file auth, without opening or parsing the credential file. Keyring, auto, and ephemeral auth have no corresponding file-watcher guarantee; account changes converge through App Server notifications, periodic `account/read`, and scheduled connection recycling, and the UI represents the account visible to AgentPaw's own connection. AgentPaw does not persist the Codex email or credentials and does not call ChatGPT web endpoints. Exiting AgentPaw terminates the App Server child process it started.
+
+Claude Code plan usage is optional and off by default. When enabled under Settings → Connections, AgentPaw sets `statusLine` in `~/.claude/settings.json` to its relay command; an existing statusLine is saved to `~/.agentpaw/claude-statusline.json`, keeps running through the relay with its output shown unchanged, and is restored exactly when you turn the option off or disconnect integrations. The relay reads only the documented `rate_limits.five_hour` and `rate_limits.seven_day` fields (used percentage and reset time, Pro and Max plans only), sends them only to the loopback service, and stores the latest result in `~/.agentpaw/claude-quota.json`. AgentPaw does not read Claude Code credential files or call undocumented Anthropic endpoints.
 
 The local service binds to loopback only. Write endpoints validate Host, Origin, body size, field shape, and a fresh random token generated for each run.
 

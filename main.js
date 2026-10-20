@@ -38,6 +38,7 @@ const { createPermissions } = require('./backend/permission');
 const { createServer } = require('./backend/server');
 const adapter = require('./backend/adapter');
 const hooks = require('./backend/hooks');
+const { createClaudeQuota } = require('./backend/claude-quota');
 const { focusSession } = require('./backend/focus');
 const { createCodexWatch } = require('./backend/codex-watch');
 const { createCodexMetering } = require('./backend/codex-metering');
@@ -119,6 +120,7 @@ let codexWatch = null;  // Codex rollout 只读监听器
 let codexMetering = null; // Codex rollout 累计 token 台账（与状态 watcher 解耦）
 let codexRateLimits = null; // Codex App Server 订阅额度（独立于 rollout token 台账）
 let codexQuotaState = unavailableCodexQuota('idle');
+let claudeQuota = null; // Claude Code 订阅额度（可选，经 statusLine 中继）
 let workbuddyMetering = null; // WorkBuddy 转录 token 台账（只读，从 ~/.workbuddy/projects 扫描）
 let opencodeMetering = null; // opencode 用量台账（只读，tail ~/.agentpaw/opencode-usage.jsonl）
 let updateService = null;
@@ -925,6 +927,7 @@ function buildStats(agent = 'all', snapshot = null, cachedMeter = null) {
     estimate: weeklyQuotaEstimator.observe({ quotaHistory }, codexQuotaState),
     forecast: quotaForecaster.observe(codexQuotaState, quotaHistory),
   };
+  stats.claudeQuota = claudeQuota ? claudeQuota.card() : null;
   const decorated = taskCenter ? taskCenter.sync(stats, config.get().notifications) : stats;
   return privacy.protectStats(decorated, config.get().privacyMode === true);
 }
@@ -1234,7 +1237,10 @@ function bootBackend() {
     onChange: scheduleEmit,
   });
 
-  server = createServer({ core, permissions });
+  claudeQuota = createClaudeQuota({ config });
+  server = createServer({ core, permissions, onClaudeQuota: (report) => {
+    if (claudeQuota.record(report)) emitStats();
+  } });
   server.start();
 
   // Install hooks once the server has a port (defer so listen wins the race).
@@ -1248,6 +1254,7 @@ function bootBackend() {
     if (port) {
       hooks.install(port, server.getToken());
       stopWatcher = hooks.startWatcher(() => ({ port: server.getPort(), token: server.getToken() }));
+      claudeQuota.reconcile();
       if (config.get().onboardingVersion < 1) {
         config.save({ onboardingVersion: 1 });
         showIntegrationStatus();
@@ -1424,6 +1431,20 @@ function registerIpc() {
       return { ok: false, error: 'forbidden' };
     }
     return uninstallIntegrationHealth();
+  });
+  ipcMain.handle(IPC.GET_CLAUDE_QUOTA, (e) => {
+    if (!settingsWin || settingsWin.isDestroyed() || e.sender !== settingsWin.webContents || !claudeQuota) {
+      return { ok: false, error: 'forbidden' };
+    }
+    return claudeQuota.setting();
+  });
+  ipcMain.handle(IPC.SET_CLAUDE_QUOTA, (e, enabled) => {
+    if (!settingsWin || settingsWin.isDestroyed() || e.sender !== settingsWin.webContents || !claudeQuota) {
+      return { ok: false, error: 'forbidden' };
+    }
+    const result = claudeQuota.setEnabled(enabled === true);
+    emitStats();
+    return result;
   });
   ipcMain.handle(IPC.GET_UPDATE_STATE, () => updateService ? updateService.snapshot() : null);
   ipcMain.handle(IPC.CHECK_FOR_UPDATES, (e) => {

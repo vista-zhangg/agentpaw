@@ -16,6 +16,8 @@ const { statePath } = require('./paths');
 const RUNTIME_FILES = Object.freeze([
   'hook/agentpaw-hook.js',
   'hook/workbuddy-hook.js',
+  'hook/agentpaw-statusline.js',
+  'backend/claude-statusline.js',
   'backend/hook-common.js',
   'backend/transport.js',
   'backend/transcript.js',
@@ -75,6 +77,35 @@ function writeJsonAtomic(target, value) {
   return true;
 }
 
+function writeTextAtomic(target, text) {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  try {
+    if (fs.readFileSync(target, 'utf8') === text) return false;
+  } catch {}
+  const tmp = path.join(path.dirname(target), `.${path.basename(target)}.${process.pid}.${Date.now()}.tmp`);
+  fs.writeFileSync(tmp, text, 'utf8');
+  fs.renameSync(tmp, target);
+  return true;
+}
+
+function statusLineLauncherPath(homeDir = os.homedir()) {
+  return runtimeHookPath('agentpaw-statusline.ps1', homeDir);
+}
+
+// Claude Code's statusLine has no `shell` field, so the relay starts from a
+// PowerShell file that both Git Bash and PowerShell can launch. UTF-8 both ways
+// keeps non-ASCII paths and the wrapped status line intact.
+function statusLineLauncher(runtime, script) {
+  return [
+    '$utf8 = New-Object System.Text.UTF8Encoding $false',
+    '[Console]::InputEncoding = $utf8; [Console]::OutputEncoding = $utf8; $OutputEncoding = $utf8',
+    `if (-not (Test-Path -LiteralPath ${psQuote(runtime.executable)})) { exit 0 }`,
+    runtime.runAsNode ? "$env:ELECTRON_RUN_AS_NODE = '1'" : '',
+    `[Console]::In.ReadToEnd() | & ${psQuote(runtime.executable)} ${psQuote(script)}`,
+    '',
+  ].filter((line, i, all) => line || i === all.length - 1).join('\r\n');
+}
+
 function stageHookRuntime(options = {}) {
   const sourceRoot = options.sourceRoot || path.join(__dirname, '..');
   const homeDir = options.homeDir || os.homedir();
@@ -94,6 +125,8 @@ function stageHookRuntime(options = {}) {
 
   const manifest = { schema: 1, executable, runAsNode };
   writeJsonAtomic(manifestPath(homeDir), manifest);
+  writeTextAtomic(statusLineLauncherPath(homeDir),
+    statusLineLauncher(manifest, runtimeHookPath('agentpaw-statusline.js', homeDir)));
   return { root, copied, ...manifest };
 }
 
@@ -142,4 +175,6 @@ module.exports = {
   readHookRuntime,
   buildHookCommand,
   removeHookRuntime,
+  statusLineLauncherPath,
+  statusLineLauncher,
 };

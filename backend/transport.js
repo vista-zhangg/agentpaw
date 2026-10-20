@@ -25,6 +25,7 @@ const PORT_COUNT = 5;
 const PORTS = Array.from({ length: PORT_COUNT }, (_, i) => BASE_PORT + i);
 const STATE_PATH = '/state';
 const PERMISSION_PATH = '/permission';
+const CLAUDE_QUOTA_PATH = '/claude-quota';
 const RUNTIME_PATH = statePath('runtime.json');
 const POST_TIMEOUT_MS = 120;
 const PROTOCOLS = Object.freeze([
@@ -128,6 +129,10 @@ function probe(port, timeoutMs, cb) {
 // POST a state body to the first reachable AgentPaw server. Best-effort + fast:
 // the hook must not block Claude Code, so it gives up quickly on each port.
 function postState(body, cb) {
+  postJson(STATE_PATH, body, cb);
+}
+
+function postJson(pathname, body, cb) {
   const payload = typeof body === 'string' ? body : JSON.stringify(body);
   const runtime = readRuntimeConfig();
   if (!runtime) { cb && cb(false); return; }
@@ -138,7 +143,7 @@ function postState(body, cb) {
     const port = ports[i++];
     const req = http.request(
       {
-        hostname: '127.0.0.1', port, path: STATE_PATH, method: 'POST',
+        hostname: '127.0.0.1', port, path: pathname, method: 'POST',
         timeout: POST_TIMEOUT_MS,
         headers: {
           'Content-Type': 'application/json',
@@ -163,6 +168,6 @@ function postState(body, cb) {
 module.exports = {
   SERVER_ID, SERVER_HEADER, TOKEN_HEADER, PORTS, BASE_PORT, STATE_PATH, RUNTIME_PATH,
   validToken, readRuntimeConfig, writeRuntimeConfig, clearRuntimeConfig,
-  getPortCandidates, buildPermissionUrl, probe, postState,
+  getPortCandidates, buildPermissionUrl, probe, postState, postJson, CLAUDE_QUOTA_PATH,
   headerIsOurs, tokenFromHeaders, serverHeaders,
 };

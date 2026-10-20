@@ -5439,5 +5439,45 @@
     "共提醒 {0} 次",
     "{0} reminders",
     "共提醒 {0} 次"
+  ],
+  [
+    "显示 Claude Code 订阅额度",
+    "Show Claude Code plan usage",
+    "顯示 Claude Code 訂閱額度"
+  ],
+  [
+    "经 Claude Code 状态栏读取 5h / 7d 额度，仅 Pro / Max 订阅提供。开启后 Claude Code 底部会显示状态栏；已有的状态栏照常显示，关闭时原样恢复。",
+    "Reads 5h / 7d usage from Claude Code's status line (Pro and Max plans only). Claude Code then shows a status line; an existing one keeps working and is restored when you turn this off.",
+    "經 Claude Code 狀態列讀取 5h / 7d 額度，僅 Pro / Max 訂閱提供。開啟後 Claude Code 底部會顯示狀態列；既有的狀態列照常顯示，關閉時原樣還原。"
+  ],
+  [
+    "Claude 额度",
+    "Claude quota",
+    "Claude 額度"
+  ],
+  [
+    "Claude Code 下一次回复后更新",
+    "Updates after Claude Code's next reply",
+    "Claude Code 下一次回覆後更新"
+  ],
+  [
+    "未检测到 Claude Code。",
+    "Claude Code was not detected.",
+    "未偵測到 Claude Code。"
+  ],
+  [
+    "已开启，原有状态栏照常显示。",
+    "On. Your existing status line still shows.",
+    "已開啟，原有狀態列照常顯示。"
+  ],
+  [
+    "已开启，Claude Code 下一次回复后更新。",
+    "On. Updates after Claude Code's next reply.",
+    "已開啟，Claude Code 下一次回覆後更新。"
+  ],
+  [
+    "设置失败，请重试。",
+    "Couldn't save the setting. Please try again.",
+    "設定失敗，請重試。"
   ]
 ];});

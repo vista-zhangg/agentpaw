@@ -55,6 +55,10 @@ const stats = { today, sessions, active: sessions[0], lifetime: { cost: 136.72, 
   codexQuota: { status:'ready', updatedAt:Date.now(), windows:{ fiveHour:{ remainingPercent:76, usedPercent:24, resetsAt:Math.floor(Date.now()/1000)+6200 }, weekly:{ remainingPercent:92,usedPercent:8,resetsAt:Math.floor(Date.now()/1000)+320000 } },
     forecast: { fiveHour: { status:'ready', ratePerHour:52, exhaustAt:Date.now()+5260e3, earlyMs:940e3, remainingAtReset:0 }, weekly: { status:'ready', ratePerHour:.4, exhaustAt:null, earlyMs:0, remainingAtReset:56 } } }
 };
+stats.claudeQuota = { enabled: true, status: 'ready', updatedAt: Date.now(), observedWindows: ['fiveHour', 'weekly'],
+  windows: { fiveHour: { usedPercent: 38, remainingPercent: 62, resetsAt: Math.floor(Date.now()/1000)+8100 },
+    weekly: { usedPercent: 27, remainingPercent: 73, resetsAt: Math.floor(Date.now()/1000)+410000 } } };
+let claudeQuotaSetting = { ok: true, detected: true, enabled: true, wrapped: false };
 const noop = () => {};
 stats.usage = require('./panel-preview-data.cjs')().usage;
 function refreshWorkflow() {
@@ -110,6 +114,8 @@ const handlers = {
   'chip:get-display': () => chipDisplay,
   'chip:set-display': (_,value) => ({ok:true,...(chipDisplay={...chipDisplay,...value})}),
   'integrations:get-health': () => report,
+  'claude-quota:get': () => claudeQuotaSetting,
+  'claude-quota:set': (_, enabled) => (claudeQuotaSetting = { ...claudeQuotaSetting, enabled: !!enabled }),
   'get-xiaban-schedule': () => ({lunch:'12:00',evening:'18:00'}),
   'set-xiaban-schedule': (_,schedule) => ({ok:true,schedule}),
   'get-pet-assets': () => characterStore ? characterStore.catalog() : require('../shared/pet-assets').defaultCatalog(),

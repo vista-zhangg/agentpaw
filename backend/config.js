@@ -22,6 +22,7 @@ const DEFAULTS = Object.freeze({
   petPosition: null,      // {x,y} | null
   onboardingVersion: 0,  // portable integration summary shown once
   hooksEnabled: true,
+  claudeQuotaEnabled: false, // opt-in: AgentPaw relays Claude Code's statusLine
   autoUpdateEnabled: true,
   privacyMode: false,
   showCat: true,
@@ -54,6 +55,7 @@ function sanitize(raw) {
     out.onboardingVersion = raw.onboardingVersion;
   }
   if (typeof raw.hooksEnabled === 'boolean') out.hooksEnabled = raw.hooksEnabled;
+  if (typeof raw.claudeQuotaEnabled === 'boolean') out.claudeQuotaEnabled = raw.claudeQuotaEnabled;
   if (typeof raw.autoUpdateEnabled === 'boolean') out.autoUpdateEnabled = raw.autoUpdateEnabled;
   if (typeof raw.privacyMode === 'boolean') out.privacyMode = raw.privacyMode;
   if (typeof raw.autoHideFullscreen === 'boolean') out.autoHideFullscreen = raw.autoHideFullscreen;

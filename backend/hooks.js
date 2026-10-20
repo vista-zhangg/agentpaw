@@ -73,7 +73,9 @@ function install(port, token) {
 }
 
 function uninstall() {
-  config.save({ hooksEnabled: false });
+  config.save({ hooksEnabled: false, claudeQuotaEnabled: false });
+  // The statusLine relay lives in the hook runtime removed below.
+  try { require('./claude-statusline').createInstaller().disable(); } catch {}
   const results = INSTALLERS.map(uninstallOne);
   if (results.every((result) => result !== null)) hookRuntime.removeHookRuntime();
   return results;

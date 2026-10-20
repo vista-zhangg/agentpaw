@@ -223,6 +223,16 @@
               </div>
             </div>
           </div>
+          <div class="setting-card claude-quota-card">
+            <div class="setting-copy">
+              <div class="setting-title" data-l10n="显示 Claude Code 订阅额度">Show Claude Code plan usage</div>
+              <div class="setting-description" data-l10n="经 Claude Code 状态栏读取 5h / 7d 额度，仅 Pro / Max 订阅提供。开启后 Claude Code 底部会显示状态栏；已有的状态栏照常显示，关闭时原样恢复。">Reads 5h / 7d usage from Claude Code's status line (Pro and Max plans only). Claude Code then shows a status line; an existing one keeps working and is restored when you turn this off.</div>
+            </div>
+            <button id="claude-quota-toggle" class="switch" type="button" role="switch" aria-checked="false" aria-label="Show Claude Code plan usage" data-l10n-aria-label="显示 Claude Code 订阅额度">
+              <span class="switch-thumb" aria-hidden="true"></span>
+            </button>
+          </div>
+          <div id="claude-quota-status" class="setting-status" aria-live="polite"></div>
         </section>
         </div>
         <div id="panel-expressions" class="settings-panel" data-panel="expressions" role="tabpanel" aria-labelledby="tab-appearance" tabindex="0" hidden>

@@ -44,6 +44,16 @@ function durationText(ms) {
   const days = Math.floor(hours / 24), restHours = hours % 24;
   return restHours ? t('quota.durationDaysHours', { days, hours: restHours }) : t('quota.durationDays', { count: days });
 }
+function renderClaudeQuota(quota) {
+  const block = $('claude-quota-block');
+  block.hidden = !quota;
+  if (!quota) return;
+  const card = window.AgentPawQuotaCard;
+  const ready = quota.status === 'ready';
+  $('claude-quota-meta').textContent = ready ? card.meta(quota) : text('Claude Code 下一次回复后更新');
+  if (ready) card.render($('claude-quota-rows'), quota);
+  else $('claude-quota-rows').replaceChildren();
+}
 function renderQuota(quota) {
   const card = window.AgentPawQuotaCard;
   const ready = quota && quota.status === 'ready';
@@ -189,13 +199,18 @@ function renderSubtitle(s) {
 function renderLive(s) {
   renderSubtitle(s);
   renderQuota(s.codexQuota);
+  renderClaudeQuota(s.claudeQuota);
   renderSessions(s.sessions);
   renderRecent(s.recent);
 }
 setInterval(() => {
   for (const node of document.querySelectorAll('.live-clock')) node.textContent = elapsedText(Date.now() - Number(node.dataset.start));
 }, 1000);
-setInterval(() => { if (lastStats) renderQuota(lastStats.codexQuota); }, 30000);
+setInterval(() => {
+  if (!lastStats) return;
+  renderQuota(lastStats.codexQuota);
+  renderClaudeQuota(lastStats.claudeQuota);
+}, 30000);
 
 /* ---------- 价目表状态（口径浮层内） ---------- */
 let lastPrice = null;

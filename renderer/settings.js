@@ -210,6 +210,8 @@ const integrationStatusEl = $('integration-status');
 const integrationRefresh = $('integration-refresh');
 const integrationRepair = $('integration-repair');
 const integrationUninstall = $('integration-uninstall');
+const claudeQuotaToggle = $('claude-quota-toggle');
+const claudeQuotaStatusEl = $('claude-quota-status');
 const lunchTime = $('xiaban-lunch-time');
 const eveningTime = $('xiaban-evening-time');
 const xiabanStatusEl = $('xiaban-status');
@@ -232,6 +234,8 @@ let updateBusy = false;
 let updateState = null;
 let integrationBusy = false;
 let integrationHealth = null;
+let claudeQuotaState = { enabled: false, detected: true, wrapped: false };
+let claudeQuotaBusy = false;
 let xiabanBusy = false;
 let assetBusy = false;
 let selectedSlotId = 'working';
@@ -327,6 +331,42 @@ async function togglePrivacyMode() {
     applyPrivacyState(result, result && result.ok ? null : 'settings.privacyFailed', result && result.ok ? '' : 'error');
   } catch { renderPrivacyStatus('settings.privacyFailed', 'error'); }
   finally { privacyBusy = false; privacyToggle.disabled = false; }
+}
+
+function renderClaudeQuota(message = '', kind = '') {
+  const L = window.AgentPawI18n;
+  claudeQuotaToggle.setAttribute('aria-checked', String(claudeQuotaState.enabled === true));
+  claudeQuotaToggle.disabled = claudeQuotaBusy || (!claudeQuotaState.detected && !claudeQuotaState.enabled);
+  let note = message;
+  if (!note && !claudeQuotaState.detected) note = L.text('未检测到 Claude Code。');
+  else if (!note && claudeQuotaState.enabled) {
+    note = claudeQuotaState.wrapped ? L.text('已开启，原有状态栏照常显示。') : L.text('已开启，Claude Code 下一次回复后更新。');
+  }
+  flashStatus(claudeQuotaStatusEl, note, kind);
+}
+
+async function loadClaudeQuota() {
+  try {
+    const result = await window.pet.getClaudeQuota();
+    if (result && result.ok !== false) claudeQuotaState = result;
+    renderClaudeQuota();
+  } catch { renderClaudeQuota(window.AgentPawI18n.text('设置失败，请重试。'), 'error'); }
+}
+
+async function toggleClaudeQuota() {
+  if (claudeQuotaBusy) return;
+  claudeQuotaBusy = true;
+  renderClaudeQuota();
+  try {
+    const result = await window.pet.setClaudeQuota(!claudeQuotaState.enabled);
+    if (result) claudeQuotaState = result;
+    claudeQuotaBusy = false;
+    if (result && result.ok) renderClaudeQuota();
+    else renderClaudeQuota(window.AgentPawI18n.text('设置失败，请重试。'), 'error');
+  } catch {
+    claudeQuotaBusy = false;
+    renderClaudeQuota(window.AgentPawI18n.text('设置失败，请重试。'), 'error');
+  }
 }
 
 function integrationModeLabel(mode) {
@@ -958,6 +998,7 @@ privacyToggle.addEventListener('click', togglePrivacyMode);
 integrationRefresh.addEventListener('click', () => loadIntegrationHealth());
 integrationRepair.addEventListener('click', repairIntegrations);
 integrationUninstall.addEventListener('click', uninstallIntegrations);
+claudeQuotaToggle.addEventListener('click', toggleClaudeQuota);
 updateToggle.addEventListener('click', toggleAutoUpdate);
 updateCheck.addEventListener('click', checkUpdatesNow);
 updateAction.addEventListener('click', runUpdateAction);
@@ -1014,6 +1055,7 @@ setTab('general');
 loadSettings();
 loadPrivacyMode();
 loadIntegrationHealth();
+loadClaudeQuota();
 loadUpdateState();
 loadXiabanSchedule();
 loadAssetCatalog();
@@ -1034,5 +1076,5 @@ languageSelect.addEventListener('change', async () => {
 });
 window.addEventListener('agentpaw:language', () => {
   applyStaticI18n(); languageSelect.value = window.AgentPawI18n.getLanguage();
-  renderAssets(); renderPrivacyStatus(); loadSettings(); loadIntegrationHealth(); loadUpdateState();
+  renderAssets(); renderPrivacyStatus(); loadSettings(); loadIntegrationHealth(); loadClaudeQuota(); loadUpdateState();
 });

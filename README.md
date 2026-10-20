@@ -91,6 +91,7 @@ The details panel brings tokens, cache hit rate, context windows, models and ref
 - **Status at a glance** — working, thinking, parallel tasks, compaction, permission waits, user input, completion, errors, breaks and sleep; background tasks and scheduled wakeups stay active until they actually clear.
 - **Calmer notifications** — choose Standard or Needs attention only, combine completion notices, defer transient failures, and mute an agent or project while keeping permission cards available.
 - **Quick view** — what needs you (approve on the spot), what is running with model, elapsed time and context use, recent sessions and the last 7 days. Finished tasks stay marked on the capsule until you open them. Follow, rename or mute a project in place.
+- **Claude Code plan usage (optional)** — turn it on under Settings → Connections to see your 5h / 7d Pro or Max usage in the details panel. It uses Claude Code's documented status line data; an existing status line keeps working.
 - **Codex quota in the tray** — right-click the tray icon for the masked current account, 5h / 7d remaining quota, reset times and last update. Missing windows show `--`.
 - **Integration health** — verify all four agents, then repair or remove AgentPaw-managed integrations from Settings.
 - **Privacy mode** — one click in the right-click menu hides sensitive details while keeping essential state visible.
@@ -116,6 +117,7 @@ On first launch AgentPaw only connects to tools the current Windows account alre
 - The local HTTP service binds to loopback only, and write endpoints require a fresh per-run token.
 - The only download is the public price list from models.dev. Transcripts, permission contents and usage statistics are never uploaded.
 - Codex quota is read through Codex's own App Server, which handles authentication. AgentPaw does not read `~/.codex/auth.json` or call ChatGPT web endpoints.
+- Claude Code plan usage (off by default) comes only from the documented status line data; no Claude credentials are read.
 
 See [Privacy and data boundaries](docs/PRIVACY.md) for the full policy.
 

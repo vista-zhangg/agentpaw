@@ -16,6 +16,7 @@ const TESTS = Object.freeze([
   'codex-history.js',
   'codex-rate-limits.js',
   'codex-quota-estimate.js',
+  'claude-quota.js',
   'workbuddy-metering.js',
   'opencode-metering.js',
   'usage-stats.js',
