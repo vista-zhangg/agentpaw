@@ -36,6 +36,11 @@ function createRestReminderController({ now = Date.now, preferences, onChange, r
   let pausedSince = null;
   let wasInactive = false;
   const elapsed = { water: 0, stretch: 0, eyes: 0 };
+  // Today's use and reminder outcomes. A snoozed reminder that returns is the
+  // same reminder, so it is not counted again. Streak is in-memory only.
+  let today = { usedMs: 0, prompts: 0, done: 0, skipped: 0 };
+  let streakMs = 0;
+  let resumingSnooze = false;
 
   const enabled = (kind) => prefs.enabled && prefs[`${kind}Enabled`];
   const interval = (kind) => prefs[`${kind}Minutes`] * MINUTE_MS;
@@ -45,6 +50,12 @@ function createRestReminderController({ now = Date.now, preferences, onChange, r
   // Validation avoids stale reminders or an arbitrary persisted date silencing
   // the app indefinitely. Existing snoozes preserve the chosen end time when
   // settings change, bounded by the maximum supported duration.
+  const saved = runtime && runtime.version === 1 && runtime.today;
+  if (saved && saved.day === day) {
+    const count = (value, max) => Number.isFinite(value) && value >= 0 ? Math.min(Math.floor(value), max) : 0;
+    today = { usedMs: count(saved.usedMs, 86_400_000), prompts: count(saved.prompts, 10_000),
+      done: count(saved.done, 10_000), skipped: count(saved.skipped, 10_000) };
+  }
   if (runtime && runtime.version === 1 && prefs.enabled) {
     if (runtime.day === day && Number.isFinite(runtime.skippedUntil) && runtime.skippedUntil > lastTick) {
       skippedUntil = Math.min(runtime.skippedUntil, nextLocalMidnight(lastTick));
@@ -65,10 +76,14 @@ function createRestReminderController({ now = Date.now, preferences, onChange, r
       pending: pending ? { ...pending, kinds: [...pending.kinds] } : null,
       skippedUntil,
       snoozedUntil,
+      today: { usedMinutes: Math.floor(today.usedMs / MINUTE_MS), streakMinutes: Math.floor(streakMs / MINUTE_MS),
+        prompts: today.prompts, done: today.done, skipped: today.skipped },
     };
   }
 
-  const stateSignature = (state) => JSON.stringify({ ...state, snoozedKinds });
+  // Usage minutes ride along with real changes and explicit reads; they never
+  // broadcast on their own.
+  const stateSignature = (state) => JSON.stringify({ ...state, today: undefined, snoozedKinds });
   let previousState = stateSignature(getState());
   function publish() {
     const state = getState();
@@ -88,7 +103,8 @@ function createRestReminderController({ now = Date.now, preferences, onChange, r
       if (!pending.kinds.length) pending = null;
     }
     snoozedKinds = snoozedKinds.filter((kind) => !kinds.includes(kind));
-    if (!snoozedKinds.length) snoozedUntil = 0;
+    if (!snoozedKinds.length) { snoozedUntil = 0; resumingSnooze = false; }
+    if (kinds.includes('stretch') || kinds.includes('eyes')) streakMs = 0;
   }
 
   function resetKinds(kinds) {
@@ -104,6 +120,7 @@ function createRestReminderController({ now = Date.now, preferences, onChange, r
       const carrySnoozeKinds = carrySnoozeUntil ? [...snoozedKinds] : [];
       resetKinds(KINDS);
       skippedUntil = 0;
+      today = { usedMs: 0, prompts: 0, done: 0, skipped: 0 };
       if (carrySnoozeKinds.length) {
         snoozedUntil = carrySnoozeUntil;
         snoozedKinds = carrySnoozeKinds;
@@ -148,6 +165,8 @@ function createRestReminderController({ now = Date.now, preferences, onChange, r
     }
     const activeDelta = changedDay || longGap || wasInactive ? 0 : Math.max(0, delta);
     wasInactive = false;
+    today.usedMs = Math.min(86_400_000, today.usedMs + activeDelta);
+    streakMs += activeDelta;
     if (!prefs.enabled || skippedUntil > timestamp) return publish();
 
     for (const kind of KINDS) {
@@ -159,7 +178,11 @@ function createRestReminderController({ now = Date.now, preferences, onChange, r
     snoozedKinds = [];
     const due = KINDS.filter((kind) => enabled(kind) && elapsed[kind] >= interval(kind));
     if (due.length) {
-      if (!pending) pending = { id: `rest-${timestamp}-${++sequence}`, kinds: due, createdAt: timestamp };
+      if (!pending) {
+        pending = { id: `rest-${timestamp}-${++sequence}`, kinds: due, createdAt: timestamp };
+        if (!resumingSnooze) today.prompts += 1;
+        resumingSnooze = false;
+      }
       else pending.kinds = KINDS.filter((kind) => pending.kinds.includes(kind) || due.includes(kind));
     }
     return publish();
@@ -186,10 +209,12 @@ function createRestReminderController({ now = Date.now, preferences, onChange, r
     }
     const kinds = [...pending.kinds];
     pending = null;
-    if (action === 'done') resetKinds(kinds);
+    if (action === 'done') { today.done += 1; resetKinds(kinds); }
+    else today.skipped += 1;
     if (action === 'snooze') {
       snoozedKinds = kinds;
       snoozedUntil = timestamp + prefs.snoozeMinutes * MINUTE_MS;
+      resumingSnooze = true;
     }
     if (action === 'skip-today') {
       resetKinds(KINDS);
@@ -200,7 +225,9 @@ function createRestReminderController({ now = Date.now, preferences, onChange, r
   }
 
   function serialize() {
-    return { version: 1, day, skippedUntil, snoozedUntil, snoozedKinds: [...snoozedKinds] };
+    // Whole minutes, so the runtime file is rewritten at most once a minute.
+    const usedMs = Math.floor(today.usedMs / MINUTE_MS) * MINUTE_MS;
+    return { version: 1, day, skippedUntil, snoozedUntil, snoozedKinds: [...snoozedKinds], today: { day, ...today, usedMs } };
   }
 
   return { tick, getState, setPreferences, act, serialize };

@@ -53,6 +53,7 @@ html, body {
 .rest-card-mark { display: inline-grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 10px; background: var(--ui-blue-soft); color: var(--ui-blue); font-size: 18px; }
 .rest-card-text { min-width: 0; }
 .rest-card-title { font-size: 15px; line-height: 1.4; font-weight: 650; }
+.rest-card-today { margin-top: 1px; font-size: 12px; color: var(--ui-blue); font-weight: 550; }
 .rest-card-message { margin-top: 2px; font-size: 12px; line-height: 1.55; color: #6b6e77; }
 .rest-card-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .rest-card-actions button { min-height: 29px; padding: 5px 12px; border: 1px solid rgba(32,36,48,.14); border-radius: 8px; color: var(--ui-text); background: #fff; font-size: 12.5px; font-weight: 500; cursor: pointer; }

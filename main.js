@@ -639,6 +639,7 @@ function startCompanionServices() {
     let idleSeconds = 0;
     try { idleSeconds = powerMonitor.getSystemIdleTime(); } catch {}
     restReminders.tick({ idleSeconds, paused: desktopPaused || desktopLocked });
+    persistRestRuntime(); // today's use minutes; unchanged JSON is skipped
   };
   powerMonitor.on('suspend', () => { desktopPaused = true; tickRest(); applyPetVisibility(); });
   powerMonitor.on('resume', () => { desktopPaused = false; tickRest(); applyPetVisibility(); });
@@ -1069,7 +1070,7 @@ function registerWorkflowIpc() {
     if (!entry) return false;
     const session = core.getSession(entry.sessionId) || (entry.agent === 'codex' ? { id: entry.sessionId, agentId: 'codex' } : null);
     const ok = await focusSession(session, { openExternal: url => shell.openExternal(url) });
-    if (ok) { taskCenter.markRead([id]); emitStats(); }
+    if (ok) { taskCenter.markRead([id]); taskCenter.markSessionRead(entry.sessionId); emitStats(); }
     return ok;
   });
 }

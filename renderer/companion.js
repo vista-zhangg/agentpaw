@@ -8,6 +8,7 @@
   const title = document.getElementById('rest-title');
   document.getElementById('rest-card-mark').innerHTML = window.AgentPawIcons?.icon('cup') || '';
   const message = document.getElementById('rest-message');
+  const todayLine = document.getElementById('rest-today');
   const status = document.getElementById('rest-action-status');
   const badge = document.getElementById('rest-pending');
   const buttons = ['done', 'snooze', 'skip'].map(name => document.getElementById('rest-' + name));
@@ -54,6 +55,14 @@
     signature = nextSignature;
     const names = { water: window.AgentPawI18n.text("喝口水"), stretch: window.AgentPawI18n.text("起身伸个懒腰"), eyes: window.AgentPawI18n.text("看看远处") };
     title.textContent = pending.kinds.map(kind => names[kind]).filter(Boolean).join('，') + window.AgentPawI18n.text("吧");
+    const today = value.rest.today;
+    todayLine.hidden = !today;
+    if (today) {
+      const parts = [];
+      if (today.streakMinutes >= 1) parts.push(window.AgentPawI18n.text("已连续使用 {0} 分钟", [today.streakMinutes]));
+      parts.push(window.AgentPawI18n.text("今日 {0} / {1} 次", [today.done, today.prompts]));
+      todayLine.textContent = parts.join(' · ');
+    }
     message.textContent = pending.kinds.includes('stretch')
       ? window.AgentPawI18n.text("离开座位走两步，让肩颈也放松一下。伙伴继续帮你看着进度。")
       : pending.kinds.includes('water') ? window.AgentPawI18n.text("给自己补一点水，慢慢来，伙伴陪你。") : window.AgentPawI18n.text("把视线从屏幕移开一会儿，让眼睛也休息一下。");

@@ -74,6 +74,7 @@ async function main() {
       assert.strictEqual(w.elements('stage').classList.contains('cat-hidden'), !showCat);
       assert(w.elements('rest-title').textContent.includes('喝口水'));
       assert(w.elements('rest-title').textContent.includes('伸个懒腰'));
+      assert.strictEqual(w.elements('rest-today').textContent, '已连续使用 5 分钟 · 今日 0 / 1 次', 'card shows streak and today');
       const id = test.controller.getState().pending.id;
       test.advance(5);
       assert.strictEqual(test.controller.getState().pending.id, id, 'pending reminders stay deduplicated');

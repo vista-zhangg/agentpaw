@@ -67,6 +67,18 @@ initializeChipDisplay();
       $('rest-' + kind + '-minutes').disabled = toggle.disabled || !checked(toggle);
     }
   }
+  function duration(minutes) {
+    const h = Math.floor(minutes / 60), m = minutes % 60;
+    return h ? window.AgentPawI18n.text("{0} 小时 {1} 分", [h, m]) : window.AgentPawI18n.text("{0} 分钟", [m]);
+  }
+  function renderToday(today) {
+    $('rest-today-grid').hidden = !today;
+    if (!today) return;
+    $('rest-today-used').textContent = duration(today.usedMinutes || 0);
+    $('rest-today-streak').textContent = today.streakMinutes >= 1 ? window.AgentPawI18n.text("已连续 {0} 分钟", [today.streakMinutes]) : '';
+    $('rest-today-done').textContent = `${today.done || 0} / ${today.prompts || 0}`;
+    $('rest-today-skipped').textContent = String(today.skipped || 0);
+  }
   function render(value, force = false) {
     if (!value || !value.rest || !value.visibility) return;
     companionValue = value;
@@ -80,6 +92,7 @@ initializeChipDisplay();
         $('rest-' + kind + '-minutes').value = prefs[kind + 'Minutes'];
       }
     }
+    renderToday(value.rest.today);
     fullscreen.setAttribute('aria-checked', String(value.visibility.autoHideFullscreen !== false));
     if (document.activeElement !== $('quiet-minutes')) $('quiet-minutes').value = value.quietMinutes || 30;
     const until = Number(value.visibility.quietUntil) || 0;
@@ -158,6 +171,11 @@ initializeChipDisplay();
     finally { $('quiet-menu').disabled = false; }
   });
   if (window.pet.onCompanionState) window.pet.onCompanionState(value => render(value));
+  // Use minutes never broadcast on their own; refresh them while Settings is visible.
+  setInterval(() => {
+    if (document.hidden || !loaded) return;
+    window.pet.getCompanionState().then(value => { if (value && value.rest) renderToday(value.rest.today); }).catch(() => {});
+  }, 60_000);
   refreshControls();
   window.pet.getCompanionState().then(value => render(value, true)).catch(() => { flashStatus(status, window.AgentPawI18n.text("陪伴设置加载失败，请重新打开设置"), 'error'); });
 })();

@@ -246,4 +246,33 @@ assert.strictEqual(browser.window.AgentPawRestPreferences.DEFAULTS.waterMinutes,
   assert.deepStrictEqual(overnight.advance(0.25).pending.kinds, ['water', 'stretch']);
 }
 
+// Today's numbers: use time, reminders, outcomes and the current streak; a
+// returning snooze is the same reminder; the day boundary clears them.
+{
+  const test = fixture({ waterMinutes: 5, stretchMinutes: 30 });
+  let state = test.advance(5);
+  assert.deepStrictEqual(state.today, { usedMinutes: 5, streakMinutes: 5, prompts: 1, done: 0, skipped: 0 });
+  assert.strictEqual(test.controller.act({ id: state.pending.id, action: 'snooze' }).ok, true);
+  state = test.advance(10);
+  assert.ok(state.pending, 'snoozed reminder returns');
+  assert.strictEqual(state.today.prompts, 1, 'a returning snooze is not a new reminder');
+  assert.strictEqual(state.today.skipped, 1);
+  test.controller.act({ id: state.pending.id, action: 'done' });
+  state = test.controller.getState();
+  assert.deepStrictEqual([state.today.done, state.today.usedMinutes, state.today.streakMinutes], [1, 15, 15]);
+  test.advance(6, { idleSeconds: 6 * 60 });
+  assert.strictEqual(test.controller.getState().today.streakMinutes, 0, 'five minutes away ends the streak');
+  assert.strictEqual(test.controller.getState().today.usedMinutes, 15, 'idle time is not use');
+  const saved = test.controller.serialize();
+  assert.strictEqual(saved.today.usedMs, 15 * MINUTE);
+  const restored = fixture({ waterMinutes: 5, stretchMinutes: 30 }, saved, test.now());
+  assert.deepStrictEqual(restored.controller.getState().today, { usedMinutes: 15, streakMinutes: 0, prompts: 1, done: 1, skipped: 1 });
+  const nextDay = fixture({ waterMinutes: 5, stretchMinutes: 30 }, saved, test.now() + 24 * 60 * MINUTE);
+  assert.strictEqual(nextDay.controller.getState().today.usedMinutes, 0, 'yesterday is not restored');
+  restored.jump(24 * 60 * MINUTE);
+  assert.deepStrictEqual(restored.controller.getState().today, { usedMinutes: 0, streakMinutes: 0, prompts: 0, done: 0, skipped: 0 });
+  const broken = fixture({}, { version: 1, day: saved.day, today: { day: saved.day, usedMs: -5, prompts: 'x', done: 1e9 } }, test.now());
+  assert.deepStrictEqual(broken.controller.getState().today, { usedMinutes: 0, streakMinutes: 0, prompts: 0, done: 10000, skipped: 0 });
+}
+
 console.log('rest reminder scheduler checks passed');

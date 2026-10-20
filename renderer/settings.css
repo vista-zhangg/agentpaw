@@ -44,6 +44,12 @@ main { overflow-y: auto; min-height: 0; min-width: 0; padding: 24px; scrollbar-g
 .switch[aria-checked="true"] { background: var(--ui-blue); }
 .switch[aria-checked="true"] .switch-thumb { transform: translateX(16px); }
 .switch:disabled { opacity: .5; }
+.today-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 20px; border: 1px solid var(--ui-line); border-radius: 14px; background: var(--ui-surface); box-shadow: 0 3px 12px #18203003; }
+.today-grid .tile { min-width: 0; padding: 12px 16px; }
+.today-grid .tile + .tile { border-left: 1px solid var(--ui-line); }
+.today-grid .k { font-size: 12px; color: var(--ui-secondary); }
+.today-grid .v { margin-top: 3px; font-size: 20px; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.today-grid .d { margin-top: 1px; min-height: 1.5em; font-size: 12px; color: var(--ui-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rest-preferences { margin-top: 8px; }
 .rest-preferences { overflow: hidden; border: 1px solid var(--ui-line); border-radius: 12px; background: var(--ui-surface); }
 .rest-preferences .setting-card { margin: 0; padding: 10px 16px; border: 0; border-radius: 0; box-shadow: none; }
