@@ -387,6 +387,7 @@ const askEl = document.getElementById('ask');
 const askScroll = document.getElementById('ask-scroll');
 const askLabel = document.getElementById('ask-label');
 const askSess = document.getElementById('ask-sess');
+const askQueueEl = document.getElementById('ask-queue');
 const askQhead = document.getElementById('ask-qhead');
 const askQ = document.getElementById('ask-q');
 const askHint = document.getElementById('ask-hint');
@@ -807,9 +808,10 @@ function showAskPanel() {
   const c = askQueue[askIdx];
   if (!c) { hideAsk(); return; }
   if (quotaPopoverOpen) closeQuotaPopover();
-  const sess = c.sessionId ? ' · #' + String(c.sessionId).slice(-3) : '';
-  const queue = askQueue.length > 1 ? `${askIdx + 1}/${askQueue.length} · ` : '';
-  askSess.textContent = queue + (c.project || '?') + sess;
+  // Who is asking and where; the queue position sits apart from the question number.
+  askSess.textContent = `${peekAgentLabel(c.agent)} · ${c.project || t('peek.unknownProject')}`;
+  askQueueEl.textContent = askQueue.length > 1
+    ? window.AgentPawI18n.text("待办 {0} / {1}", [askIdx + 1, askQueue.length]) : '';
   askEl.dataset.kind = c.kind;
 
   if (c.kind === 'ask') {
@@ -833,6 +835,7 @@ function showAskPanel() {
 
 function clearAskBody() {
   askScroll.scrollTop = 0;
+  askQ.classList.remove('md');
   askOpts.innerHTML = '';
   askOpts.classList.remove('perm-row');
   askQhead.textContent = '';
@@ -980,12 +983,48 @@ function renderPerm(c) {
     const card = document.createElement('button');
     card.className = 'ask-opt act ' + kind;
     const label = opt.key === 'allow' ? t('perm.allow') : opt.key === 'deny' ? t('perm.deny') : opt.label;
-    card.innerHTML = `<span class="ask-ot"><span class="ask-ol">${esc(label)}</span></span>`;
+    const key = opt.key === 'allow' ? 'Enter' : '';
+    card.innerHTML = `<span class="ask-ot"><span class="ask-ol">${esc(label)}</span></span>`
+      + (key ? `<span class="kbd" aria-hidden="true">${key}</span>` : '');
     card.addEventListener('click', () => submitPerm(opt.key, c, opt.label));
     askOpts.appendChild(card);
   });
   askFoot.classList.add('hidden');
   askTerm.classList.remove('hidden');
+}
+
+// Minimal, escape-first Markdown for plan review: headings, lists, code,
+// bold and italic. Plans come from the agent, so raw HTML is never trusted.
+function markdownHtml(src) {
+  const inline = (s) => esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>');
+  const out = [];
+  let list = null;
+  let code = null;
+  const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  for (const line of String(src).replace(/\r/g, '').split('\n')) {
+    if (code !== null) {
+      if (/^\s*```/.test(line)) { out.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`); code = null; }
+      else code.push(line);
+      continue;
+    }
+    if (/^\s*```/.test(line)) { closeList(); code = []; continue; }
+    const heading = line.match(/^(#{1,6})\s+(.*)$/);
+    const bullet = line.match(/^\s*[-*+]\s+(.*)$/);
+    const ordered = line.match(/^\s*\d+[.)]\s+(.*)$/);
+    if (heading) { closeList(); out.push(`<h${Math.min(6, heading[1].length + 3)}>${inline(heading[2])}</h${Math.min(6, heading[1].length + 3)}>`); }
+    else if (bullet || ordered) {
+      const tag = bullet ? 'ul' : 'ol';
+      if (list !== tag) { closeList(); out.push(`<${tag}>`); list = tag; }
+      out.push(`<li>${inline((bullet || ordered)[1])}</li>`);
+    } else if (!line.trim()) closeList();
+    else { closeList(); out.push(`<p>${inline(line)}</p>`); }
+  }
+  if (code !== null) out.push(`<pre><code>${esc(code.join('\n'))}</code></pre>`);
+  closeList();
+  return out.join('');
 }
 
 // ③ 纯回复（无选项）：只读问题 + Go to Terminal
@@ -1001,8 +1040,14 @@ function renderContinue(c) {
 function renderPlan(c) {
   clearAskBody();
   askLabel.textContent = t('ask.planLabel');
-  askQhead.textContent = c.project || '';
-  askQ.textContent = c.question || t('ask.planQ');
+  askQhead.textContent = '';
+  if (c.markdown) {
+    askQ.classList.add('md');
+    askQ.innerHTML = markdownHtml(c.markdown);
+  } else {
+    askQ.textContent = c.question || t('ask.planQ');
+  }
+  askOpts.classList.add('perm-row');
   const approve = document.createElement('button');
   approve.className = 'ask-opt act allow';
   approve.innerHTML = '<span class="ask-ot"><span class="ask-ol">' + esc(t('ask.approve')) + '</span></span>';
@@ -2498,8 +2543,22 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && quotaPopoverOpen) {
     e.preventDefault();
     closeQuotaPopover();
+    return;
+  }
+  if (!askActive || e.target === askText) return;
+  const current = askQueue[askIdx];
+  if (e.key === 'Escape') {
+    // Later: the item stays in the quick view and on the capsule count.
+    e.preventDefault();
+    hideAsk();
+  } else if (e.key === 'Enter' && current && current.kind === 'perm' && current.permId
+    && !(e.target && e.target.closest && e.target.closest('button'))) {
+    e.preventDefault();
+    submitPerm('allow', current, t('perm.allow'));
   }
 });
+window.addEventListener('focus', () => document.body.classList.add('window-focused'));
+window.addEventListener('blur', () => document.body.classList.remove('window-focused'));
 
 // ---------- 右键菜单 ----------
 // A native menu: the OS handles check marks, submenus and screen edges.

@@ -182,6 +182,7 @@ function buildPermChoice(perm, entry) {
   return {
     kind: 'perm',
     sessionId: perm.sessionId,
+    agent: agentOf(entry),
     permId: perm.id,
     project: entry ? projectName(entry) : (perm.sessionId || '?'),
     header: perm.toolName,
@@ -198,10 +199,13 @@ function buildPlanChoice(perm, entry) {
   return {
     kind: 'plan',
     sessionId: perm.sessionId,
+    agent: agentOf(entry),
     permId: perm.id,
     project: entry ? projectName(entry) : (perm.sessionId || '?'),
     header: t('perm.planHeader'),
     question: plan ? clip(plainText(plan), 900) : t('perm.planQuestion'),
+    // Raw plan for the card's Markdown view; line breaks matter, so no clip().
+    markdown: plan.length > 6000 ? plan.slice(0, 5999) + '…' : plan,
     options: [{ label: t('perm.planApprove'), key: 'allow' }],
     allowInput: true, // feedback box for "打回并反馈"
     multi: false,
@@ -215,6 +219,7 @@ function buildElicitationChoice(perm, entry) {
   return {
     kind: 'ask',
     sessionId: perm.sessionId,
+    agent: agentOf(entry),
     permId: perm.id,
     project: entry ? projectName(entry) : (perm.sessionId || '?'),
     header: single ? single.header : t('ask.needsInput'),
@@ -233,6 +238,7 @@ function buildContinueChoice(entry) {
     kind: 'continue',
     actionId: `notification:${entry.id}:${entry.updatedAt || 0}`,
     sessionId: entry.id,
+    agent: agentOf(entry),
     project: projectName(entry),
     header: '',
     question: entry.assistantLastOutput ? clip(entry.assistantLastOutput, 120) : t('perm.continueQuestion', { who }),

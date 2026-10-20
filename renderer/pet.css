@@ -126,7 +126,10 @@ html, body {
 }
 .ask.hidden, .ask .hidden { display: none; }
 @keyframes askIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
-.ask-head { flex: 0 0 auto; min-width: 0; padding: 0 2px; }
+.ask-head { flex: 0 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0 8px; min-width: 0; padding: 0 2px; }
+.ask-head .ask-sess { grid-column: 1 / -1; }
+.ask-queue { color: #9a9da5; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ask-queue:empty { display: none; }
 .ask-label { font-size: 13.5px; line-height: 1.4; font-weight: 650; }
 .ask-sess { margin-top: 2px; color: #6b6e77; font-size: 12px; line-height: 1.5; }
 .ask-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
@@ -157,6 +160,16 @@ html, body {
 .ask-opt.multi.sel .ask-radio { border: 0; background: var(--ui-blue); }
 .ask-opt.multi.sel .ask-radio::after { content: ""; display: block; width: 4px; height: 8px; margin: 1px 0 0 5px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .ask-opt.act { align-items: center; justify-content: center; font-weight: 500; }
+.ask-opt .kbd { display: none; margin-left: 6px; padding: 0 5px; border: 1px solid currentColor; border-radius: 5px; font-size: 11px; line-height: 16px; opacity: .65; }
+body.window-focused .ask[data-kind="perm"] .ask-opt .kbd { display: inline-block; }
+.ask-q.md { font-weight: 400; font-size: 13px; line-height: 1.6; white-space: normal; }
+.ask-q.md h4, .ask-q.md h5, .ask-q.md h6 { margin: 6px 0 2px; font-size: 13.5px; }
+.ask-q.md h5, .ask-q.md h6 { font-size: 12.5px; color: #6b6e77; }
+.ask-q.md p { margin: 2px 0; }
+.ask-q.md ul, .ask-q.md ol { margin: 2px 0; padding-left: 18px; }
+.ask-q.md code { padding: 1px 4px; border-radius: 4px; background: #e8e9ec; font-family: "Cascadia Mono", Consolas, monospace; font-size: 12px; }
+.ask-q.md pre { margin: 4px 0; padding: 8px 10px; overflow-x: auto; border-radius: 8px; background: #fff; border: 1px solid rgba(32, 36, 48, .08); }
+.ask-q.md pre code { padding: 0; background: none; }
 .ask-opt.allow { background: var(--ui-blue); border-color: var(--ui-blue); color: #fff; }
 .ask-opt.allow:hover { background: #0a68cf; border-color: #0a68cf; }
 .ask-opt.deny:hover, .ask-opt.sugg:hover { background: #f6f7f8; border-color: rgba(32, 36, 48, .2); }

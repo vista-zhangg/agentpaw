@@ -58,6 +58,7 @@ const TESTS = Object.freeze([
   'notify-policy.js',
   'task-workflow.js',
   'quick-view-ui.js',
+  'ask-card.js',
   'workflow-main.js',
 ]);
 
