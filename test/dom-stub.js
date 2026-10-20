@@ -71,6 +71,7 @@ function makeElement(tag, id) {
       else el.textContent += String(n);
     }
   };
+  el.replaceChildren = (...nodes) => { el.children = []; el.textContent = ''; el.append(...nodes); };
   el.after = (n) => {
     const parent = el.parentNode;
     if (!parent) return;
@@ -237,6 +238,11 @@ function loadRenderer(files) {
   const world = createStubWorld();
   vm.createContext(world.sandbox);
   if (files.includes('shared/i18n.js') && !files.includes('shared/messages.js')) files = ['shared/messages.js', ...files];
+  // pet.html loads the shared quota card before pet.js.
+  if (files.includes('renderer/pet.js') && !files.includes('renderer/quota-card.js')) {
+    const at = files.indexOf('renderer/pet.js');
+    files = [...files.slice(0, at), 'renderer/quota-card.js', ...files.slice(at)];
+  }
   for (const f of files) {
     const code = fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
     vm.runInContext(code, world.sandbox, { filename: f });

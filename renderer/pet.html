@@ -6,6 +6,7 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: agentpaw-asset:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'" />
     <link rel="stylesheet" href="ui.css" />
     <link rel="stylesheet" href="pet.css" />
+    <link rel="stylesheet" href="quota-card.css" />
     <link rel="stylesheet" href="popovers.css" />
     <link rel="stylesheet" href="capsule.css" />
     <title>AgentPaw</title>
@@ -19,9 +20,13 @@
 
       <!-- 需要输入 / 授权卡片：Claude 要选择/授权/输入时在这处理 -->
       <section id="rest-reminder" class="rest-card hidden" role="region" aria-labelledby="rest-title">
-        <div class="rest-card-heading"><span class="rest-card-mark" aria-hidden="true">♡</span><span data-l10n="给自己一点时间">Take a little time for yourself</span></div>
-        <div id="rest-title" class="rest-card-title" aria-live="polite"></div>
-        <p id="rest-message" class="rest-card-message"></p>
+        <div class="rest-card-top">
+          <span id="rest-card-mark" class="rest-card-mark" aria-hidden="true"></span>
+          <div class="rest-card-text">
+            <div id="rest-title" class="rest-card-title" aria-live="polite"></div>
+            <p id="rest-message" class="rest-card-message"></p>
+          </div>
+        </div>
         <div class="rest-card-actions"><button id="rest-done" type="button" class="rest-primary" data-l10n="完成啦">Done</button><button id="rest-snooze" type="button" data-l10n="10 分钟后">In 10 minutes</button><button id="rest-skip" type="button" data-l10n="今天跳过">Skip today</button></div>
         <p id="rest-action-status" class="rest-action-status" role="status"></p>
       </section>
@@ -47,7 +52,7 @@
             <button class="ask-btn" id="ask-back" data-i18n="ask.back" data-l10n="返回">Back</button>
             <button class="ask-btn primary" id="ask-submit" data-i18n="ask.submit" data-l10n="提交回答">Submit answer</button>
           </div>
-          <button class="ask-term" id="ask-term" data-i18n="ask.goTerminal" data-l10n="💬 去终端">💬 Open terminal</button>
+          <button class="ask-term" id="ask-term" data-i18n="ask.goTerminal" data-l10n="在终端处理">Handle in terminal</button>
         </div>
       </div>
 
@@ -70,19 +75,22 @@
       <div id="prop" class="prop"></div>
       <div id="sidekick" class="sidekick"><img src="../assets/salary-cat.png" alt="" aria-hidden="true" /></div>
 
-      <!-- 订阅额度详情：点击胶囊上的 5h / 7d 后显示，避免原生 title 遮挡视野 -->
-      <div id="quota-popover" class="quota-popover hidden" role="dialog" aria-labelledby="quota-popover-title" aria-describedby="quota-popover-hint">
-        <div class="quota-popover-head">
+      <!-- Codex 额度：点击胶囊上的 5h / 7d 打开，与详情面板同一张额度卡 -->
+      <div id="quota-popover" class="quota-popover pop hidden" role="dialog" aria-labelledby="quota-popover-title">
+        <div class="pop-head">
           <div class="quota-popover-heading">
-            <div id="quota-popover-title" class="quota-popover-title" data-l10n="Codex 订阅额度">Codex subscription quota</div>
-            <div id="quota-popover-status" class="quota-popover-status"></div>
+            <div id="quota-popover-title" class="pop-title" data-l10n="Codex 额度">Codex quota</div>
+            <div id="quota-popover-status" class="pop-sub"></div>
           </div>
-          <button id="quota-popover-close" class="quota-popover-close" type="button" aria-label="Close quota details" data-l10n-aria-label="关闭订阅额度详情">✕</button>
+          <button id="quota-popover-close" class="icon-btn" type="button" aria-label="Close" data-l10n-aria-label="关闭"></button>
         </div>
-        <div id="quota-popover-rows" class="quota-popover-rows"></div>
-        <div id="quota-popover-insight" class="quota-popover-insight" hidden></div>
-        <div id="quota-popover-updated" class="quota-popover-updated"></div>
-        <div id="quota-popover-hint" class="quota-popover-hint" data-l10n="鼠标移开后自动收起，也可按 Esc 关闭">Closes when the pointer leaves; press Esc to close</div>
+        <div class="pop-body">
+          <div id="quota-popover-rows" class="quota-grid"></div>
+          <div id="quota-popover-insight" class="quota-estimate" hidden></div>
+        </div>
+        <div class="pop-foot">
+          <button id="quota-popover-panel" class="linkbtn" type="button"><span class="oi" id="quota-popover-panel-icon" aria-hidden="true"></span><span data-l10n="在详情面板看用量">View usage in Details</span></button>
+        </div>
       </div>
 
       <div id="compact-row" class="compact-row">
@@ -157,6 +165,7 @@
     <script src="../shared/agents.js"></script>
     <script src="../shared/pet-insights.js"></script>
     <script src="icons.js"></script>
+    <script src="quota-card.js"></script>
     <script src="../shared/pet-geometry.js"></script>
     <script src="pet.js"></script>
     <script src="quick-view.js"></script>

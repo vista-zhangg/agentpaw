@@ -1,0 +1,18 @@
+/* Codex quota card shared by the detail panel and the pet's quota popover. */
+.quota-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
+.quota-row { padding:10px 12px; border-radius:11px; background:#f2f3f5; }
+.quota-top { display:flex; align-items:baseline; gap:6px; }
+.quota-label { font-size:12px; color:var(--ui-secondary); min-width:22px; }
+.quota-value { font-size:20px; font-weight:650; font-variant-numeric:tabular-nums; }
+.quota-left { font-size:12px; color:var(--ui-secondary); }
+.quota-reset { margin-left:auto; font-size:12px; color:var(--ui-secondary); white-space:nowrap; }
+.quota-bar { position:relative; height:6px; border-radius:3px; background:#e1e3e8; margin:8px 0 6px; overflow:hidden; }
+.quota-bar i { display:block; height:100%; border-radius:3px; background:#2a78d6; transition:width .5s var(--ui-ease); }
+.quota-bar .proj { position:absolute; top:0; bottom:0; background:repeating-linear-gradient(135deg, rgba(255,255,255,.75) 0 2px, transparent 2px 5px); }
+.quota-row[data-level="amber"] .quota-bar i { background:#d9741f; }
+.quota-row[data-level="red"] .quota-bar i { background:#d03b3b; }
+.quota-row[data-level="red"] .quota-value { color:#c03434; }
+.quota-note { font-size:12px; margin-top:2px; color:var(--ui-secondary); }
+.quota-note.warn { color:#b5470f; font-weight:500; }
+.quota-note.ok { color:var(--ui-green); }
+.quota-at { font-size:12px; color:var(--ui-tertiary); }

@@ -106,6 +106,18 @@
   color: #ffe9b5;
   box-shadow: 0 0 0 2px rgba(255, 208, 102, 0.35), 0 4px 14px rgba(120, 60, 35, 0.3);
 }
+/* Status dot: the colour carries the state, the text stays short. */
+.chip-context::before {
+  content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%;
+  vertical-align: 1px; background: #c9beb8;
+}
+.chip[data-context^="active"] .chip-context::before { background: #7cc4ff; }
+.chip[data-context="active-thinking"] .chip-context::before { background: #b8a6ff; }
+.chip[data-context="waiting"] .chip-context::before,
+.chip[data-context="needsinput"] .chip-context::before { background: #ff9a6b; }
+.chip[data-context="error"] .chip-context::before { background: #ff7a70; }
+.chip[data-context="done"] .chip-context::before { background: #7cd6a0; }
+.chip[data-context="purr"] .chip-context::before { display: none; }
 .chip-sep {
   flex: 0 0 auto;
   color: rgba(255, 233, 220, 0.5);
@@ -113,21 +125,4 @@
   line-height: 1;
 }
 .preview-stage:hover .chip { opacity: 1; }
-.quota-popover { padding: 16px; border: 1px solid #dfe2e9; border-radius: 18px; color: var(--ui-text); background: #fafbfd; box-shadow: 0 6px 20px #1820301f; gap: 12px; animation: quotaPopoverIn .28s var(--ui-ease); }
-.quota-popover::after { border-top-color: #fafbfd; }
-#stage.edge-below .quota-popover::after { border-bottom-color: #fafbfd; }
-.quota-popover-title { font-size: 13px; font-weight: 600; }
-.quota-popover-status, .quota-pop-reset, .quota-popover-updated, .quota-popover-hint { color: var(--ui-secondary); line-height: 1.5; }
-.quota-popover-close { border-radius: 50%; background: #edeef2; color: var(--ui-secondary); }
-.quota-popover-close:hover { background: #e3e5eb; color: var(--ui-text); }
-.quota-pop-row { padding: 10px; background: #f0f2f6; border-radius: 11px; gap: 9px; }
-.quota-pop-period { color: #666d79; font-weight: 500; }
-.quota-pop-value { font-size: 14px; font-weight: 600; }
-.quota-pop-bar { height: 4px; background: #e0e5ec; }
-.quota-pop-bar-fill { background: #69ad91; transition: width .4s var(--ui-ease); }
-.quota-popover-insight { background: #eef3fa; color: #717986; padding: 11px; border-radius: 12px; }
-.quota-estimate-head { color: #4b5667; font-weight: 600; }
-.quota-estimate-badge { background: #e2eaf5; color: #6c7f99; }
-.quota-estimate-label, .quota-estimate-unit, .quota-estimate-note { color: #79818e; }
-.quota-estimate-number { color: #313a49; font-weight: 600; }
-@media (prefers-reduced-motion: reduce) { .chip, .quota-popover, .quota-pop-bar-fill { animation: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { .chip { animation: none; transition: none; } }

@@ -649,7 +649,7 @@ async function main() {
     const idle = world();
     idle.handlers.stats(baseStats({ idleMs: 1000 }));
     check('普通空闲不会冒充完成', () =>
-      assert.strictEqual(idle.elements('chip-context').textContent, '🌿 待命'));
+      assert.strictEqual(idle.elements('chip-context').textContent, '待命'));
 
     const w = world();
     w.handlers.stats(baseStats({
@@ -658,7 +658,7 @@ async function main() {
       idleMs: 500,
     }));
     check('完成快照保留完整主状态文案', () =>
-      assert.strictEqual(w.elements('chip-context').textContent, '✅ 刚刚完成'));
+      assert.strictEqual(w.elements('chip-context').textContent, '刚刚完成'));
 
     const sleepingDone = world();
     sleepingDone.handlers.stats(baseStats({
@@ -666,7 +666,7 @@ async function main() {
       idleMs: null,
     }));
     check('无活跃会话的完成快照仍显示完成而非休息', () =>
-      assert.strictEqual(sleepingDone.elements('chip-context').textContent, '✅ 刚刚完成'));
+      assert.strictEqual(sleepingDone.elements('chip-context').textContent, '刚刚完成'));
     check('完成胶囊使用独立语义标记', () =>
       assert.strictEqual(sleepingDone.elements('chip').dataset.context, 'done'));
 

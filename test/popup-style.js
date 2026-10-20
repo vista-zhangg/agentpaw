@@ -30,7 +30,8 @@ function walk(dir) {
 assert(/const POPUP_W = 520;/.test(js), 'popup measurement width must remain stable');
 assert(/const ASK_VIEWPORT_MAX_H = 520;/.test(js), 'ask measurement must retain its height cap');
 assert(/function fitPopup[\s\S]*el === askEl[\s\S]*ASK_VIEWPORT_MAX_H/.test(js), 'ask popup must keep dynamic sizing');
-assert(/\.ask\s*\{[\s\S]*background\s*:\s*rgba\(255, 255, 255, 0\.98\)/.test(css), 'ask card styling must remain');
+assert(/\.ask\s*\{[^}]*background:\s*var\(--ui-background\)/.test(css), 'the ask card uses the panel material');
+assert(/\.rest-card\s*\{[^}]*background:\s*var\(--ui-background\)/.test(css), 'the rest card uses the panel material');
 assert(/\.action-pop\s*\{/.test(css) && /id="action-pop" class="action-pop pop/.test(html), 'the quick view must use the shared popover material');
 assert(/id="ask"/.test(html) && /id="sessions"/.test(html), 'ask card and status dots must remain');
 assert(!/id="peek"|\.peek\b|openPeek|closePeek/.test(html + css + js), 'the retired peek must not come back beside the quick view');

@@ -139,3 +139,22 @@ button.ev:hover { background: var(--pop-surface2); }
 .ev .when { font-size: 12px; color: var(--pop-text3); }
 .ac-status { padding: 0 14px 8px; font-size: 12px; color: var(--pop-bad); }
 .ac-status:empty { display: none; }
+
+/* ---------- Codex 额度浮层 ---------- */
+.quota-popover { position: relative; display: flex; flex-direction: column; width: 320px; max-width: calc(100vw - 24px); margin-bottom: 10px; animation: quotaPopoverIn .2s var(--ui-ease); }
+.quota-popover.hidden { display: none; }
+@keyframes quotaPopoverIn { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+.quota-popover::after { content: ""; position: absolute; bottom: -7px; left: var(--quota-tip-x, 50%); transform: translateX(-50%); border-width: 8px 7px 0 7px; border-style: solid; border-color: #fafafb transparent transparent transparent; }
+#stage.edge-below .quota-popover { order: 4; margin-top: 8px; margin-bottom: 0; }
+#stage.edge-below .quota-popover::after { top: -7px; bottom: auto; border-width: 0 7px 8px 7px; border-color: transparent transparent var(--ui-background) transparent; }
+.quota-popover-heading { flex: 1 1 auto; min-width: 0; }
+.pop-sub { margin-top: 1px; overflow: hidden; color: var(--pop-text2); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.quota-popover .quota-grid { grid-template-columns: 1fr; gap: 8px; }
+.quota-popover .quota-row { background: var(--ui-surface); border: 1px solid var(--pop-line); }
+.quota-estimate { padding: 9px 12px; border: 1px solid var(--pop-line); border-radius: 11px; background: var(--ui-surface); font-size: 12px; color: var(--pop-text2); cursor: help; }
+.quota-estimate[hidden] { display: none; }
+.quota-estimate-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.quota-estimate-head .k { color: var(--ui-text); font-weight: 600; }
+.quota-estimate-line { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+.quota-estimate-line b { color: var(--ui-text); font-weight: 650; }
+@media (prefers-reduced-motion: reduce) { .quota-popover { animation: none; } }

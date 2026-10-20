@@ -27,7 +27,7 @@ assert.strictEqual(w.elements('quota-popover').classList.contains('hidden'), tru
 w.elements('chip-quota').dispatch('click');
 assert.strictEqual(w.elements('quota-popover').classList.contains('hidden'), false);
 assert.strictEqual(w.elements('quota-popover-rows').children.length, 2);
-assert(w.elements('quota-popover-rows').children[0].children[1].children[1].textContent.includes('刷新'));
+assert(w.elements('quota-popover-rows').children[0].children[0].children[3].textContent.includes('重置'), 'each row shows when it resets');
 w.elements('chip-quota').dispatch('click');
 assert.strictEqual(w.elements('quota-popover').classList.contains('hidden'), true);
 w.handlers.stats({ ...stats, codexQuota: {
@@ -43,33 +43,34 @@ assert.strictEqual(w.elements('quota-popover-rows').children.length, 1,
   'the weekly-only popover must hide the empty 5h row');
 assert.strictEqual(w.elements('quota-popover-insight').hidden, false,
   'the quota popover must show the weekly usage estimate when available');
-assert.strictEqual(w.elements('quota-popover-insight').children[1].className, 'quota-estimate-grid');
-assert.strictEqual(w.elements('quota-popover-insight').children[1].children[0].children[1].textContent, '≈ $6.25');
-assert.strictEqual(w.elements('quota-popover-insight').children[1].children[1].children[1].textContent, '≈ $5.00');
+assert.strictEqual(w.elements('quota-popover-insight').children[1].className, 'quota-estimate-line');
+assert.strictEqual(w.elements('quota-popover-insight').children[1].children[0].children[0].textContent, '≈ $6.25');
+assert.strictEqual(w.elements('quota-popover-insight').children[1].children[1].children[0].textContent, '≈ $5.00');
 w.handlers.stats({ ...stats, codexQuota: { ...stats.codexQuota,
   estimate: { tokens: 0, cost: 0, samplePercent: 0, estimatedTotalCost: null },
 } });
-assert.strictEqual(w.elements('quota-popover-insight').children[1].className, 'quota-estimate-pending',
+assert.strictEqual(w.elements('quota-popover-insight').children[0].children[1].textContent, '记录中',
   'missing estimate must show collecting state instead of a zero-capacity card');
 w.handlers.stats({ ...stats, codexQuota: { ...stats.codexQuota,
   estimate: { basis: 'cycle', cost: 7, usedPercent: 7, samplePercent: 7, estimatedTotalCost: 100, estimatedRemainingCost: 93 },
 } });
 assert.strictEqual(w.elements('quota-popover-insight').children[0].children[1].textContent, '动态参考');
-assert(w.elements('quota-popover-insight').children[2].textContent.includes('已用 7%'));
-assert.strictEqual(w.elements('quota-popover-insight').children[1].children[1].children[1].textContent, '≈ $93.00');
+assert(w.elements('quota-popover-insight').title.includes('已用 7%'), 'the basis moves into the tooltip');
+assert.strictEqual(w.elements('quota-popover-insight').children[1].children[1].children[0].textContent, '≈ $93.00');
 w.handlers.stats({ ...stats, codexQuota: { ...stats.codexQuota,
   estimate: { basis: 'cycle', confidence: 'early', cost: 1, usedPercent: 1, samplePercent: 1, estimatedTotalCost: 100, estimatedRemainingCost: 99 },
 } });
 assert.strictEqual(w.elements('quota-popover-insight').children[0].children[1].textContent, '初步估算');
-assert.strictEqual(w.elements('quota-popover-insight').children[1].className, 'quota-estimate-grid', '1% consumption already shows an estimate');
+assert.strictEqual(w.elements('quota-popover-insight').children[1].className, 'quota-estimate-line', '1% consumption already shows an estimate');
 w.elements('chip-quota').dispatch('click');
 const compactStats = { ...stats, sessions: [{ state: 'working', agent: 'codex', createdAt: 100 }],
   chipDisplay: { showCat: false, showStatus: true, showQuota: true, showTokens: false, showCost: false } };
 w.handlers.stats(compactStats);
 assert.strictEqual(w.elements('stage').classList.contains('cat-hidden'), true);
 assert.strictEqual(w.elements('cat').getAttribute('aria-hidden'), 'true');
-assert.strictEqual(w.elements('chip-context').textContent.startsWith('⚙️'), true,
-  'the working-state icon must remain inside the capsule');
+assert.strictEqual(w.elements('chip-context').textContent.startsWith('干活中'), true,
+  'the working state stays inside the capsule');
+assert.strictEqual(w.elements('chip').dataset.context, 'active-working', 'the status dot colour follows the state');
 w.window.innerWidth = 320;
 w.elements('stage').getBoundingClientRect = () => ({ left: 0, top: 0, width: 320, height: 340 });
 w.elements('chip').getBoundingClientRect = () => ({ left: 150, top: 300, width: 130, height: 21 });

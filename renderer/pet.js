@@ -377,8 +377,6 @@ const quotaPopoverTitle = document.getElementById('quota-popover-title');
 const quotaPopoverStatus = document.getElementById('quota-popover-status');
 const quotaPopoverRows = document.getElementById('quota-popover-rows');
 const quotaPopoverInsight = document.getElementById('quota-popover-insight');
-const quotaPopoverUpdated = document.getElementById('quota-popover-updated');
-const quotaPopoverHint = document.getElementById('quota-popover-hint');
 const quotaPopoverClose = document.getElementById('quota-popover-close');
 const sessionsEl = document.getElementById('sessions');
 const thinkEl = document.getElementById('think');
@@ -843,7 +841,7 @@ function clearAskBody() {
   askInputRow.classList.add('hidden');
   askText.value = '';
   askText.placeholder = t('ask.placeholder');
-  askTerm.textContent = t('ask.goTerminal');
+  askTerm.innerHTML = (window.AgentPawIcons?.icon('terminal') || '') + esc(t('ask.goTerminal'));
 }
 
 // ① elicitation（AskUserQuestion）：多选项卡 + Other + 分页 + Submit/Back
@@ -1235,11 +1233,6 @@ function closeActionPop({ keepFocus = false } = {}) {
 }
 
 // 状态标签仅用于猫猫头顶的状态点。
-const SESS_META_ICON = {
-  waiting: '✋ ', needsinput: '💬 ', working: '⚙️ ', juggling: '🤹 ',
-  sweeping: '🧹 ', thinking: '💭 ', loafing: '🍦 ', error: '😵 ',
-  idle: '', sleeping: '💤 ',
-};
 const SESS_META_KEY = {
   waiting: 'state.waiting', needsinput: 'state.needsinput', working: 'state.working',
   juggling: 'state.juggling', sweeping: 'state.sweeping', thinking: 'state.thinking',
@@ -1248,7 +1241,7 @@ const SESS_META_KEY = {
 };
 function sessMeta(state) {
   const key = SESS_META_KEY[state];
-  return key ? (SESS_META_ICON[state] || '') + t(key) : null;
+  return key ? t(key) : null;
 }
 const SESS_SORT = { waiting: 0, needsinput: 0, error: 1, working: 2, juggling: 2, sweeping: 2, thinking: 2, loafing: 3, idle: 4, sleeping: 5 };
 
@@ -1866,7 +1859,7 @@ function quotaWindowEntries(quota) {
 function quotaCostText(value) {
   if (value === null || value === undefined) return '--';
   const n = Number(value);
-  return Number.isFinite(n) ? '$' + n.toFixed(3) : '--';
+  return Number.isFinite(n) ? '$' + n.toFixed(2) : '--';
 }
 
 function quotaPlanText(quota) {
@@ -1876,6 +1869,7 @@ function quotaPlanText(quota) {
   return plan ? ` · ${plan.slice(0, 1).toUpperCase()}${plan.slice(1)}` : '';
 }
 
+// One line: the API-price value of the weekly quota. Basis and caveats sit in the tooltip.
 function renderQuotaEstimate(quota) {
   if (!quotaPopoverInsight) return;
   const estimate = quota && quota.estimate;
@@ -1889,96 +1883,45 @@ function renderQuotaEstimate(quota) {
     parent.appendChild(el);
     return el;
   };
+  const money = (value) => Number.isFinite(value) ? '≈ $' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '--';
   const ready = Number.isFinite(estimate.estimatedTotalCost) && estimate.estimatedTotalCost > 0;
   const head = add(quotaPopoverInsight, 'div', 'quota-estimate-head', '');
-  add(head, 'span', '', t('quota.estimateTitle'));
-  add(head, 'span', 'quota-estimate-badge', t(ready
+  add(head, 'span', 'k', t('quota.estimateTitle'));
+  add(head, 'span', 'badge', t(ready
     ? (estimate.confidence === 'early' ? 'quota.estimateEarly' : 'quota.estimateDynamic') : 'quota.estimateCollecting'));
+  const tips = [];
   if (ready) {
-    const grid = add(quotaPopoverInsight, 'div', 'quota-estimate-grid', '');
-    for (const [label, value] of [
-      ['quota.estimateFull', estimate.estimatedTotalCost],
-      ['quota.estimateRemaining', estimate.estimatedRemainingCost],
-    ]) {
-      const card = add(grid, 'div', 'quota-estimate-card', '');
-      add(card, 'div', 'quota-estimate-label', t(label));
-      add(card, 'div', 'quota-estimate-number', Number.isFinite(value) ? '≈ $' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '--');
-      add(card, 'div', 'quota-estimate-unit', t('quota.estimateUnit'));
+    const line = add(quotaPopoverInsight, 'div', 'quota-estimate-line', '');
+    for (const [label, value] of [['quota.estimateFull', estimate.estimatedTotalCost], ['quota.estimateRemaining', estimate.estimatedRemainingCost]]) {
+      const part = add(line, 'span', '', t(label) + ' ');
+      add(part, 'b', 'num', money(value));
     }
-    add(quotaPopoverInsight, 'div', 'quota-estimate-detail', t(estimate.basis === 'cycle' ? 'quota.estimateCycleEvidence' : 'quota.estimateEvidence', {
+    tips.push(t(estimate.basis === 'cycle' ? 'quota.estimateCycleEvidence' : 'quota.estimateEvidence', {
       percent: Number.isFinite(estimate.samplePercent) ? +estimate.samplePercent.toFixed(1) : '--',
       cost: quotaCostText(estimate.cost),
     }));
     if (Number.isFinite(estimate.rangeLow) && Number.isFinite(estimate.rangeHigh)) {
-      add(quotaPopoverInsight, 'div', 'quota-estimate-detail', t('quota.estimateRange', {
-        low: '$' + estimate.rangeLow.toFixed(2), high: '$' + estimate.rangeHigh.toFixed(2),
-      }));
+      tips.push(t('quota.estimateRange', { low: '$' + estimate.rangeLow.toFixed(2), high: '$' + estimate.rangeHigh.toFixed(2) }));
     } else if (estimate.confidence === 'early') {
-      add(quotaPopoverInsight, 'div', 'quota-estimate-detail', t('quota.estimateEarlyHint'));
+      tips.push(t('quota.estimateEarlyHint'));
     }
   } else {
-    const pending = add(quotaPopoverInsight, 'div', 'quota-estimate-pending', t('quota.estimateObserved', {
+    add(quotaPopoverInsight, 'div', 'quota-estimate-line', t('quota.estimateObserved', {
       cost: quotaCostText(estimate.cost),
       used: Number.isFinite(estimate.usedPercent) ? +estimate.usedPercent.toFixed(1) : '--',
     }));
-    add(pending, 'div', 'quota-estimate-detail', t(estimate.reason === 'no-percent'
-      ? 'quota.estimateAwaitPercent' : 'quota.estimateAwaitCost'));
+    tips.push(t(estimate.reason === 'no-percent' ? 'quota.estimateAwaitPercent' : 'quota.estimateAwaitCost'));
   }
-  add(quotaPopoverInsight, 'div', 'quota-estimate-note', t('quota.estimateNote'));
+  tips.push(t('quota.estimateNote'));
+  quotaPopoverInsight.title = tips.join('\n');
 }
 
 function renderQuotaPopover(s) {
   if (!quotaPopoverRows || !quotaPopoverStatus || !s) return;
   const quota = s.codexQuota || {};
-  quotaPopoverTitle.textContent = t('quota.title');
-  quotaPopoverStatus.textContent = quota.status === 'ready'
-    ? t('quota.synced') + quotaPlanText(quota)
-    : (quota.statusText || t('quota.unavailable'));
-  quotaPopoverRows.innerHTML = '';
-
-  const windows = quotaWindowEntries(quota);
-  for (const [key, labelKey] of windows) {
-    const w = quota.windows && quota.windows[key];
-    const remaining = quotaRemainingPercent(w);
-    const row = document.createElement('div');
-    row.className = 'quota-pop-row';
-    row.dataset.level = quotaLevel(remaining);
-
-    const period = document.createElement('div');
-    period.className = 'quota-pop-period';
-    period.textContent = t(labelKey);
-
-    const main = document.createElement('div');
-    main.className = 'quota-pop-main';
-    const value = document.createElement('div');
-    value.className = 'quota-pop-value';
-    value.textContent = t('quota.remaining', {
-      percent: remaining === null ? '--' : Math.round(remaining) + '%',
-    });
-    const reset = document.createElement('div');
-    reset.className = 'quota-pop-reset';
-    reset.textContent = quotaResetText(w);
-    main.appendChild(value);
-    main.appendChild(reset);
-
-    const bar = document.createElement('div');
-    bar.className = 'quota-pop-bar';
-    const fill = document.createElement('div');
-    fill.className = 'quota-pop-bar-fill';
-    fill.style.setProperty('--quota-remaining', `${remaining === null ? 0 : remaining}%`);
-    bar.appendChild(fill);
-
-    row.appendChild(period);
-    row.appendChild(main);
-    row.appendChild(bar);
-    quotaPopoverRows.appendChild(row);
-  }
-
+  quotaPopoverStatus.textContent = window.AgentPawQuotaCard.meta(quota);
+  window.AgentPawQuotaCard.render(quotaPopoverRows, quota, { showDate: false });
   renderQuotaEstimate(quota);
-  quotaPopoverUpdated.textContent = Number.isFinite(quota.updatedAt)
-    ? t('quota.updatedAt', { time: quotaUpdatedText(quota.updatedAt) })
-    : (quota.statusText || t('quota.unavailable'));
-  quotaPopoverHint.textContent = t('quota.dismissHint');
 }
 
 function clearQuotaPopoverCloseTimer() {
@@ -2088,7 +2031,7 @@ function renderContextCapsule(s) {
     const remaining = quotaRemainingPercent(w);
     const badge = document.createElement('span');
     badge.className = 'quota-badge';
-    badge.dataset.level = quotaLevel(remaining);
+    badge.dataset.level = window.AgentPawQuotaCard ? window.AgentPawQuotaCard.level(quota, key) : quotaLevel(remaining);
     badge.dataset.period = label;
     badge.textContent = remaining === null ? '--' : Math.round(remaining) + '%';
     badge.style.setProperty('--quota-remaining', `${remaining === null ? 0 : remaining}%`);
@@ -2108,7 +2051,7 @@ function renderContextCapsule(s) {
     const purr = purrPaydaySummary;
     updateCapsuleState('purr', t('purr.title'));
     chipTokens.textContent = `${compactTokens(purr.tokens)} tokens`;
-    chipCost.textContent = '$' + (Number(purr.cost) || 0).toFixed(3);
+    chipCost.textContent = '$' + (Number(purr.cost) || 0).toFixed(2);
     chip.setAttribute('aria-label', purr.copy || t('purr.ariaLabel'));
     fitRestingFrame();
     return;
@@ -2122,7 +2065,7 @@ function renderContextCapsule(s) {
     cost: Number(s.today && s.today.cost) || 0,
   };
   const detail = [showTokens ? `${compactTokens(usage.tokens)} tokens` : '',
-    showCost ? window.AgentPawI18n.text("API 等价估算 ${0}", [usage.cost.toFixed(3)]) : ''].filter(Boolean).join(' · ');
+    showCost ? window.AgentPawI18n.text("API 等价估算 ${0}", [usage.cost.toFixed(2)]) : ''].filter(Boolean).join(' · ');
   let label = '';
   let title = '';
   // A done badge is only the primary capsule state when no higher-priority
@@ -2131,33 +2074,31 @@ function renderContextCapsule(s) {
   const showDone = info.recentDone && (info.kind === 'idle' || info.kind === 'sleeping');
 
   if (info.kind === 'waiting') {
-    const total = info.count + (info.needsinput || 0);
-    label = window.AgentPawI18n.text("✋ {0} 件等你", [total]);
+    label = window.AgentPawI18n.text("需要你");
     title = window.AgentPawI18n.text("等你处理：{0} 项授权{1}", [info.count, info.needsinput ? window.AgentPawI18n.text(" · {0} 项回复", [info.needsinput]) : '']);
   } else if (info.kind === 'needsinput') {
-    label = window.AgentPawI18n.text("💬 {0} 件待回复", [info.count]);
+    label = window.AgentPawI18n.text("需要你");
     title = window.AgentPawI18n.text("等你回复：{0} 项", [info.count]);
   } else if (info.kind === 'error') {
-    label = window.AgentPawI18n.text("😵 {0} 项异常", [info.count]);
+    label = window.AgentPawI18n.text("异常 {0}", [info.count]);
     title = window.AgentPawI18n.text("任务异常：{0} 项", [info.count]);
   } else if (info.kind === 'active') {
-    const icon = SESS_META_ICON[info.state] || '⚙️';
     const stateText = backgroundStatus(info.primary) || t(SESS_META_KEY[info.state] || 'state.working');
     const elapsed = info.primary && info.primary.turnStartedAt
       ? capsuleElapsed(now - Number(info.primary.turnStartedAt))
       : '';
     label = info.activeCount > 1
-      ? window.AgentPawI18n.text("{0}{1} 个任务", [icon, info.activeCount])
-      : `${icon}${stateText}${elapsed ? ` · ${elapsed}` : ''}`;
+      ? window.AgentPawI18n.text("运行中 {0}", [info.activeCount])
+      : `${stateText}${elapsed ? ` · ${elapsed}` : ''}`;
     title = info.activeCount > 1 ? window.AgentPawI18n.text("{0} 个任务正在进行", [info.activeCount]) : stateText;
   } else if (showDone) {
-    label = window.AgentPawI18n.text("✅ 刚刚完成");
+    label = window.AgentPawI18n.text("刚刚完成");
     title = window.AgentPawI18n.text("最近一轮任务已完成");
   } else if (info.kind === 'sleeping') {
-    label = window.AgentPawI18n.text("💤 休息中");
+    label = window.AgentPawI18n.text("休息中");
     title = window.AgentPawI18n.text("没有活动任务，伙伴正在休息");
   } else {
-    label = window.AgentPawI18n.text("🌿 待命");
+    label = window.AgentPawI18n.text("待命");
     title = window.AgentPawI18n.text("当前没有活动任务");
   }
 
@@ -2171,7 +2112,7 @@ function renderContextCapsule(s) {
     : (info.kind === 'active' ? `active-${info.state}` : info.kind);
   updateCapsuleState(capsuleState, label);
   chipTokens.textContent = compactTokens(usage.tokens) + ' tokens';
-  chipCost.textContent = '$' + usage.cost.toFixed(3);
+  chipCost.textContent = '$' + usage.cost.toFixed(2);
   chip.setAttribute('aria-label', `${title}${detail ? window.AgentPawI18n.text(" · 今日 {0}", [detail]) : ''}`);
   fitRestingFrame();
 }
@@ -2540,7 +2481,14 @@ quotaPopover.addEventListener('pointerleave', () => {
 });
 quotaPopover.addEventListener('focusin', keepQuotaPopoverOpen);
 quotaPopover.addEventListener('focusout', scheduleQuotaPopoverClose);
+quotaPopoverClose.innerHTML = window.AgentPawIcons?.icon('close') || '';
 quotaPopoverClose.addEventListener('click', (e) => { e.stopPropagation(); closeQuotaPopover(); });
+document.getElementById('quota-popover-panel-icon').innerHTML = window.AgentPawIcons?.icon('chart') || '';
+document.getElementById('quota-popover-panel').addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeQuotaPopover();
+  window.pet.openPanel(AGENT);
+});
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && actionPopOpen) {
     e.preventDefault();

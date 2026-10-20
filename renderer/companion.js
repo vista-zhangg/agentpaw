@@ -6,6 +6,7 @@
   const card = document.getElementById('rest-reminder');
   if (!card || !window.pet.getCompanionState) return;
   const title = document.getElementById('rest-title');
+  document.getElementById('rest-card-mark').innerHTML = window.AgentPawIcons?.icon('cup') || '';
   const message = document.getElementById('rest-message');
   const status = document.getElementById('rest-action-status');
   const badge = document.getElementById('rest-pending');

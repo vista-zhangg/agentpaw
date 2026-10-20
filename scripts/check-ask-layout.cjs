@@ -8,7 +8,7 @@ module.exports = async function checkAskLayout(pet, { capture, log }) {
   const permission = {
     kind: 'perm', permId: 'preview-ask', sessionId: 'session-a7d', project: '[skills-trial] 试跑',
     header: 'Bash', question: '运行命令：\ncd /d/Desktop/TW-Steel/projects/skills-trial &&\nPY=/c/Users/77723/.local/bin/python npm test',
-    options: [{ key: 'allow', label: '✅ 允许' }, { key: 'deny', label: '⛔ 拒绝' }],
+    options: [{ key: 'allow', label: '允许' }, { key: 'deny', label: '拒绝' }],
   };
   const question = {
     kind: 'ask', permId: 'preview-question', sessionId: 'session-a7d', project: 'AgentPaw',

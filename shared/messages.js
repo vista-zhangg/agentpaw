@@ -5229,5 +5229,55 @@
     "去终端回复",
     "Reply in terminal",
     "去終端回覆"
+  ],
+  [
+    "刚刚完成",
+    "Just finished",
+    "剛剛完成"
+  ],
+  [
+    "在详情面板看用量",
+    "View usage in Details",
+    "在詳情面板看用量"
+  ],
+  [
+    "允许",
+    "Allow",
+    "允許"
+  ],
+  [
+    "拒绝",
+    "Deny",
+    "拒絕"
+  ],
+  [
+    "批准方案",
+    "Approve plan",
+    "批准方案"
+  ],
+  [
+    "打回并附意见",
+    "Send back with notes",
+    "退回並附意見"
+  ],
+  [
+    "在终端处理",
+    "Handle in terminal",
+    "在終端處理"
+  ],
+  [
+    "始终允许：",
+    "Always allow: ",
+    "始終允許："
+  ],
+  [
+    "切到计划模式",
+    "Switch to plan mode",
+    "切到計畫模式"
+  ],
+  [
+    "自动接受编辑",
+    "Auto-accept edits",
+    "自動接受編輯"
   ]
 ];});

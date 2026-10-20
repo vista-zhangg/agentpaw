@@ -44,71 +44,13 @@ function durationText(ms) {
   const days = Math.floor(hours / 24), restHours = hours % 24;
   return restHours ? t('quota.durationDaysHours', { days, hours: restHours }) : t('quota.durationDays', { count: days });
 }
-function quotaRemaining(w) {
-  if (!w || typeof w !== 'object') return null;
-  if (Number.isFinite(w.remainingPercent)) return Math.max(0, Math.min(100, Number(w.remainingPercent)));
-  return Number.isFinite(w.usedPercent) ? Math.max(0, Math.min(100, 100 - Number(w.usedPercent))) : null;
-}
-function quotaWindows(quota) {
-  const windows = quota && quota.windows && typeof quota.windows === 'object' ? quota.windows : {};
-  const observed = Array.isArray(quota && quota.observedWindows) ? quota.observedWindows : [];
-  // A missing response says nothing about which windows this account has.
-  return [['fiveHour', 'quota.fiveHour'], ['weekly', 'quota.weekly']]
-    .filter(([key]) => key !== 'fiveHour' || quotaRemaining(windows.fiveHour) !== null || observed.includes('fiveHour'))
-    .map(([key, labelKey]) => ({ key, label: t(labelKey), window: windows[key] }));
-}
 function renderQuota(quota) {
-  const rows = quotaWindows(quota);
+  const card = window.AgentPawQuotaCard;
   const ready = quota && quota.status === 'ready';
-  $('quota-block').hidden = !rows.some(row => quotaRemaining(row.window) !== null) && !ready;
+  $('quota-block').hidden = !card.windows(quota).some(row => card.remaining(row.window) !== null) && !ready;
   if ($('quota-block').hidden) return;
-  const plan = quota.account && typeof quota.account.planType === 'string' ? quota.account.planType.trim() : '';
-  const synced = Number.isFinite(quota.updatedAt) ? window.AgentPawI18n.text('同步于 {0}', [clockText(quota.updatedAt)]) : '';
-  $('quota-meta').textContent = ready
-    ? [plan && plan[0].toUpperCase() + plan.slice(1), synced].filter(Boolean).join(' · ')
-    : (quota.statusText || t('quota.unavailable'));
-  const box = $('quota-rows');
-  box.replaceChildren();
-  for (const row of rows) {
-    const remaining = quotaRemaining(row.window);
-    const item = el('div', 'quota-row');
-    item.dataset.level = remaining === null ? 'unknown' : remaining <= 5 ? 'red' : remaining <= 20 ? 'amber' : 'normal';
-    const top = el('div', 'quota-top');
-    const resetAt = row.window && Number.isFinite(row.window.resetsAt) ? Number(row.window.resetsAt) * 1000 : null;
-    const resetText = resetAt == null ? t('quota.resetUnknown')
-      : resetAt <= Date.now() ? t('quota.resetSoon')
-      : window.AgentPawI18n.text('{0}后重置', [durationText(resetAt - Date.now())]);
-    top.append(el('span', 'quota-label', row.label), el('span', 'quota-value num', remaining === null ? '--' : Math.round(remaining) + '%'),
-      el('span', 'meta', window.AgentPawI18n.text('剩余')), el('span', 'quota-reset', resetText));
-    const bar = el('div', 'quota-bar'), fill = el('i');
-    fill.style.width = (remaining || 0) + '%';
-    bar.append(fill);
-    item.append(top, bar);
-    const forecast = quota.forecast && quota.forecast[row.key];
-    if (remaining !== null && forecast && forecast.status === 'ready') {
-      // Hatched: what the recent burn rate would still use before the reset.
-      const left = Math.max(0, Math.min(remaining, Number(forecast.remainingAtReset) || 0));
-      const projected = el('span', 'proj');
-      projected.style.left = left + '%';
-      projected.style.width = (remaining - left) + '%';
-      bar.append(projected);
-      const note = el('div', 'quota-note');
-      if (forecast.exhaustAt) {
-        note.classList.add('warn');
-        note.textContent = window.AgentPawI18n.text('按当前速度约 {0} 用完，比重置早 {1}', [clockText(forecast.exhaustAt), durationText(forecast.earlyMs)]);
-        if (item.dataset.level === 'normal') item.dataset.level = 'amber';
-      } else {
-        note.classList.add('ok');
-        note.textContent = window.AgentPawI18n.text('按当前速度够用，重置时约剩 {0}%', [Math.round(left)]);
-      }
-      note.title = window.AgentPawI18n.text('近期速度 {0}% / 小时', [forecast.ratePerHour.toFixed(1)]);
-      item.append(note);
-    }
-    if (resetAt != null) {
-      item.append(el('div', 'quota-at', new Date(resetAt).toLocaleString(window.AgentPawI18n.getLanguage(), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })));
-    }
-    box.append(item);
-  }
+  $('quota-meta').textContent = card.meta(quota);
+  card.render($('quota-rows'), quota);
 }
 
 /* ---------- 此刻：任务 ---------- */
