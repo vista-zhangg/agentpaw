@@ -13,7 +13,7 @@ function inspectDock() {
     && bounds.top < rect.bottom && bounds.bottom > rect.top;
   const selectors = '#cat, #sessions, #chip-context, #chip-quota, #chip-tokens, #chip-cost, #rest-pending, '
     + '#prop.on, #sleep.on .z, #sidekick.on, #think.on, #peek:not(.hidden), #ask:not(.hidden), '
-    + '#action-pop:not(.hidden), #quota-popover:not(.hidden), #rest-reminder:not(.hidden), .radial-item';
+    + '#action-pop:not(.hidden), #quota-popover:not(.hidden), #rest-reminder:not(.hidden)';
   const collisions = [...document.querySelectorAll(selectors)].filter(el => {
     const style = getComputedStyle(el);
     return style.visibility !== 'hidden' && Number(style.opacity) > 0.05
@@ -40,8 +40,7 @@ module.exports = async function checkNotepadLayout(win, { stats, defaults, captu
     Object.defineProperty(window,'screenY',{configurable:true,get:()=>{
       const area=browserWorkArea(); return area.y+('${vertical}'==='below'?0:area.height-innerHeight);
     }});
-    setStageEdgeLayout({vertical:'${vertical}',horizontal:'${horizontal}'});
-    if (radialOpen) { buildRadial(); if (!catVisible) positionCompactRadial(); } void 0;
+    setStageEdgeLayout({vertical:'${vertical}',horizontal:'${horizontal}'}); void 0;
   `);
   const inspect = async name => {
     const geometry = await win.webContents.executeJavaScript(`(${inspectDock.toString()})()`);
@@ -88,7 +87,7 @@ module.exports = async function checkNotepadLayout(win, { stats, defaults, captu
     win.setSize(520,740);
     await settle();
     for (const vertical of ['above','below']) {
-      for (const overlay of minimal?['Peek','ActionPop','Radial']:['Peek','QuotaPopover','ActionPop','Radial']) {
+      for (const overlay of minimal?['Peek','ActionPop']:['Peek','QuotaPopover','ActionPop']) {
         await setEdge(vertical,'right');
         await win.webContents.executeJavaScript(`open${overlay}()`);
         await settle();

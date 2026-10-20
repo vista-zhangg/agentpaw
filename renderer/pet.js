@@ -300,7 +300,7 @@ function announceXiaban(info) {
   if (!info || xiabanAnnouncedWindow === info.key) return;
   // 用户正在操作卡片/菜单时不抢界面，也不先标记已播报；
   // 下一次状态快照进来后仍可以补播。
-  if (askActive || actionPopOpen || radialOpen || peekOpen) return;
+  if (askActive || actionPopOpen || peekOpen) return;
   const keys = XIABAN_COPY_KEYS[info.period] || XIABAN_COPY_KEYS.evening;
   const key = keys[Math.floor(Math.random() * keys.length)];
   xiabanAnnouncedWindow = info.key;
@@ -381,7 +381,6 @@ const quotaPopoverUpdated = document.getElementById('quota-popover-updated');
 const quotaPopoverHint = document.getElementById('quota-popover-hint');
 const quotaPopoverClose = document.getElementById('quota-popover-close');
 const sessionsEl = document.getElementById('sessions');
-const radial = document.getElementById('radial');
 const thinkEl = document.getElementById('think');
 const sleepEl = document.getElementById('sleep');
 const propEl = document.getElementById('prop');
@@ -645,7 +644,7 @@ function fitRestingFrame(force = false, allowOverlays = false) {
       if (force || allowOverlays) fitPopup(document.getElementById('rest-reminder'));
       return;
     }
-    if (!allowOverlays && (askActive || actionPopOpen || peekOpen || quotaPopoverOpen || radialOpen)) return;
+    if (!allowOverlays && (askActive || actionPopOpen || peekOpen || quotaPopoverOpen)) return;
     const width = desiredRestingWidth();
     const current = Number(window.innerWidth) || CAPSULE_FRAME_MIN_W;
     if (!force && Math.abs(current - width) <= 2) return;
@@ -694,7 +693,7 @@ function settleEdgeLayout() {
   if (!petGeometrySnapshot()) return;
   // Keep the intrinsic capsule width while re-evaluating the edge anchor.
   // Resetting to the old 320px base here would briefly reintroduce clipping
-  // after a drag or immediately before the radial menu is laid out.
+  // after a drag.
   fitRestingFrame(true, true);
 }
 
@@ -1463,7 +1462,7 @@ function armPeekTimer() {
 
 function openPeek() {
   if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
-  if (!lastStats || askActive || actionPopOpen || radialOpen) return;
+  if (!lastStats || askActive || actionPopOpen) return;
   if (quotaPopoverOpen) closeQuotaPopover();
   clearTimeout(bubbleTimer);
   bubbleTimer = null;
@@ -1487,7 +1486,6 @@ function closePeek({ keepFocus = false } = {}) {
 }
 
 function handleCatClick() {
-  if (radialOpen) { closeRadial(); return; }
   if (askActive) { hideAsk(); return; }
   if (actionPopOpen) { closeActionPop(); return; }
   if (quotaPopoverOpen) { closeQuotaPopover(); return; }
@@ -1523,7 +1521,6 @@ let state = 'idle';
 let bubbleTimer = null;
 let transientUntil = 0;   // 短暂状态（happy/error）持续到的时间
 let transientState = null;
-let radialOpen = false;
 
 const IDLE_SLEEP_MS = 6 * 60 * 1000;
 const PURR_HOLD_MS = 1100;
@@ -1739,7 +1736,7 @@ function showBubble(text, holdMs = 3200, force = false) {
     if (!force) return;
     window.AgentPawCompanion.hide();
   }
-  if (!force && (radialOpen || askActive || actionPopOpen || peekOpen || quotaPopoverOpen)) return; // 弹层开着时不用普通气泡盖住它
+  if (!force && (askActive || actionPopOpen || peekOpen || quotaPopoverOpen)) return; // 弹层开着时不用普通气泡盖住它
   // emoji → 内联 SVG（AgentPawIcons 在 emoji 字符与 SVG 之间做安全替换；不可识别字符原样保留）
   if (window.AgentPawIcons && window.AgentPawIcons.hasMappedEmoji(text)) {
     window.AgentPawIcons.setTextWithIcons(bubbleText, text);
@@ -1760,7 +1757,7 @@ const pendingQuotaAlerts = new Map();
 let quotaAlertRetryTimer = null;
 let quotaAlertDisplaying = false;
 function quotaAlertUiBusy() {
-  return document.hidden === true || radialOpen || askActive || actionPopOpen || peekOpen || quotaPopoverOpen
+  return document.hidden === true || askActive || actionPopOpen || peekOpen || quotaPopoverOpen
     || (window.AgentPawCompanion && window.AgentPawCompanion.isOpen())
     || !bubble.classList.contains('hidden');
 }
@@ -1933,7 +1930,6 @@ function perfNow() {
 
 // ---------- 统计 + 聚合状态 ----------
 let lastStats = null; // 最近一次快照：transient 到期时用它立即重算聚合态
-let privacyModeCache = false;
 let sayToken = 0;     // say 接棒 happy 的排队令牌（新事件作废旧排队）
 function compactTokens(value) {
   const n = Number(value) || 0;
@@ -1969,7 +1965,7 @@ function markPurrAnnounced(day) {
 
 function purrCanRun(stats) {
   if (!stats || !petInsights || typeof petInsights.hasActiveWork !== 'function') return false;
-  if (askActive || actionPopOpen || radialOpen || peekOpen || quotaPopoverOpen) return false;
+  if (askActive || actionPopOpen || peekOpen || quotaPopoverOpen) return false;
   // Do not cut across a real completion/error/reply animation.
   if (perfNow() < transientUntil) return false;
   return !petInsights.hasActiveWork(stats, { sleepMs: IDLE_SLEEP_MS });
@@ -1977,7 +1973,7 @@ function purrCanRun(stats) {
 
 function purrEnvironmentClear(stats) {
   if (!stats || !petInsights || typeof petInsights.hasActiveWork !== 'function') return false;
-  if (askActive || actionPopOpen || radialOpen || peekOpen || quotaPopoverOpen) return false;
+  if (askActive || actionPopOpen || peekOpen || quotaPopoverOpen) return false;
   return !petInsights.hasActiveWork(stats, { sleepMs: IDLE_SLEEP_MS });
 }
 
@@ -2219,7 +2215,6 @@ function openQuotaPopover() {
   if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
   if (!lastStats || !quotaEl || quotaEl.hidden || askActive) return false;
   if (quotaPopoverOpen) return true;
-  if (radialOpen) closeRadial();
   if (actionPopOpen) closeActionPop();
   if (peekOpen) closePeek();
   clearTimeout(bubbleTimer);
@@ -2403,7 +2398,6 @@ function triggerPurrPayday() {
 
 function applyStats(s) {
   if (!s) return;
-  privacyModeCache = s.privacyMode === true;
   const enteringPrivacy = s.privacyMode === true && !(lastStats && lastStats.privacyMode === true);
   if (enteringPrivacy) {
     clearPurrPayday();
@@ -2641,18 +2635,17 @@ function attachDrag(el, options = {}) {
     }
     if (g.moved && !g.win) g.win = currentWindowScreenPosition();
     if (g.moved && g.win) {
-      if (radialOpen) closeRadial();
       queueDragMove(g, e, g.win[0] + dx, g.win[1] + dy);
     }
   });
   el.addEventListener('pointerup', (e) => finishDrag(el, e, false));
   el.addEventListener('pointercancel', (e) => finishDrag(el, e, true));
   el.addEventListener('lostpointercapture', (e) => finishDrag(el, e, true));
-  // 右键 = 泡泡菜单
+  // 右键 = 菜单
   el.addEventListener('contextmenu', (e) => {
     if (options.hiddenOnly && catVisible) return;
     e.preventDefault();
-    toggleRadial();
+    openPetMenu();
   });
 }
 stateEls.forEach(attachDrag);
@@ -2665,7 +2658,7 @@ cat.addEventListener('keydown', (e) => {
     handleCatClick();
   } else if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) {
     e.preventDefault();
-    toggleRadial();
+    openPetMenu();
   }
 });
 
@@ -2708,7 +2701,6 @@ actionPop.querySelectorAll('.ac-ops button').forEach((b) => {
 });
 
 function openPetSettings() {
-  if (radialOpen) closeRadial();
   if (peekOpen) closePeek();
   if (actionPopOpen) closeActionPop();
   window.pet.openSettings();
@@ -2775,265 +2767,19 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// ---------- 泡泡菜单 ----------
-let radialOpenSeq = 0;
-let radialRelayoutSeq = 0;
-
-function privacyModeEnabled() {
-  return privacyModeCache;
-}
-
-async function readPrivacyMode() {
-  const result = await window.pet.getPrivacyMode();
-  if (result && result.ok && typeof result.enabled === 'boolean') privacyModeCache = result.enabled;
-  return privacyModeCache;
-}
-
-async function togglePrivacyMode() {
-  try {
-    const current = await readPrivacyMode();
-    const result = await window.pet.setPrivacyMode(!current);
-    if (result && result.ok && typeof result.enabled === 'boolean') privacyModeCache = result.enabled;
-  } catch {}
-}
-
-// labelKey (not label): buildRadial resolves Chinese labels at render time.
-const MENU = [
-  { ic: 'chart',  labelKey: 'menu.panel', act: () => window.pet.openPanel(AGENT) },
-  // 收起只隐藏桌宠（托盘可重新显示）；应用退出保留在托盘中。
-  { ic: 'minus',  labelKey: 'menu.collapse', act: () => window.pet.openHideMenu ? window.pet.openHideMenu() : window.pet.closePet() },
-  { labelKey: 'menu.privacy', status: () => privacyModeEnabled() ? 'ON' : 'OFF', act: togglePrivacyMode },
-  { ic: 'settings', labelKey: 'menu.settings', act: openPetSettings },
-];
-// The compact toolbar groups privacy, detail and settings before hide.
-// Keep the cat-facing radial menu's original MENU order unchanged.
-const COMPACT_MENU = [MENU[2], MENU[0], MENU[3], MENU[1]];
-
-function usableRadialMetrics(metrics) {
-  if (!metrics || !metrics.window || !metrics.workArea) return null;
-  const wr = metrics.window;
-  const wa = metrics.workArea;
-  if (![wr.x, wr.y, wr.width, wr.height, wa.x, wa.y, wa.width, wa.height].every(Number.isFinite)) return null;
-  if (wr.width <= 0 || wr.height <= 0 || wa.width <= 0 || wa.height <= 0) return null;
-  return metrics;
-}
-
-function radialFrame() {
-  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
-}
-
-async function settledRadialMetrics(resting = false) {
-  if (!window.pet || typeof window.pet.getWindowMetrics !== 'function') return null;
-  let metrics = null;
-  try { metrics = usableRadialMetrics(await window.pet.getWindowMetrics()); } catch { return null; }
-  // setPetSize/resetPetSize 在主进程同步落 bounds，但 renderer 的 resize 与
-  // flex 重排会晚一拍。等到 DOM viewport 也追上主进程尺寸后再取 pet rect。
-  for (let i = 0; metrics && i < (resting ? 12 : 6); i++) {
-    const wr = metrics.window;
-    const expectedW = resting ? Math.min(metrics.workArea.width, desiredRestingWidth()) : wr.width;
-    const expectedH = resting ? Math.min(metrics.workArea.height, BASE_PET_FRAME_H) : wr.height;
-    const settled = Math.abs((window.innerWidth || 0) - wr.width) <= 1
-      && Math.abs((window.innerHeight || 0) - wr.height) <= 1;
-    if (settled && Math.abs(wr.width - expectedW) <= 1 && Math.abs(wr.height - expectedH) <= 1) break;
-    await radialFrame();
-    try { metrics = usableRadialMetrics(await window.pet.getWindowMetrics()) || metrics; } catch {}
-  }
-  await radialFrame();
-  return metrics;
-}
-
-function makeRadialItem(it, i, compact = false) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'radial-item';
-  b.style.transitionDelay = i * 0.03 + 's';
-  const status = typeof it.status === 'function' ? it.status() : '';
-  if (status) {
-    const enabled = status === 'ON';
-    b.classList.add('radial-toggle');
-    b.dataset.enabled = String(enabled);
-    b.setAttribute('aria-pressed', String(enabled));
-    b.setAttribute('aria-label', `${t(it.labelKey)} ${status}`);
-    b.innerHTML = compact
-      ? `<span class="ri-lb">${esc(t(it.labelKey))}</span><span class="ri-state">${esc(status)}</span>`
-      : `<span class="ri-state">${esc(status)}</span><span class="ri-lb">${esc(t(it.labelKey))}</span>`;
-  } else {
-    const icHtml = (window.AgentPawIcons && window.AgentPawIcons.icon(it.ic)) || '';
-    b.innerHTML = `<span class="ri-ic oi">${icHtml}</span><span class="ri-lb">${esc(t(it.labelKey))}</span>`;
-  }
-  b.addEventListener('click', (e) => {
-    e.stopPropagation();
-    closeRadial();
-    it.act();
-  });
-  return b;
-}
-
-function positionCompactRadial() {
-  if (!radial || !chip || catVisible) return;
-  const bar = radial.children && [...radial.children].find((child) =>
-    child.classList && child.classList.contains('radial-compact'));
-  if (!bar) return;
-  const sr = stage.getBoundingClientRect();
-  const chipRect = chip.getBoundingClientRect();
-  const barRect = bar.getBoundingClientRect();
-  const viewportW = Math.max(1, sr.width || window.innerWidth || 320);
-  const barWidth = Math.max(0, Number(barRect.width) || 0);
-  const halfBar = barWidth / 2;
-  const desiredCenter = chipRect.left - sr.left + chipRect.width / 2;
-  const minCenter = 8 + halfBar;
-  const maxCenter = viewportW - 8 - halfBar;
-  const center = minCenter <= maxCenter
-    ? Math.max(minCenter, Math.min(maxCenter, desiredCenter))
-    : viewportW / 2;
-  const chipTop = chipRect.top - sr.top;
-  const chipBottom = chipTop + chipRect.height;
-  bar.style.left = Math.round(center) + 'px';
-  bar.style.top = Math.round(edgeLayout.vertical === 'below' ? chipBottom + 8 : chipTop - 8) + 'px';
-  bar.style.transform = edgeLayout.vertical === 'below'
-    ? 'translateX(-50%)'
-    : 'translate(-50%, -100%)';
-}
-
-function buildCompactRadial() {
-  radial.dataset.layout = 'compact';
-  radial.dataset.direction = edgeLayout.vertical === 'below' ? 'below' : 'above';
-  const bar = document.createElement('div');
-  bar.className = 'radial-compact';
-  bar.setAttribute('role', 'toolbar');
-  bar.setAttribute('aria-label', window.AgentPawI18n.text("桌宠操作"));
-  COMPACT_MENU.forEach((it, i) => bar.appendChild(makeRadialItem(it, i, true)));
-  radial.appendChild(bar);
-  // Set a useful first position before the browser has measured the toolbar;
-  // the open step and the next paint both refine it against the chip bounds.
-  const sr = stage.getBoundingClientRect();
-  const r = chip.getBoundingClientRect();
-  bar.style.left = Math.round(r.left - sr.left + r.width / 2) + 'px';
-  bar.style.top = Math.round(edgeLayout.vertical === 'below'
-    ? r.top - sr.top + r.height + 8
-    : r.top - sr.top - 8) + 'px';
-  bar.style.transform = edgeLayout.vertical === 'below'
-    ? 'translateX(-50%)'
-    : 'translate(-50%, -100%)';
-}
-
-function buildRadial(metrics = null) {
-  radial.innerHTML = '';
-  const exact = usableRadialMetrics(metrics);
-  if (!catVisible) {
-    buildCompactRadial();
-    return;
-  }
-  radial.dataset.layout = 'radial';
-  const el = curSkinEl();
-  const sr = stage.getBoundingClientRect();
-  const r = el.getBoundingClientRect();
-  const cx = r.left - sr.left + r.width / 2;
-  const cy = r.top - sr.top + r.height / 2;
-  const items = MENU;
-  const n = items.length;
-  const frame = exact && exact.window;
-  // DOM geometry and BrowserWindow bounds can briefly disagree while a popup
-  // shrinks. Buttons must always fit the viewport that actually clips them.
-  const viewportW = Math.max(1, window.innerWidth || (frame ? frame.width : 320));
-  const viewportH = Math.max(1, window.innerHeight || (frame ? frame.height : 340));
-  const wa = exact ? exact.workArea : browserWorkArea();
-  const winX = Number.isFinite(window.screenX) ? window.screenX : (frame ? frame.x : wa.x);
-  const winY = Number.isFinite(window.screenY) ? window.screenY : (frame ? frame.y : wa.y);
-  const pad = 5;
-  // Intersect the BrowserWindow viewport with the actually visible work area.
-  // This protects old saved positions that may still have part of the
-  // transparent window off-screen before the first drag normalises them.
-  const safeRect = {
-    x: Math.max(pad, wa.x - winX + pad),
-    y: Math.max(pad, wa.y - winY + pad),
-    width: Math.max(46, Math.min(viewportW - pad, wa.x + wa.width - winX - pad) - Math.max(pad, wa.x - winX + pad)),
-    height: Math.max(46, Math.min(viewportH - pad, wa.y + wa.height - winY - pad) - Math.max(pad, wa.y - winY + pad)),
-  };
-  const preferred = [];
-  if (edgeLayout.horizontal === 'left') preferred.push('right');
-  else if (edgeLayout.horizontal === 'right') preferred.push('left');
-  if (edgeLayout.vertical === 'below') preferred.push('below');
-  else preferred.push('above');
-  preferred.push(edgeLayout.vertical === 'below' ? 'above' : 'below');
-  const petLocalRect = { x: r.left - sr.left, y: r.top - sr.top, width: r.width, height: r.height };
-  const stack = compactRow.getBoundingClientRect();
-  const layout = window.PetGeometry
-    ? window.PetGeometry.cornerMenuLayout({
-      count: n,
-      center: { x: cx, y: cy },
-      petRect: petLocalRect,
-      stackRect: { x: stack.left - sr.left, y: stack.top - sr.top, width: stack.width, height: stack.height },
-      safeRect,
-      preferred,
-      itemRadius: 26,
-      gap: 10,
-    })
-    : { direction: 'top-right', points: [] };
-  radial.dataset.direction = layout.direction || 'top-right';
-  items.forEach((it, i) => {
-    const point = layout.points[i] || { x: cx, y: cy };
-    const b = makeRadialItem(it, i);
-    b.style.left = point.x + 'px';
-    b.style.top = point.y + 'px';
-    radial.appendChild(b);
-  });
-}
-
-async function openRadial() {
+// ---------- 右键菜单 ----------
+// A native menu: the OS handles check marks, submenus and screen edges.
+function openPetMenu() {
   if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
-  const seq = ++radialOpenSeq;
-  if (actionPopOpen) closeActionPop();
-  if (peekOpen) closePeek();
-  if (quotaPopoverOpen) closeQuotaPopover();
-  radialOpen = true;
+  if (actionPopOpen) closeActionPop({ keepFocus: true });
+  if (peekOpen) closePeek({ keepFocus: true });
+  if (quotaPopoverOpen) closeQuotaPopover({ keepFocus: true });
   bubble.classList.add('hidden');
-  try { await readPrivacyMode(); } catch {}
-  if (seq !== radialOpenSeq || !radialOpen) return;
-  // closeActionPop 会异步把 BrowserWindow 从弹层尺寸缩回基础
-  // 尺寸。必须等窗口和 DOM 都归位后再布局，否则菜单会按旧大窗坐标生成，
-  // 随后的缩窗会把按钮直接裁出可见区域。
-  let metrics = await settledRadialMetrics();
-  if (seq !== radialOpenSeq || !radialOpen) return;
-  settleEdgeLayout();
-  metrics = await settledRadialMetrics(true) || metrics;
-  if (seq !== radialOpenSeq || !radialOpen) return;
-  buildRadial(metrics);
-  radial.classList.remove('hidden');
-  if (!catVisible) {
-    positionCompactRadial();
-    requestAnimationFrame(() => {
-      if (seq === radialOpenSeq && radialOpen) positionCompactRadial();
-    });
-  }
-}
-function scheduleRadialRelayout() {
-  if (!radialOpen || !catVisible || radial.classList.contains('hidden')) return;
-  const openSeq = radialOpenSeq;
-  const layoutSeq = ++radialRelayoutSeq;
-  settledRadialMetrics().then((metrics) => {
-    if (openSeq === radialOpenSeq && layoutSeq === radialRelayoutSeq
-      && radialOpen && catVisible) buildRadial(metrics);
-  }).catch(() => {});
-}
-function closeRadial() {
-  radialOpenSeq++;
-  radialRelayoutSeq++;
-  radial.classList.add('hidden');
-  radial.removeAttribute('data-layout');
-  radial.removeAttribute('data-direction');
-  radialOpen = false;
+  window.pet.openPetMenu();
   requestAnimationFrame(() => { if (window.AgentPawCompanion) window.AgentPawCompanion.refresh(); });
 }
-function toggleRadial() {
-  if (radialOpen) closeRadial();
-  else openRadial().catch(() => closeRadial());
-}
-// 点遮罩空白处关闭
-radial.addEventListener('click', () => closeRadial());
 window.addEventListener('blur', () => {
   if (actionPopOpen) closeActionPop();
-  if (radialOpen) closeRadial();
   if (peekOpen) closePeek();
   if (quotaPopoverOpen) closeQuotaPopover();
 });
@@ -3066,7 +2812,7 @@ window.addEventListener('blur', () => {
 // The capsule is still the drag handle when the cat is hidden, while the
 // quota group is a deliberate click target in either layout. The rest of the
 // visible capsule remains click-through so hovering it never creates a popup.
-const HIT_SEL = '#cat,#stage.cat-hidden #chip,#chip-quota,#quota-popover,#radial,#notepad,#action-pop,#ask,#peek,#rest-reminder,#rest-pending';
+const HIT_SEL = '#cat,#stage.cat-hidden #chip,#chip-quota,#quota-popover,#notepad,#action-pop,#ask,#peek,#rest-reminder,#rest-pending';
 let mouseIgnoring = false;
 function setMouseIgnore(on) {
   if (on === mouseIgnoring) return;
@@ -3105,9 +2851,7 @@ window.addEventListener('resize', () => requestAnimationFrame(() => {
   positionQuotaPopoverTip();
   if (actionPopOpen) positionActionPop();
   if (propEl && propEl.classList.contains('on')) positionProp();
-  if (radialOpen && !catVisible) positionCompactRadial();
-  if (radialOpen && catVisible) scheduleRadialRelayout();
-  if (!askActive && !actionPopOpen && !peekOpen && !quotaPopoverOpen && !radialOpen) fitRestingFrame();
+  if (!askActive && !actionPopOpen && !peekOpen && !quotaPopoverOpen) fitRestingFrame();
 }));
 
 
@@ -3144,6 +2888,5 @@ window.addEventListener('agentpaw:language', () => {
   refreshAskLanguage();
   if (lastStats) applyStats(lastStats);
   if (peekOpen) renderPeek(lastStats);
-  if (radialOpen) buildRadial();
   if (quotaPopoverOpen) renderQuotaPopover(lastStats);
 });

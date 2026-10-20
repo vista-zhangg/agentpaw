@@ -149,13 +149,10 @@ function createStubWorld() {
         ? Promise.resolve(behavior.restAction(...a)) : Promise.resolve(behavior.restActionResult || null);
     },
     openHideMenu: () => calls.push(['openHideMenu']),
+    openPetMenu: () => calls.push(['openPetMenu']),
     getPetAssets: () => Promise.resolve(null),
     getStats: () => Promise.resolve(null),
     getWinPos: () => Promise.resolve([0, 0]),
-    getWindowMetrics: () => Promise.resolve({
-      window: { x: 0, y: 0, width: 320, height: 340 },
-      workArea: { x: 0, y: 0, width: 1440, height: 900 },
-    }),
     setWinPos: (...a) => calls.push(['setWinPos', a]),
     endWinDrag: (...a) => calls.push(['endWinDrag', a]),
     setPetSize: (...a) => calls.push(['setPetSize', a]),

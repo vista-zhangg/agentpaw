@@ -577,18 +577,41 @@ function setFullscreenPreference(enabled) {
   applyPetVisibility();
 }
 
+function quietMenuItems() {
+  return [...new Set([config.get().quietMinutes, 15, 30, 60])].map((minutes) => ({
+    label: i18n.text("安静 {0} 分钟{1}", [minutes, minutes === config.get().quietMinutes ? i18n.text(" · 我的时长") : '']),
+    click: () => { if (petVisibility) petVisibility.snooze(minutes); applyPetVisibility(); },
+  }));
+}
+
+function fullscreenMenuItem() {
+  return { label: i18n.text("全屏时自动藏起"), type: 'checkbox', checked: companionState().visibility.autoHideFullscreen !== false,
+    click: (item) => setFullscreenPreference(item.checked) };
+}
+
 function hideMenuItems() {
-  const visibility = companionState().visibility;
   return [
     { label: i18n.text("藏起，直到我再次打开"), click: hidePet },
     { type: 'separator' },
-    ...[...new Set([config.get().quietMinutes, 15, 30, 60])].map((minutes) => ({
-      label: i18n.text("安静 {0} 分钟{1}", [minutes, minutes === config.get().quietMinutes ? i18n.text(" · 我的时长") : '']),
-      click: () => { if (petVisibility) petVisibility.snooze(minutes); applyPetVisibility(); },
-    })),
+    ...quietMenuItems(),
     { type: 'separator' },
-    { label: i18n.text("全屏时自动藏起"), type: 'checkbox', checked: visibility.autoHideFullscreen !== false,
-      click: (item) => setFullscreenPreference(item.checked) },
+    fullscreenMenuItem(),
+  ];
+}
+
+// The pet's right-click menu: actions are verbs, switches carry a check mark.
+function petMenuItems(win) {
+  return [
+    { label: i18n.text("详情面板"), click: () => openPanel() },
+    { label: i18n.text("快速视图"), click: () => sendWin(win, IPC.WORKFLOW_COMMAND, 'peek') },
+    { type: 'separator' },
+    { label: i18n.text("隐私模式"), type: 'checkbox', checked: config.get().privacyMode === true,
+      click: (item) => setPrivacyMode(item.checked) },
+    fullscreenMenuItem(),
+    { label: i18n.text("安静一会儿"), submenu: quietMenuItems() },
+    { type: 'separator' },
+    { label: i18n.text("设置…"), click: () => openSettings() },
+    { label: i18n.text("藏起，直到我再次打开"), click: hidePet },
   ];
 }
 
@@ -1283,19 +1306,16 @@ function registerIpc() {
     const win = settingsWin && !settingsWin.isDestroyed() && e.sender === settingsWin.webContents ? settingsWin : senderPetWin(e);
     Menu.buildFromTemplate(hideMenuItems()).popup({ window: win });
   });
+  ipcMain.on(IPC.OPEN_PET_MENU, (e) => {
+    const win = senderPetWin(e);
+    if (!win) return;
+    Menu.buildFromTemplate(petMenuItems(win)).popup({ window: win });
+  });
   ipcMain.handle(IPC.GET_WIN_POS, (e) => {
     const win = senderPetWin(e);
     if (!win) return [0, 0];
     const b = win.getBounds();
     return [b.x, b.y];
-  });
-  ipcMain.handle(IPC.GET_WINDOW_METRICS, (e) => {
-    const win = senderPetWin(e);
-    if (!win) return null;
-    const windowBounds = win.getBounds();
-    let workArea = null;
-    try { workArea = screen.getDisplayMatching(windowBounds).workArea; } catch {}
-    return { window: windowBounds, workArea };
   });
 
   ipcMain.on(IPC.SET_WIN_POS, (e, x, y, dragOffset) => {

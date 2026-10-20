@@ -49,7 +49,7 @@ const TESTS = Object.freeze([
   'i18n.js',
   'language.js',
   'pet-geometry.js',
-  'radial-menu.js',
+  'pet-menu.js',
   'pet-insights.js',
   'chip-display.js',
   'popup-style.js',

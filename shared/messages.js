@@ -5084,5 +5084,20 @@
     "按星期和小时的 Token 分布",
     "Tokens by weekday and hour",
     "按星期和小時的 Token 分布"
+  ],
+  [
+    "快速视图",
+    "Quick view",
+    "快速檢視"
+  ],
+  [
+    "安静一会儿",
+    "Quiet for a while",
+    "安靜一會兒"
+  ],
+  [
+    "设置…",
+    "Settings…",
+    "設定…"
   ]
 ];});

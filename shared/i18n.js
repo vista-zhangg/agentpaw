@@ -328,7 +328,7 @@
     'purr.hint': '长按伙伴，可查看今日陪伴工资条',
     'purr.ariaLabel': '今日陪伴工资条',
 
-    // ── radial menu ─────────────────────────────────────────────────────────
+    // ── break-time bubbles ──────────────────────────────────────────────────
     'bub.xiabanLunch1': '🍚 午饭铃响啦！保存好进度，先去干饭～',
     'bub.xiabanLunch2': '🍱 上午巡逻结束，工位我看着，你去吃饭吧！',
     'bub.xiabanLunch3': '🥢 到饭点啦，代码不会趁你吃饭时长腿跑掉的。',
@@ -366,10 +366,6 @@
     'peek.interrupted': '已中断',
     'peek.unknownProject': '未命名会话',
 
-    'menu.panel': '详情',
-    'menu.settings': '设置',
-    'menu.privacy': '隐私',
-    'menu.collapse': '收起',
 
     // ── action center ───────────────────────────────────────────────────────
     'action.title': '🗒️ 行动中心',

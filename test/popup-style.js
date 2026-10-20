@@ -53,22 +53,15 @@ assert(!/\.(?:mp3|wav|ogg|m4a)\b/i.test(walk(path.join(root, 'assets')).join('\n
 
 assert(/#stage\.edge-below\s*\{[^}]*justify-content\s*:\s*flex-start\s*;/s.test(css), 'top-edge layout must remain');
 assert(/anchoredLayoutPayload/.test(js) && /choosePopupLayout/.test(js), 'popup sizing must preserve the visible pet anchor');
-assert(/PetGeometry\.cornerMenuLayout/.test(js), 'radial menu geometry must remain bounded');
-assert(/getWindowMetrics:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(IPC\.GET_WINDOW_METRICS\)/.test(preload), 'radial menu must retain window metrics access');
-assert(/ipcMain\.handle\(IPC\.GET_WINDOW_METRICS/.test(main), 'main process must retain window metrics IPC');
-
-const radialSource = js.match(/const MENU = \[[\s\S]*?\n\];/)?.[0] || '';
-assert(!/menu\.(?:pending|background)/.test(radialSource), 'radial menu must remove duplicate panel entries');
-assert.strictEqual((radialSource.match(/window\.pet\.openPanel\(/g) || []).length, 1, 'radial menu must keep one detail entry');
-assert(/menu\.privacy/.test(radialSource) && /'ON'[\s\S]*'OFF'/.test(radialSource),
-  'radial menu must show the compact privacy ON/OFF action');
-assert(!/menu\.quit|window\.pet\.quit/.test(radialSource), 'radial menu must leave whole-app quit in the tray');
-assert(/const COMPACT_MENU = \[MENU\[2\], MENU\[0\], MENU\[3\], MENU\[1\]\];/.test(js),
-  'hidden-cat actions must use their dedicated horizontal order');
-assert(/function buildCompactRadial\(\)/.test(js) && /dataset\.layout = 'compact'/.test(js),
-  'hidden-cat context menu must build a compact toolbar layout');
-assert(/\.radial\[data-layout="compact"\] \.radial-compact\s*\{[\s\S]*?display:\s*flex;/.test(css),
-  'hidden-cat context menu must render as a horizontal toolbar');
+assert(!/radial|cornerMenuLayout|getWindowMetrics/i.test(js + css + html + preload),
+  'the retired radial menu and its geometry bridge must not come back');
+assert(/openPetMenu:\s*\(\)\s*=>\s*ipcRenderer\.send\(IPC\.OPEN_PET_MENU\)/.test(preload)
+  && /ipcMain\.on\(IPC\.OPEN_PET_MENU/.test(main), 'right-click must open the native pet menu');
+const petMenuSource = main.match(/function petMenuItems\(win\) \{[\s\S]*?\n\}/)?.[0] || '';
+assert.strictEqual((petMenuSource.match(/openPanel\(/g) || []).length, 1, 'pet menu must keep one detail entry');
+assert(/type: 'checkbox', checked: config\.get\(\)\.privacyMode === true/.test(petMenuSource),
+  'pet menu must show privacy as a checked switch');
+assert(!/app\.quit/.test(petMenuSource), 'pet menu must leave whole-app quit in the tray');
 assert(/\.sessions\s*\{[\s\S]*?min-width:\s*120px;/.test(css), 'session dots must retain a centred minimum width');
 assert(/#stage\.cat-hidden #compact-row \.sessions\s*\{[\s\S]*?min-width:\s*0;/.test(css),
   'compact session dots must shrink to their intrinsic width beside the capsule');

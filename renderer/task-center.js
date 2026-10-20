@@ -227,7 +227,6 @@
   get('peek-center').addEventListener('click', event => { event.stopPropagation(); openActionPop(); });
   if (window.pet.onWorkflowCommand) window.pet.onWorkflowCommand(command => {
     if (command === 'peek') {
-      if (radialOpen) closeRadial();
       if (actionPopOpen) return;
       if (askActive) { openActionPop(); return; }
       openPeek();

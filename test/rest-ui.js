@@ -223,11 +223,11 @@ async function main() {
     const w = test.world;
     w.handlers.stats(baseStats({ chipDisplay: { showCat, showStatus: true, showQuota: true } }));
     test.advance(5);
-    await vm.runInContext('openRadial()', w.sandbox);
-    assert.strictEqual(visible(w), false, 'context menu temporarily defers the reminder');
-    w.elements('radial').dispatch('click');
+    const handleEl = w.elements(showCat ? 'cat' : 'chip');
+    handleEl.dispatch('contextmenu', { preventDefault() {}, stopPropagation() {} });
+    assert.strictEqual(w.calls.filter((call) => call[0] === 'openPetMenu').length, 1, 'right-click opens the native pet menu');
     await pause();
-    assert.strictEqual(visible(w), true, 'closing context menu restores reminder without a stats tick');
+    assert.strictEqual(visible(w), true, 'the native menu does not hide a pending reminder');
 
     w.window.screenX = 0;
     w.window.screenY = 0;
@@ -248,10 +248,6 @@ async function main() {
     await pause();
     assert.strictEqual(visible(w), true, 'cancelled pointer capture must restore the reminder without movement');
 
-    // Use the real menu entry/action; native Menu rendering is the main-process boundary.
-    vm.runInContext('MENU.find(item => item.labelKey === "menu.collapse").act()', w.sandbox);
-    assert.strictEqual(w.calls.filter((call) => call[0] === 'openHideMenu').length, 1,
-      'both cat and capsule menus expose the same hide/quiet menu');
   }
 
   {

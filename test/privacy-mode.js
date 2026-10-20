@@ -81,12 +81,8 @@ const settingsHtml = read('renderer/settings.html');
 const preload = read('preload.js');
 assert(!/label:\s*t\('tray\.privacyMode'\)/.test(main),
   'tray must stay compact without the privacy toggle');
-assert(/labelKey:\s*'menu\.privacy'[\s\S]*?status:\s*\(\)\s*=>[\s\S]*?'ON'[\s\S]*?'OFF'/.test(pet),
-  'cat menu must replace Quit with a compact ON/OFF privacy action');
-assert(!/labelKey:\s*'menu\.quit'/.test(pet), 'cat menu must no longer quit the whole app');
-assert(/openRadial\(\)[\s\S]*?await readPrivacyMode\(\)/.test(pet)
-  && /const current = await readPrivacyMode\(\)[\s\S]*?setPrivacyMode\(!current\)/.test(pet),
-  'cat privacy action must read and toggle the persisted main-process state');
+assert(/function petMenuItems[\s\S]*?checked: config\.get\(\)\.privacyMode === true,\s*click: \(item\) => setPrivacyMode\(item\.checked\)/.test(main),
+  'cat menu privacy switch must read and write the persisted main-process state');
 assert(settingsHtml.includes('id="privacy-toggle"') && settingsHtml.includes('id="privacy-status"'),
   'Settings must expose the synchronized privacy switch');
 assert(/getPrivacyMode/.test(preload) && /setPrivacyMode/.test(preload) && /onPrivacyMode/.test(preload),

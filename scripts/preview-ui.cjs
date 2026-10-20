@@ -331,13 +331,11 @@ app.whenReady().then(async()=>{
     for (const [surface, setup, target] of [
       ['peek', 'openPeek()', '#peek-settings'],
       ['center', 'openActionPop()', '#ac-settings'],
-      ['radial', "applyStats({...lastStats,chipDisplay:{...lastStats.chipDisplay,showCat:true}}); radialOpen=true; buildRadial(); radial.classList.remove('hidden')", '.radial-item:last-child'],
-      ['compact-menu', "applyStats({...lastStats,chipDisplay:{...lastStats.chipDisplay,showCat:false}}); radialOpen=true; buildRadial(); radial.classList.remove('hidden'); positionCompactRadial()", '.radial-item:nth-child(3)'],
     ]) {
       await pet.webContents.executeJavaScript(setup + ';void 0;');
       await capture(pet, 'settings-entry-' + surface);
       assert.equal(await pet.webContents.executeJavaScript(`(() => {
-        const buttons = [...document.querySelectorAll('.radial-item, #peek-settings, #peek-close, #ac-settings, #ac-close')].filter(el => el.getClientRects().length && !el.closest('.hidden'));
+        const buttons = [...document.querySelectorAll('#peek-settings, #peek-close, #ac-settings, #ac-close')].filter(el => el.getClientRects().length && !el.closest('.hidden'));
         const rects = buttons.map(el => el.getBoundingClientRect());
         return rects.every(r => r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight)
           && rects.every((r, i) => rects.slice(i + 1).every(s => r.right <= s.left || s.right <= r.left || r.bottom <= s.top || s.bottom <= r.top));
@@ -346,7 +344,7 @@ app.whenReady().then(async()=>{
       await pet.webContents.executeJavaScript(`document.querySelector('${target}').click();void 0;`);
       await new Promise(resolve => setTimeout(resolve, 100));
       assert.equal(settingsOpenRequests, before + 1, 'settings entry dispatches once: ' + surface);
-      assert.equal(await pet.webContents.executeJavaScript('peekOpen || actionPopOpen || radialOpen'), false);
+      assert.equal(await pet.webContents.executeJavaScript('peekOpen || actionPopOpen'), false);
     }
     await pet.webContents.executeJavaScript('applyStats({...lastStats,chipDisplay:{...lastStats.chipDisplay,showCat:true}});void 0;');
     pet.setSize(520,740);

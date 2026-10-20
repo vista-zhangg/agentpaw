@@ -6,7 +6,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const IPC = Object.freeze({
   LANGUAGE: 'language:changed', GET_LANGUAGE: 'language:get', SET_LANGUAGE: 'language:set',
   PET_EVENT: 'pet:event', PET_STATS: 'pet:stats', PANEL_STATS: 'panel:stats', PANEL_PRICE: 'panel:price',
-  GET_STATS: 'get-stats', GET_WIN_POS: 'get-win-pos', GET_WINDOW_METRICS: 'get-window-metrics',
+  GET_STATS: 'get-stats', GET_WIN_POS: 'get-win-pos',
   XIABAN_SCHEDULE: 'xiaban:schedule',
   PET_ASSETS: 'pet-assets:changed',
   UPDATE_STATE: 'update:state',
@@ -16,7 +16,7 @@ const IPC = Object.freeze({
   GET_WORKFLOW_PREFERENCES: 'workflow:get-preferences', SET_WORKFLOW_PREFERENCES: 'workflow:set-preferences',
   UPDATE_SESSION_PREFERENCES: 'workflow:update-session', MARK_RECENT_READ: 'workflow:mark-read',
   CLEAR_RECENT: 'workflow:clear-recent', FOCUS_RECENT: 'workflow:focus-recent',
-  SET_COMPANION_PREFS: 'companion:set-preferences', REST_ACTION: 'rest:action', OPEN_HIDE_MENU: 'pet:hide-menu',
+  SET_COMPANION_PREFS: 'companion:set-preferences', REST_ACTION: 'rest:action', OPEN_HIDE_MENU: 'pet:hide-menu', OPEN_PET_MENU: 'pet:menu',
   GET_UPDATE_STATE: 'update:get-state', CHECK_FOR_UPDATES: 'update:check', SET_AUTO_UPDATE: 'update:set-auto',
   DOWNLOAD_UPDATE: 'update:download', INSTALL_UPDATE: 'update:install', OPEN_UPDATE_PAGE: 'update:open-page',
   SET_WIN_POS: 'set-win-pos', END_WIN_DRAG: 'end-win-drag', OPEN_PANEL: 'open-panel', CLOSE_PANEL: 'close-panel',
@@ -64,6 +64,7 @@ contextBridge.exposeInMainWorld('pet', {
   setCompanionPreferences: (value) => ipcRenderer.invoke(IPC.SET_COMPANION_PREFS, value),
   restAction: (value) => ipcRenderer.invoke(IPC.REST_ACTION, value),
   openHideMenu: () => ipcRenderer.send(IPC.OPEN_HIDE_MENU),
+  openPetMenu: () => ipcRenderer.send(IPC.OPEN_PET_MENU),
   // 渲染进程 -> 主进程
   getStats: () => ipcRenderer.invoke(IPC.GET_STATS),
   openPanel: (agent) => ipcRenderer.send(IPC.OPEN_PANEL, agent || 'all'),
@@ -99,7 +100,6 @@ contextBridge.exposeInMainWorld('pet', {
   closePet: () => ipcRenderer.send(IPC.CLOSE_PET),
   // 手动拖动窗口
   getWinPos: () => ipcRenderer.invoke(IPC.GET_WIN_POS),
-  getWindowMetrics: () => ipcRenderer.invoke(IPC.GET_WINDOW_METRICS),
   setWinPos: (x, y, dragOffset) => ipcRenderer.send(IPC.SET_WIN_POS, x, y, dragOffset || null),
   endWinDrag: (dragId) => ipcRenderer.send(IPC.END_WIN_DRAG, dragId),
   // 原生授权：通过本地 HTTP server 回 CC 决策（allow/deny），不需按键/Accessibility
