@@ -4,6 +4,17 @@ const { t } = window.AgentPawI18n;
 const ASSETS = window.AgentPawPetAssets;
 const $ = (id) => document.getElementById(id);
 
+// Changes save on their own. Success shows a short "Saved" next to the control;
+// an error stays until the next attempt. Nothing echoes the switch state.
+function flashStatus(el, message = '', kind = '') {
+  if (!el) return;
+  clearTimeout(el.flashTimer);
+  el.className = 'setting-status' + (kind ? ' ' + kind : '');
+  el.textContent = message;
+  if (message && kind !== 'error') el.flashTimer = setTimeout(() => { el.textContent = ''; }, 1800);
+}
+const savedText = () => window.AgentPawI18n.text("已保存");
+
 async function initializeChipDisplay() {
   const keys = ['showCat', 'showStatus', 'showQuota', 'showTokens', 'showCost'];
   const status = $('chip-display-status');
@@ -23,25 +34,25 @@ async function initializeChipDisplay() {
           const result = await window.pet.setChipDisplay({ [key]: button.getAttribute('aria-checked') !== 'true' });
           if (!result || !result.ok) throw new Error('save failed');
           render(result);
-          status.textContent = window.AgentPawI18n.text("已保存，桌面胶囊已更新");
-        } catch { status.textContent = window.AgentPawI18n.text("保存失败，请重试"); }
+          flashStatus(status, savedText());
+        } catch { flashStatus(status, window.AgentPawI18n.text("保存失败，请重试"), 'error'); }
         finally { keys.forEach(key => { $(key + '-toggle').disabled = false; }); }
       });
     });
-  } catch { status.textContent = window.AgentPawI18n.text("展示设置加载失败，请重新打开设置"); }
+  } catch { flashStatus(status, window.AgentPawI18n.text("展示设置加载失败，请重新打开设置"), 'error'); }
 }
 initializeChipDisplay();
 
-// Rest preferences are saved together, so changing an interval never races a
-// switch update or a background fullscreen notification.
+// Rest preferences are saved together on every change, so an interval never
+// races a switch update or a background fullscreen notification.
 (function initializeCompanionSettings() {
   if (!window.pet.getCompanionState || !$('rest-enabled')) return;
   const kinds = ['water', 'stretch', 'eyes'];
   const master = $('rest-enabled');
-  const save = $('rest-save');
   const status = $('rest-settings-status');
   const fullscreen = $('fullscreen-toggle');
   let saving = false;
+  let queued = false; // a change made while saving is saved right after
   let dirty = false;
   let loaded = false;
   let companionValue = null;
@@ -49,7 +60,6 @@ initializeChipDisplay();
   window.addEventListener('agentpaw:language', () => { if (companionValue) render(companionValue); });
   function refreshControls() {
     master.disabled = saving || !loaded;
-    save.disabled = saving || !loaded;
     $('rest-snooze-minutes').disabled = saving || !loaded || !checked(master);
     for (const kind of kinds) {
       const toggle = $('rest-' + kind + '-enabled');
@@ -84,23 +94,25 @@ initializeChipDisplay();
       if (button.disabled) return;
       dirty = true;
       button.setAttribute('aria-checked', String(!checked(button)));
-      status.textContent = window.AgentPawI18n.text("调整后点击“保存提醒”生效");
       refreshControls();
+      saveRest();
     });
   }
-  kinds.forEach(kind => $('rest-' + kind + '-minutes').addEventListener('input', () => { dirty = true; }));
-  $('rest-snooze-minutes').addEventListener('input', () => { dirty = true; });
-  save.addEventListener('click', async () => {
-    if (saving || !loaded) return;
+  for (const input of [...kinds.map(kind => $('rest-' + kind + '-minutes')), $('rest-snooze-minutes')]) {
+    input.addEventListener('input', () => { dirty = true; });
+    input.addEventListener('change', () => saveRest());
+  }
+  async function saveRest() {
+    if (!loaded) return;
+    if (saving) { queued = true; return; }
     const prefs = { enabled: checked(master), snoozeMinutes: Number($('rest-snooze-minutes').value) };
     if (!Number.isInteger(prefs.snoozeMinutes) || prefs.snoozeMinutes < 1 || prefs.snoozeMinutes > 240) {
-      status.textContent = window.AgentPawI18n.text("稍后提醒请填写 1–240 分钟的整数"); status.classList.add('error'); return;
+      flashStatus(status, window.AgentPawI18n.text("稍后提醒请填写 1–240 分钟的整数"), 'error'); return;
     }
     for (const kind of kinds) {
       const minutes = Number($('rest-' + kind + '-minutes').value);
       if (!Number.isInteger(minutes) || minutes < 5 || minutes > 240) {
-        status.textContent = window.AgentPawI18n.text("提醒间隔请填写 5–240 分钟的整数");
-        status.classList.add('error');
+        flashStatus(status, window.AgentPawI18n.text("提醒间隔请填写 5–240 分钟的整数"), 'error');
         return;
       }
       prefs[kind + 'Minutes'] = minutes;
@@ -111,41 +123,43 @@ initializeChipDisplay();
     try {
       const value = await window.pet.setCompanionPreferences({ restReminders: prefs });
       if (!value || !value.ok) throw new Error('save');
-      dirty = false;
-      render(value, true);
-      status.classList.remove('error');
-      status.textContent = prefs.enabled ? window.AgentPawI18n.text("已保存，提醒会跟随你的电脑使用时间") : window.AgentPawI18n.text("休息提醒已关闭");
-    } catch { status.textContent = window.AgentPawI18n.text("保存失败，请重试"); status.classList.add('error'); }
-    finally { saving = false; refreshControls(); }
-  });
+      if (!queued) { dirty = false; render(value, true); }
+      flashStatus(status, savedText());
+    } catch { flashStatus(status, window.AgentPawI18n.text("保存失败，请重试"), 'error'); }
+    finally {
+      saving = false;
+      refreshControls();
+      if (queued) { queued = false; saveRest(); }
+    }
+  }
   fullscreen.addEventListener('click', async () => {
     fullscreen.disabled = true;
     try {
       const value = await window.pet.setCompanionPreferences({ autoHideFullscreen: !checked(fullscreen) });
       if (!value || !value.ok) throw new Error('save');
       render(value);
-      $('fullscreen-status').textContent = window.AgentPawI18n.text("全屏免打扰设置已保存");
-    } catch { $('fullscreen-status').textContent = window.AgentPawI18n.text("保存失败，请重试"); }
+      flashStatus($('fullscreen-status'), savedText());
+    } catch { flashStatus($('fullscreen-status'), window.AgentPawI18n.text("保存失败，请重试"), 'error'); }
     finally { fullscreen.disabled = false; }
   });
   $('quiet-menu').addEventListener('click', () => window.pet.openHideMenu());
   $('quiet-minutes').addEventListener('change', async () => {
     const minutes = Number($('quiet-minutes').value);
     if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440) {
-      $('fullscreen-status').textContent = window.AgentPawI18n.text("安静时长请填写 1–1440 分钟的整数"); return;
+      flashStatus($('fullscreen-status'), window.AgentPawI18n.text("安静时长请填写 1–1440 分钟的整数"), 'error'); return;
     }
     $('quiet-menu').disabled = true;
     try {
       const result = await window.pet.setCompanionPreferences({ quietMinutes: minutes });
       if (!result || !result.ok) throw new Error('save');
       render(result);
-      $('fullscreen-status').textContent = window.AgentPawI18n.text("已保存：我的安静时长 {0} 分钟", [minutes]);
-    } catch { $('fullscreen-status').textContent = window.AgentPawI18n.text("安静时长保存失败，请重试"); }
+      flashStatus($('fullscreen-status'), savedText());
+    } catch { flashStatus($('fullscreen-status'), window.AgentPawI18n.text("安静时长保存失败，请重试"), 'error'); }
     finally { $('quiet-menu').disabled = false; }
   });
   if (window.pet.onCompanionState) window.pet.onCompanionState(value => render(value));
   refreshControls();
-  window.pet.getCompanionState().then(value => render(value, true)).catch(() => { status.textContent = window.AgentPawI18n.text("陪伴设置加载失败，请重新打开设置"); });
+  window.pet.getCompanionState().then(value => render(value, true)).catch(() => { flashStatus(status, window.AgentPawI18n.text("陪伴设置加载失败，请重新打开设置"), 'error'); });
 })();
 
 function renderChipPreview(value) {
@@ -180,7 +194,6 @@ const integrationUninstall = $('integration-uninstall');
 const lunchTime = $('xiaban-lunch-time');
 const eveningTime = $('xiaban-evening-time');
 const xiabanStatusEl = $('xiaban-status');
-const xiabanSave = $('xiaban-save');
 const xiabanReset = $('xiaban-reset');
 const assetGallery = $('asset-gallery');
 const assetStatus = $('asset-status');
@@ -238,8 +251,8 @@ function setTab(tabId) {
 function renderStatus(messageKey = null, kind = '') {
   toggle.setAttribute('aria-checked', String(enabled));
   toggle.disabled = !supported || busy;
-  statusEl.className = `setting-status${kind ? ` ${kind}` : ''}`;
-  statusEl.textContent = messageKey ? t(messageKey) : t(enabled ? 'settings.enabled' : 'settings.disabled');
+  if (messageKey === 'settings.saved') flashStatus(statusEl, savedText());
+  else flashStatus(statusEl, messageKey && messageKey !== 'settings.saving' ? t(messageKey) : '', kind);
 }
 
 function applyState(result, messageKey = null, kind = '') {
@@ -270,10 +283,7 @@ async function toggleAutoLaunch() {
 function renderPrivacyStatus(messageKey = null, kind = '') {
   privacyToggle.setAttribute('aria-checked', String(privacyEnabled));
   privacyToggle.disabled = privacyBusy;
-  privacyStatusEl.className = `setting-status${kind ? ` ${kind}` : ''}`;
-  privacyStatusEl.textContent = messageKey
-    ? t(messageKey)
-    : t(privacyEnabled ? 'settings.privacyEnabled' : 'settings.privacyDisabled');
+  flashStatus(privacyStatusEl, messageKey && messageKey !== 'settings.privacySaving' ? t(messageKey) : '', kind);
 }
 
 function applyPrivacyState(result, messageKey = null, kind = '') {
@@ -553,8 +563,8 @@ function scheduleFrom(result) {
   return { lunch: schedule.lunch, evening: schedule.evening };
 }
 function renderXiabanStatus(messageKey = null, kind = '') {
-  xiabanStatusEl.className = 'setting-status' + (kind ? ' ' + kind : '');
-  xiabanStatusEl.textContent = messageKey ? t(messageKey) : '';
+  if (messageKey === 'settings.timeSaved') flashStatus(xiabanStatusEl, savedText());
+  else flashStatus(xiabanStatusEl, messageKey && messageKey !== 'settings.timeSaving' ? t(messageKey) : '', kind);
 }
 function applyXiabanInputs(schedule) { lunchTime.value = schedule.lunch; eveningTime.value = schedule.evening; }
 async function loadXiabanSchedule() {
@@ -575,7 +585,6 @@ async function saveXiabanSchedule(next = null) {
     return false;
   }
   xiabanBusy = true;
-  xiabanSave.disabled = true;
   xiabanReset.disabled = true;
   renderXiabanStatus('settings.timeSaving');
   try {
@@ -594,7 +603,6 @@ async function saveXiabanSchedule(next = null) {
     return false;
   } finally {
     xiabanBusy = false;
-    xiabanSave.disabled = false;
     xiabanReset.disabled = false;
   }
 }
@@ -930,7 +938,7 @@ integrationUninstall.addEventListener('click', uninstallIntegrations);
 updateToggle.addEventListener('click', toggleAutoUpdate);
 updateCheck.addEventListener('click', checkUpdatesNow);
 updateAction.addEventListener('click', runUpdateAction);
-xiabanSave.addEventListener('click', () => saveXiabanSchedule());
+for (const input of [lunchTime, eveningTime]) input.addEventListener('change', () => saveXiabanSchedule());
 xiabanReset.addEventListener('click', () => saveXiabanSchedule(DEFAULT_XIABAN_TIMES));
 assetAdd.addEventListener('click', () => importExpression('append'));
 assetReplace.addEventListener('click', () => importExpression('replace-one'));
@@ -970,7 +978,6 @@ if (window.pet.onPrivacyMode) window.pet.onPrivacyMode((state) => {
   renderPrivacyStatus();
 });
 $('close').addEventListener('click', () => window.pet.closeSettings());
-$('done').addEventListener('click', () => window.pet.closeSettings());
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
   event.preventDefault();

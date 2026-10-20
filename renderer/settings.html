@@ -16,15 +16,13 @@
         <div class="brand">
           <img class="logo" src="../assets/agentpaw-icon.png" alt="" aria-hidden="true" />
           <div>
-            <div class="brand-title" data-i18n="settings.title" data-l10n="AgentPaw · 设置">AgentPaw · Settings</div>
-            <div class="brand-sub" data-i18n="settings.subtitle" data-l10n="调整隐私、接入、更新方式和角色表情">Privacy, connections, updates and characters</div>
+            <div class="brand-title" data-l10n="设置">Settings</div>
           </div>
         </div>
         <button id="close" class="icon-button" data-i18n-title="settings.close" title="Close" data-l10n-title="关闭" aria-label="Close" data-l10n-aria-label="关闭">✕</button>
       </header>
 
 <nav class="settings-tabs" role="tablist" aria-orientation="vertical" aria-label="Settings categories" data-l10n-aria-label="设置分类">
-        <div class="nav-caption" data-l10n="偏好设置">Preferences</div>
         <button id="tab-general" class="settings-tab active" type="button" role="tab" data-tab="general" aria-controls="panel-general" aria-selected="true" tabindex="0"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 9h8M8 15h8M10 7v4M14 13v4"/></svg><span data-l10n="通用">General</span></button>
         <button id="tab-workflow" class="settings-tab" type="button" role="tab" data-tab="workflow" aria-controls="panel-workflow" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span data-l10n="任务提醒">Task notifications</span></button>
         <button id="tab-companion" class="settings-tab" type="button" role="tab" data-tab="companion" aria-controls="panel-companion" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-8-5-8-11a4 4 0 0 1 8-1 4 4 0 0 1 8 1c0 6-8 11-8 11Z"/></svg><span data-l10n="陪伴与休息">Companion & breaks</span></button>
@@ -32,11 +30,10 @@
         <button id="tab-integrations" class="settings-tab" type="button" role="tab" data-tab="integrations" aria-controls="panel-integrations" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="8" height="8" rx="2"/><path d="M10 3v5M14 3v5M10 16v5M14 16v5M3 10h5M3 14h5M16 10h5M16 14h5"/></svg><span data-l10n="Agent 接入">Integrations</span></button>
         <button id="tab-updates" class="settings-tab" type="button" role="tab" data-tab="updates" aria-controls="panel-updates" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 8a8 8 0 1 0 1 7M19 3v5h-5M12 7v6l3 2"/></svg><span data-l10n="版本更新">Updates</span></button>
         <button id="tab-expressions" class="settings-tab" type="button" role="tab" data-tab="expressions" aria-controls="panel-expressions" aria-selected="false" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 10-1-7 6 4h4l6-4-1 7a8 8 0 1 1-14 0Z"/><path d="M8 13h.01M16 13h.01M10 17h4"/></svg><span data-l10n="角色与表情">Characters</span></button>
-        <div class="sidebar-foot"><span class="local-dot"></span><span data-l10n="本地运行 · 安心陪伴">Local companion · Here for you</span></div>
       </nav>
       <main id="settings-content">
-        <div id="panel-general" class="settings-panel active" data-panel="general" role="tabpanel" aria-labelledby="tab-general" tabindex="0"><div class="page-heading"><h1 data-l10n="让工作，自在一点。">Make work feel lighter.</h1><p data-l10n="设定启动、隐私与休息提醒，让AgentPaw融入你的日常。">Fit AgentPaw into your day with startup, privacy and break preferences.</p></div><section class="settings-section">
-          <div class="setting-card"><div class="setting-copy"><label class="setting-title" for="language-select" data-l10n="语言">Language</label><p class="setting-description" data-l10n="选择界面语言，立即生效">Choose your interface language. Changes apply immediately.</p></div><select id="language-select" aria-label="Language"><option value="en">English</option><option value="zh-Hans">简体中文</option><option value="zh-Hant">繁體中文</option></select></div><p id="language-status" class="setting-status" role="status"></p>
+        <div id="panel-general" class="settings-panel active" data-panel="general" role="tabpanel" aria-labelledby="tab-general" tabindex="0"><div class="page-heading"><h1 data-l10n="通用">General</h1></div><section class="settings-section">
+          <div class="setting-card"><div class="setting-copy"><label class="setting-title" for="language-select" data-l10n="语言">Language</label></div><select id="language-select" aria-label="Language"><option value="en">English</option><option value="zh-Hans">简体中文</option><option value="zh-Hant">繁體中文</option></select></div><p id="language-status" class="setting-status" role="status"></p>
           <div class="section-kicker" data-i18n="settings.startupSection" data-l10n="启动设置">Startup</div>
           <div class="setting-card">
             <div class="setting-copy">
@@ -48,7 +45,6 @@
             </button>
           </div>
           <div id="setting-status" class="setting-status" aria-live="polite"></div>
-          <p class="hint" data-i18n="settings.hint" data-l10n="修改会立即生效，下次登录 Windows 时自动运行。">Changes apply immediately; AgentPaw starts at your next Windows sign-in.</p>
         </section><section class="settings-section" id="privacy-section">
           <div class="section-kicker" data-i18n="settings.privacySection" data-l10n="隐私保护">Privacy</div>
           <div class="setting-card">
@@ -61,9 +57,8 @@
             </button>
           </div>
           <div id="privacy-status" class="setting-status" aria-live="polite"></div>
-          <p class="hint" data-i18n="settings.privacyHint" data-l10n="也可以右键AgentPaw，通过 ON/OFF 快速切换。">Toggle privacy using ON/OFF in AgentPaw's context menu.</p>
         </section><section class="settings-section">
-          <div class="section-kicker" data-i18n="settings.xiabanSection" data-l10n="下班彩蛋">Break-time animations</div>
+          <div class="section-kicker"><span data-i18n="settings.xiabanSection" data-l10n="下班彩蛋">Break-time animations</span><button class="info" type="button" aria-label="More information" data-l10n-aria-label="说明">i<span class="tipbox" role="tooltip" data-l10n="彩蛋持续 10 分钟，仅在AgentPaw空闲或休息时播放。">Animations last 10 minutes and play only while AgentPaw is idle or resting.</span></button></div>
           <div class="schedule-card">
             <div class="setting-description schedule-description" data-i18n="settings.xiabanDescription" data-l10n="在指定时间播放下班动画和提示语">Play an animation and message at your chosen times</div>
             <div class="time-grid">
@@ -80,70 +75,60 @@
               <div id="xiaban-status" class="setting-status" aria-live="polite"></div>
               <div class="action-buttons">
                 <button id="xiaban-reset" class="subtle-button" type="button" data-i18n="settings.resetTime" data-l10n="恢复默认">Restore defaults</button>
-                <button id="xiaban-save" class="done-button" type="button" data-i18n="settings.saveTime" data-l10n="保存时间">Save times</button>
               </div>
             </div>
-            <p class="hint" data-i18n="settings.timeHint" data-l10n="彩蛋持续 10 分钟，仅在AgentPaw空闲或休息时播放。">Animations last 10 minutes and play only while AgentPaw is idle or resting.</p>
           </div>
         </section></div>
         <div id="panel-workflow" class="settings-panel" data-panel="workflow" role="tabpanel" aria-labelledby="tab-workflow" tabindex="0" hidden>
-          <div class="page-heading"><h1 data-l10n="需要你时，再提醒。">A nudge when you need it.</h1><p data-l10n="选择提醒强度，用快捷键更快回到任务。">Choose notification intensity and return to tasks with shortcuts.</p></div>
+          <div class="page-heading"><h1 data-l10n="任务提醒">Task notifications</h1></div>
           <section class="settings-section">
-            <div class="section-kicker" data-l10n="提醒强度">Notification intensity</div>
+            <div class="section-kicker"><span data-l10n="提醒强度">Notification intensity</span><button class="info" type="button" aria-label="More information" data-l10n-aria-label="说明">i<span class="tipbox" role="tooltip" data-l10n="工具操作只更新状态；连续完成合并提醒，短暂失败恢复后不再弹出。仅减少弹出提醒，不改变桌伴显隐；最近事件仍会记录。">Tool activity only updates status. Completions are grouped and brief failures stay quiet. These settings affect notifications; visibility and event history remain available.</span></button></div>
             <div class="workflow-modes" role="group" aria-label="Notification intensity" data-l10n-aria-label="提醒强度">
               <button id="notify-standard" type="button" aria-pressed="true"><strong data-l10n="标准">Standard</strong><span data-l10n="需要处理、持续失败与合并完成提醒">Attention items, persistent failures and grouped completions</span></button>
               <button id="notify-attention" type="button" aria-pressed="false"><strong data-l10n="仅需处理">Attention only</strong><span data-l10n="只弹出等待授权、等待回复与持续失败">Approvals, replies and persistent failures only</span></button>
             </div>
-            <p class="hint" data-l10n="工具操作只更新状态；连续完成合并提醒，短暂失败恢复后不再弹出。仅减少弹出提醒，不改变桌伴显隐；最近事件仍会记录。">Tool activity only updates status. Completions are grouped and brief failures stay quiet. These settings affect notifications; visibility and event history remain available.</p>
             <div id="workflow-status" class="setting-status" role="status" aria-live="polite"></div>
           </section>
           <section class="settings-section">
-            <div class="section-kicker" data-l10n="各 Agent 的任务提醒">Notifications by tool</div>
+            <div class="section-kicker"><span data-l10n="各 Agent 的任务提醒">Notifications by tool</span><button class="info" type="button" aria-label="More information" data-l10n-aria-label="说明">i<span class="tipbox" role="tooltip" data-l10n="关闭后仍保留状态和待处理数量，可在快速视图处理；不会替你允许或拒绝授权。额度与休息提醒沿用各自设置。">Status and pending counts stay available in the quick view when notifications are off. AgentPaw never decides approvals for you. Quota and break reminders keep their own settings.</span></button></div>
             <div id="workflow-agents"></div>
-            <p class="hint" data-l10n="关闭后仍保留状态和待处理数量，可从行动中心处理；不会替你允许或拒绝授权。额度与休息提醒沿用各自设置。">Status and pending counts remain available when notifications are off. Review items in the action center; AgentPaw never decides approvals for you. Quota and break reminders keep their own settings.</p>
           </section>
           <section class="settings-section">
-            <div class="section-kicker" data-l10n="已静音的项目">Muted projects</div>
+            <div class="section-kicker"><span data-l10n="已静音的项目">Muted projects</span><button class="info" type="button" aria-label="More information" data-l10n-aria-label="说明">i<span class="tipbox" role="tooltip" data-l10n="在快速视图中，点会话行右侧的铅笔即可静音该项目。">In the quick view, use the pencil on a session row to mute its project.</span></button></div>
             <div id="workflow-projects"></div>
-            <p class="hint" data-l10n="在桌伴 → 行动中心 → 会话 → 编辑中设置项目静音。">Manage project muting in Companion → Action center → Sessions → Edit.</p>
           </section>
           <section class="settings-section">
-            <div class="section-kicker" data-l10n="全局快捷键">Global shortcuts</div>
-            <p class="hint" data-l10n="默认停用，无需设置也可使用全部功能。点击输入框，按 Ctrl+Shift 或 Ctrl+Alt 加字母、数字、F1–F12 或空格；Backspace 清除，Esc 取消录入。">Off by default; all features work without them. Select a field and press Ctrl+Shift or Ctrl+Alt with a letter, digit, F1–F12 or Space. Backspace clears; Esc cancels.</p>
-            <p class="hint" data-l10n="全局快捷键在其它软件中也会生效，请选自己不常用的组合。编辑设置期间暂停生效。">Shortcuts also work in other apps. Choose uncommon combinations. They pause while Settings is focused.</p>
+            <div class="section-kicker"><span data-l10n="全局快捷键">Global shortcuts</span><button class="info" type="button" aria-label="More information" data-l10n-aria-label="说明">i<span class="tipbox" role="tooltip" data-l10n="点击输入框，按 Ctrl+Shift 或 Ctrl+Alt 加字母、数字、F1–F12 或空格；Backspace 清除，Esc 取消。在其它软件中也会生效，编辑设置期间暂停。">Select a field and press Ctrl+Shift or Ctrl+Alt with a letter, digit, F1–F12 or Space. Backspace clears; Esc cancels. Shortcuts also work in other apps and pause while Settings is focused.</span></button></div>
             <div class="workflow-shortcuts">
-              <label><span data-l10n="打开工作速览">Open quick view</span><input id="shortcut-peek" type="text" readonly aria-label="Open quick view shortcut" data-l10n-aria-label="打开工作速览快捷键" placeholder="e.g. Ctrl+Shift+Space" data-l10n-placeholder="例如 Ctrl+Shift+Space" /><span id="shortcut-peek-error" class="shortcut-error"></span></label>
+              <label><span data-l10n="打开快速视图">Open quick view</span><input id="shortcut-peek" type="text" readonly aria-label="Open quick view shortcut" data-l10n-aria-label="打开快速视图快捷键" placeholder="e.g. Ctrl+Shift+Space" data-l10n-placeholder="例如 Ctrl+Shift+Space" /><span id="shortcut-peek-error" class="shortcut-error"></span></label>
               <label><span data-l10n="下一条待处理任务">Next pending task</span><input id="shortcut-next" type="text" readonly aria-label="Next pending task shortcut" data-l10n-aria-label="下一条待处理任务快捷键" placeholder="e.g. Ctrl+Shift+J" data-l10n-placeholder="例如 Ctrl+Shift+J" /><span id="shortcut-next-error" class="shortcut-error"></span></label>
               <label><span data-l10n="显示／隐藏桌伴">Show / hide companion</span><input id="shortcut-toggle" type="text" readonly aria-label="Show or hide companion shortcut" data-l10n-aria-label="显示或隐藏桌伴快捷键" placeholder="e.g. Ctrl+Shift+H" data-l10n-placeholder="例如 Ctrl+Shift+H" /><span id="shortcut-toggle-error" class="shortcut-error"></span></label>
             </div>
-            <div class="schedule-actions"><div id="shortcut-status" class="setting-status" role="status" aria-live="polite"></div><div class="action-buttons"><button id="shortcut-disable" type="button" class="subtle-button" data-l10n="全部停用">Disable all</button><button id="shortcut-save" type="button" class="done-button" data-l10n="保存快捷键">Save shortcuts</button></div></div>
+            <div class="schedule-actions"><div id="shortcut-status" class="setting-status" role="status" aria-live="polite"></div><div class="action-buttons"><button id="shortcut-disable" type="button" class="subtle-button" data-l10n="全部停用">Disable all</button></div></div>
           </section>
         </div>
         <div id="panel-companion" class="settings-panel" data-panel="companion" role="tabpanel" aria-labelledby="tab-companion" tabindex="0" hidden>
-          <div class="page-heading"><h1 data-l10n="照顾进度，也照顾你。">Care for your work, and yourself.</h1><p data-l10n="按你使用电脑的时间提醒，伙伴形象与胶囊模式都适用。">Reminders follow computer usage time in both character and capsule modes.</p></div>
+          <div class="page-heading"><h1 data-l10n="陪伴与休息">Companion & breaks</h1></div>
           <section class="settings-section">
-            <div class="section-kicker" data-l10n="休息提醒">Break reminders</div>
-            <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="陪你养成小习惯">Build small, healthy habits</div><div class="setting-description" data-l10n="无论 AI 是否在工作，按电脑使用时间提醒喝水、伸展与远眺。">Water, stretch and distance-view reminders follow computer usage, whether or not AI is working.</div></div><button id="rest-enabled" class="switch" type="button" role="switch" aria-checked="true" aria-label="Break reminders" data-l10n-aria-label="休息提醒"><span class="switch-thumb" aria-hidden="true"></span></button></div>
+            <div class="section-kicker"><span data-l10n="休息提醒">Break reminders</span><button class="info" type="button" aria-label="More information" data-l10n-aria-label="说明">i<span class="tipbox" role="tooltip" data-l10n="按电脑使用时间计时，与 AI 是否在工作无关。离开 5 分钟后暂停计时，伸展与远眺重新计时；锁屏和睡眠不计。">Timers follow computer use, whether or not AI is working. After 5 minutes away they pause and the stretch and distance timers restart; lock and sleep time is excluded.</span></button></div>
+            <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="陪你养成小习惯">Build small, healthy habits</div></div><button id="rest-enabled" class="switch" type="button" role="switch" aria-checked="true" aria-label="Break reminders" data-l10n-aria-label="休息提醒"><span class="switch-thumb" aria-hidden="true"></span></button></div>
             <div id="rest-preferences" class="rest-preferences">
               <div class="setting-card"><div class="setting-title" id="rest-water-label" data-l10n="喝口水">Have some water</div><div class="rest-frequency"><label><span data-l10n="每">Every</span><input id="rest-water-minutes" type="number" min="5" max="240" step="1" value="45" aria-label="Water reminder interval in minutes" data-l10n-aria-label="喝口水间隔分钟" /><span data-l10n="分钟">minutes</span></label><button id="rest-water-enabled" class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="rest-water-label"><span class="switch-thumb" aria-hidden="true"></span></button></div></div>
 <div class="setting-card"><div class="setting-title" id="rest-stretch-label" data-l10n="起身伸展">Get up and stretch</div><div class="rest-frequency"><label><span data-l10n="每">Every</span><input id="rest-stretch-minutes" type="number" min="5" max="240" step="1" value="60" aria-label="Stretch reminder interval in minutes" data-l10n-aria-label="起身伸展间隔分钟" /><span data-l10n="分钟">minutes</span></label><button id="rest-stretch-enabled" class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="rest-stretch-label"><span class="switch-thumb" aria-hidden="true"></span></button></div></div>
 <div class="setting-card"><div class="setting-title" id="rest-eyes-label" data-l10n="看看远处">Look into the distance</div><div class="rest-frequency"><label><span data-l10n="每">Every</span><input id="rest-eyes-minutes" type="number" min="5" max="240" step="1" value="20" aria-label="Distance-view interval in minutes" data-l10n-aria-label="看看远处间隔分钟" /><span data-l10n="分钟">minutes</span></label><button id="rest-eyes-enabled" class="switch" type="button" role="switch" aria-checked="false" aria-labelledby="rest-eyes-label"><span class="switch-thumb" aria-hidden="true"></span></button></div></div>
             </div>
-            <p class="hint" data-l10n="离开电脑 5 分钟后暂停计时，伸展与远眺重新计时。锁屏和睡眠时暂停，回来后不会补算离开时间。">After 5 minutes away, timers pause and stretch / distance-view timers reset. Lock and sleep time is excluded.</p>
             <div class="setting-card"><div class="setting-title" data-l10n="稍后提醒">Snooze</div><div class="rest-frequency"><label><span data-l10n="推迟">Delay</span><input id="rest-snooze-minutes" type="number" min="1" max="240" step="1" value="10" aria-label="Snooze duration in minutes" data-l10n-aria-label="稍后提醒分钟数" /><span data-l10n="分钟">minutes</span></label></div></div>
-            <p class="hint" data-l10n="提醒支持“完成”“稍后”和“今天跳过”；后两项适用于全部休息提醒。">Choose Done, Snooze or Skip today. Snooze and Skip today apply to all break reminders.</p>
-            <div class="schedule-actions"><div id="rest-settings-status" class="setting-status" role="status"></div><button id="rest-save" class="done-button" type="button" data-l10n="保存提醒">Save reminders</button></div>
+            <div id="rest-settings-status" class="setting-status" role="status"></div>
           </section>
           <section class="settings-section">
             <div class="section-kicker" data-l10n="少一点打扰">A little less interruption</div>
             <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="全屏时自动藏起">Hide automatically in fullscreen</div><div class="setting-description" data-l10n="视频、游戏或演示进入全屏后藏起伙伴与胶囊，退出全屏后恢复。">Hide the companion and capsule during fullscreen videos, games or presentations; restore them afterwards.</div></div><button id="fullscreen-toggle" class="switch" type="button" role="switch" aria-checked="true" aria-label="Hide automatically in fullscreen" data-l10n-aria-label="全屏时自动藏起"><span class="switch-thumb" aria-hidden="true"></span></button></div>
             <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="临时安静">Quiet mode</div><div id="quiet-description" class="setting-description" data-l10n="藏起 15、30 或 60 分钟，时间到后自动回来。">Hide for 15, 30 or 60 minutes, then return automatically.</div></div><button id="quiet-menu" class="subtle-button" type="button" data-l10n="收起与安静…">Hide & quiet options…</button></div>
-            <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="我的安静时长">My quiet duration</div><div class="setting-description" data-l10n="修改后自动保存，在“收起”和托盘菜单中选择。">Saved automatically; available in Hide and the tray menu.</div></div><div class="rest-frequency"><label><input id="quiet-minutes" type="number" min="1" max="1440" step="1" value="30" aria-label="Quiet duration in minutes" data-l10n-aria-label="安静分钟数" /><span data-l10n="分钟">minutes</span></label></div></div>
-            <p class="hint" data-l10n="主动“藏起”会一直保持。点击托盘图标可提前回来；后台任务监控始终继续。">Manual hiding stays in effect. Use the tray to return sooner. Task monitoring continues in the background.</p>
+            <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="我的安静时长">My quiet duration</div><div class="setting-description" data-l10n="在右键菜单和托盘的“安静一会儿”中可选">Available under Quiet for a while in the menu and tray</div></div><div class="rest-frequency"><label><input id="quiet-minutes" type="number" min="1" max="1440" step="1" value="30" aria-label="Quiet duration in minutes" data-l10n-aria-label="安静分钟数" /><span data-l10n="分钟">minutes</span></label></div></div>
             <div id="fullscreen-status" class="setting-status" role="status"></div>
           </section>
         </div>
-        <div id="panel-appearance" class="settings-panel" data-panel="appearance" role="tabpanel" aria-labelledby="tab-appearance" tabindex="0" hidden><div class="page-heading"><h1 data-l10n="一眼，即知进展。">Progress at a glance.</h1><p data-l10n="挑选你关心的信息，组合专属的桌面胶囊。">Choose the information that matters for your desktop capsule.</p></div><div class="capsule-preview" aria-label="Capsule preview with example values" data-l10n-aria-label="胶囊外观预览，数值为示例">
+        <div id="panel-appearance" class="settings-panel" data-panel="appearance" role="tabpanel" aria-labelledby="tab-appearance" tabindex="0" hidden><div class="page-heading"><h1 data-l10n="桌面胶囊">Desktop capsule</h1></div><div class="capsule-preview" aria-label="Capsule preview with example values" data-l10n-aria-label="胶囊外观预览，数值为示例">
   <div class="preview-caption"><span data-l10n="桌面预览">Desktop preview</span><span data-l10n="示例数据">Example data</span></div>
   <div class="preview-stage" id="preview-stage">
     <img id="preview-cat" src="../assets/cat/cat-working.gif" alt="Character preview" data-l10n-alt="角色预览" />
@@ -151,22 +136,21 @@
       <span class="chip-context" id="preview-status" data-l10n="干活中">Working</span>
       <span class="chip-quota" id="preview-quota"><span class="quota-badge" data-period="5h" style="--quota-remaining:76%">76%</span><span class="quota-badge" data-period="7d" style="--quota-remaining:92%">92%</span></span>
       <span class="chip-sep" id="preview-tokens-sep" hidden>·</span><span class="chip-tokens" id="preview-tokens" hidden>128k tokens</span>
-      <span class="chip-sep" id="preview-cost-sep">·</span><span class="chip-cost" id="preview-cost">$0.860</span>
+      <span class="chip-sep" id="preview-cost-sep">·</span><span class="chip-cost" id="preview-cost">$0.86</span>
     </div></div>
   </div>
   <p class="preview-empty" id="preview-empty" hidden data-l10n="当前胶囊未选择展示信息。">No information is selected for the capsule.</p>
 </div><section class="settings-section" id="chip-display-section">
           <div class="section-kicker" data-l10n="展示内容">Visible information</div>
-          <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="显示伙伴伙伴">Show companion</div><div class="setting-description" data-l10n="隐藏伙伴伙伴本体，状态小点会移动到胶囊左侧；胶囊可直接拖动">Hide the character and move its status dot to the capsule. Drag the capsule directly.</div></div><button id="showCat-toggle" class="switch" type="button" role="switch" aria-checked="true" aria-label="Show companion" data-l10n-aria-label="显示伙伴伙伴"><span class="switch-thumb" aria-hidden="true"></span></button></div>
+          <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="显示伙伴">Show companion</div><div class="setting-description" data-l10n="关掉后只留胶囊，可直接拖动">Turn off to keep only the capsule; drag it directly.</div></div><button id="showCat-toggle" class="switch" type="button" role="switch" aria-checked="true" aria-label="Show companion" data-l10n-aria-label="显示伙伴"><span class="switch-thumb" aria-hidden="true"></span></button></div>
           <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="任务状态">Task status</div><div class="setting-description" data-l10n="显示“待命、休息中、干活中、刚刚完成”等当前状态">Show the current state, such as standing by, resting, working or just finished</div></div><button id="showStatus-toggle" class="switch" type="button" role="switch" aria-checked="true" aria-label="Show task status" data-l10n-aria-label="显示任务状态"><span class="switch-thumb" aria-hidden="true"></span></button></div>
-          <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="Codex 订阅额度">Codex subscription quota</div><div class="setting-description" data-l10n="显示 5h、7d 剩余百分比，与托盘同步更新；点击额度查看刷新时间">Show 5h / 7d remaining percentages, synced with the tray. Select quota to view reset times.</div></div><button id="showQuota-toggle" class="switch" type="button" role="switch" aria-checked="true" aria-label="Show Codex subscription quota" data-l10n-aria-label="显示 Codex 订阅额度"><span class="switch-thumb" aria-hidden="true"></span></button></div>
+          <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="Codex 订阅额度">Codex subscription quota</div><div class="setting-description" data-l10n="5h、7d 剩余百分比，点开可看重置时间与预测">5h and 7d remaining; open it for reset times and forecast.</div></div><button id="showQuota-toggle" class="switch" type="button" role="switch" aria-checked="true" aria-label="Show Codex subscription quota" data-l10n-aria-label="显示 Codex 订阅额度"><span class="switch-thumb" aria-hidden="true"></span></button></div>
           <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="今日 Tokens">Today's tokens</div><div class="setting-description" data-l10n="显示全部工具今日累计 Token 消耗">Total token usage across tools today</div></div><button id="showTokens-toggle" class="switch" type="button" role="switch" aria-checked="false" aria-label="Show today's tokens" data-l10n-aria-label="显示今日 Tokens"><span class="switch-thumb" aria-hidden="true"></span></button></div>
           <div class="setting-card"><div class="setting-copy"><div class="setting-title" data-l10n="今日 API 等价费用">Today's API-equivalent cost</div><div class="setting-description" data-l10n="按 API 价格估算，不代表订阅实际扣费">Estimated from API prices; not an actual subscription charge</div></div><button id="showCost-toggle" class="switch" type="button" role="switch" aria-checked="true" aria-label="Show API-equivalent cost" data-l10n-aria-label="显示 API 等价费用"><span class="switch-thumb" aria-hidden="true"></span></button></div>
           <div id="chip-display-status" class="setting-status" aria-live="polite"></div>
-          <p class="hint" data-l10n="修改立即生效并自动保存；完整用量仍可在统计面板查看。">Changes save and apply immediately. Full usage remains available in the usage panel.</p>
         </section></div>
-        <div id="panel-integrations" class="settings-panel" data-panel="integrations" role="tabpanel" aria-labelledby="tab-integrations" tabindex="0" hidden><div class="page-heading"><h1 data-l10n="连接你的 AI 助手。">Connect your AI tools.</h1><p data-l10n="在一个地方，了解每个工具的接入状态。">Review every connection in one place.</p></div><section class="settings-section" id="integrations-section">
-          <div class="section-kicker" data-i18n="settings.integrationsSection" data-l10n="Agent 接入">Integrations</div>
+        <div id="panel-integrations" class="settings-panel" data-panel="integrations" role="tabpanel" aria-labelledby="tab-integrations" tabindex="0" hidden><div class="page-heading"><h1 data-l10n="Agent 接入">Integrations</h1></div><section class="settings-section" id="integrations-section">
+          <div class="section-kicker"><span data-i18n="settings.integrationsSection" data-l10n="Agent 接入">Integrations</span><button class="info" type="button" aria-label="More information" data-l10n-aria-label="说明">i<span class="tipbox" role="tooltip" data-l10n="修复只处理已检测工具；卸载只移除 AgentPaw 写入的 Hook 和插件，不影响 Agent 本身。">Repair handles detected tools only. Disconnect removes AgentPaw's hooks and plugins without uninstalling your AI tools.</span></button></div>
           <div class="integration-card">
             <div class="integration-head">
               <div>
@@ -184,10 +168,9 @@
                 <button id="integration-repair" class="done-button" type="button" data-i18n="settings.integrationsRepairAll" disabled data-l10n="一键修复">Repair connections</button>
               </div>
             </div>
-            <p class="hint" data-i18n="settings.integrationsHint" data-l10n="修复只处理已检测工具；卸载只移除 AgentPaw 写入的 Hook 和插件，不影响 Agent 本身。">Repair handles detected tools only. Disconnect removes AgentPaw's hooks and plugins without uninstalling your AI tools.</p>
           </div>
         </section></div>
-        <div id="panel-updates" class="settings-panel" data-panel="updates" role="tabpanel" aria-labelledby="tab-updates" tabindex="0" hidden><div class="page-heading"><h1 data-l10n="保持新鲜，持续进化。">Stay up to date.</h1><p data-l10n="管理版本与更新，让陪伴始终如一。">Manage versions and updates for a steady companion.</p></div><section class="settings-section">
+        <div id="panel-updates" class="settings-panel" data-panel="updates" role="tabpanel" aria-labelledby="tab-updates" tabindex="0" hidden><div class="page-heading"><h1 data-l10n="版本更新">Updates</h1></div><section class="settings-section">
           <div class="section-kicker" data-i18n="settings.updateSection" data-l10n="版本更新">Updates</div>
           <div class="setting-card">
             <div class="setting-copy">
@@ -216,7 +199,7 @@
             <p id="update-hint" class="hint"></p>
           </div>
         </section></div>
-        <div id="panel-expressions" class="settings-panel" data-panel="expressions" role="tabpanel" aria-labelledby="tab-expressions" tabindex="0" hidden><div class="page-heading"><h1 data-l10n="选一个伙伴，一起开工。">Choose a companion. Get started.</h1><p data-l10n="角色独立保存，切换后立即陪你工作。">Each character keeps its own settings and joins you immediately.</p></div>
+        <div id="panel-expressions" class="settings-panel" data-panel="expressions" role="tabpanel" aria-labelledby="tab-expressions" tabindex="0" hidden><div class="page-heading"><h1 data-l10n="角色与表情">Characters</h1></div>
           <section class="character-library" aria-label="Companion character" data-l10n-aria-label="桌宠角色">
             <div id="character-list" class="character-list"></div>
             <div class="character-create">
@@ -280,7 +263,6 @@
             </aside>
           </section></div>
       </main>
-      <footer><span>AgentPaw</span><button id="done" class="done-button" type="button" data-i18n="settings.close" data-l10n="关闭">Close</button></footer>
     </div>
     <script src="../shared/messages.js"></script>
     <script src="../shared/i18n.js"></script>

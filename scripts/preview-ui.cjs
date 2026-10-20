@@ -211,12 +211,12 @@ app.whenReady().then(async()=>{
       input.dispatchEvent(new KeyboardEvent('keydown',{key:'c',code:'KeyC',ctrlKey:true,bubbles:true}));
       return input.value==='' && document.getElementById('shortcut-peek-error').textContent.includes('Ctrl+Shift');
     })()`),true,'common copy shortcut cannot be registered');
-    await settings.webContents.executeJavaScript(`document.getElementById('shortcut-peek').focus();document.getElementById('shortcut-peek').dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',ctrlKey:true,shiftKey:true,bubbles:true}));document.getElementById('shortcut-save').click();`);
+    await settings.webContents.executeJavaScript(`document.getElementById('shortcut-peek').focus();document.getElementById('shortcut-peek').dispatchEvent(new KeyboardEvent('keydown',{key:' ',code:'Space',ctrlKey:true,shiftKey:true,bubbles:true}));`);
     await new Promise(resolve => setTimeout(resolve,100));
     assert.equal(workflow.shortcuts.peek, 'Ctrl+Shift+Space');
-    await settings.webContents.executeJavaScript(`document.getElementById('shortcut-save').scrollIntoView({block:'end'});void 0;`);
+    await settings.webContents.executeJavaScript(`document.getElementById('shortcut-disable').scrollIntoView({block:'end'});void 0;`);
     await capture(settings,'settings-workflow-shortcuts');
-    await settings.webContents.executeJavaScript(`document.getElementById('tab-companion').click(); document.getElementById('rest-water-minutes').value=35; document.getElementById('rest-snooze-minutes').value=7; document.getElementById('rest-save').click();`);
+    await settings.webContents.executeJavaScript(`document.getElementById('tab-companion').click(); for (const [id,v] of [['rest-water-minutes',35],['rest-snooze-minutes',7]]) { const el=document.getElementById(id); el.value=v; el.dispatchEvent(new Event('change')); }`);
     await new Promise(r=>setTimeout(r,100));
     assert.equal(companion.rest.preferences.waterMinutes,35,'custom water interval saved');
     assert.equal(companion.rest.preferences.snoozeMinutes,7,'custom reminder snooze saved');

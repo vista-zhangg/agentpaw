@@ -5279,5 +5279,65 @@
     "自动接受编辑",
     "Auto-accept edits",
     "自動接受編輯"
+  ],
+  [
+    "5h、7d 剩余百分比，点开可看重置时间与预测",
+    "5h and 7d remaining; open it for reset times and forecast.",
+    "5h、7d 剩餘百分比，點開可看重置時間與預測"
+  ],
+  [
+    "关掉后只留胶囊，可直接拖动",
+    "Turn off to keep only the capsule; drag it directly.",
+    "關掉後只留膠囊，可直接拖動"
+  ],
+  [
+    "关闭后仍保留状态和待处理数量，可在快速视图处理；不会替你允许或拒绝授权。额度与休息提醒沿用各自设置。",
+    "Status and pending counts stay available in the quick view when notifications are off. AgentPaw never decides approvals for you. Quota and break reminders keep their own settings.",
+    "關閉後仍保留狀態和待處理數量，可在快速檢視處理；不會替你允許或拒絕授權。額度與休息提醒沿用各自設定。"
+  ],
+  [
+    "在右键菜单和托盘的“安静一会儿”中可选",
+    "Available under Quiet for a while in the menu and tray",
+    "在右鍵選單和系統匣的「安靜一會兒」中可選"
+  ],
+  [
+    "在快速视图中，点会话行右侧的铅笔即可静音该项目。",
+    "In the quick view, use the pencil on a session row to mute its project.",
+    "在快速檢視中，點會話列右側的鉛筆即可靜音該專案。"
+  ],
+  [
+    "已保存",
+    "Saved",
+    "已儲存"
+  ],
+  [
+    "打开快速视图",
+    "Open quick view",
+    "開啟快速檢視"
+  ],
+  [
+    "打开快速视图快捷键",
+    "Open quick view shortcut",
+    "開啟快速檢視快捷鍵"
+  ],
+  [
+    "按电脑使用时间计时，与 AI 是否在工作无关。离开 5 分钟后暂停计时，伸展与远眺重新计时；锁屏和睡眠不计。",
+    "Timers follow computer use, whether or not AI is working. After 5 minutes away they pause and the stretch and distance timers restart; lock and sleep time is excluded.",
+    "按電腦使用時間計時，與 AI 是否在工作無關。離開 5 分鐘後暫停計時，伸展與遠眺重新計時；鎖定畫面和睡眠不計。"
+  ],
+  [
+    "显示伙伴",
+    "Show companion",
+    "顯示夥伴"
+  ],
+  [
+    "点击输入框，按 Ctrl+Shift 或 Ctrl+Alt 加字母、数字、F1–F12 或空格；Backspace 清除，Esc 取消。在其它软件中也会生效，编辑设置期间暂停。",
+    "Select a field and press Ctrl+Shift or Ctrl+Alt with a letter, digit, F1–F12 or Space. Backspace clears; Esc cancels. Shortcuts also work in other apps and pause while Settings is focused.",
+    "點擊輸入框，按 Ctrl+Shift 或 Ctrl+Alt 加字母、數字、F1–F12 或空白鍵；Backspace 清除，Esc 取消。在其他軟體中也會生效，編輯設定期間暫停。"
+  ],
+  [
+    "说明",
+    "More information",
+    "說明"
   ]
 ];});

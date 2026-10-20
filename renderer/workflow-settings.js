@@ -12,7 +12,7 @@
   const status = get('workflow-status');
   function setBusy(next) {
     busy = next;
-    document.querySelectorAll('.workflow-modes button, #workflow-agents button, #workflow-projects button, .workflow-shortcuts input, #shortcut-save, #shortcut-disable')
+    document.querySelectorAll('.workflow-modes button, #workflow-agents button, #workflow-projects button, .workflow-shortcuts input, #shortcut-disable')
       .forEach(control => { control.disabled = next; });
   }
   function render(next) {
@@ -47,7 +47,6 @@
     if (busy || !value) return;
     setBusy(true);
     const feedback = shortcut ? get('shortcut-status') : status;
-    feedback.textContent = window.AgentPawI18n.text("正在保存…");
     try {
       const result = await window.pet.setWorkflowPreferences(patch);
       if (!result || !result.ok) {
@@ -55,8 +54,8 @@
         throw new Error(result?.message || window.AgentPawI18n.text("保存失败，请重试"));
       }
       if (shortcut) shortcutDirty = false;
-      render(result); feedback.textContent = window.AgentPawI18n.text("已保存，立即生效");
-    } catch (error) { feedback.textContent = error.message || window.AgentPawI18n.text("保存失败，请重试"); }
+      render(result); flashStatus(feedback, savedText());
+    } catch (error) { flashStatus(feedback, error.message || window.AgentPawI18n.text("保存失败，请重试"), 'error'); }
     finally { setBusy(false); }
   }
   for (const mode of ['standard', 'attention']) get('notify-' + mode).addEventListener('click', () => save({ notifications: { mode } }));
@@ -82,26 +81,25 @@
       if (event.key === 'Tab') return;
       event.preventDefault();
       if (event.key === 'Escape') { event.stopPropagation(); input.value = initial; input.blur(); return; }
-      if (event.key === 'Backspace' || event.key === 'Delete') { input.value = ''; shortcutDirty = true; return; }
+      if (event.key === 'Backspace' || event.key === 'Delete') { input.value = ''; shortcutDirty = true; saveShortcuts(); return; }
       if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) return;
       const keyName = event.code === 'Space' ? 'Space' : /^Key[A-Z]$/.test(event.code) ? event.code.slice(3)
         : /^Digit[0-9]$/.test(event.code) ? event.code.slice(5) : event.key.toUpperCase();
       const chord = [...(event.ctrlKey ? ['Ctrl'] : []), ...(event.altKey ? ['Alt'] : []), ...(event.shiftKey ? ['Shift'] : []), keyName].join('+');
       const accepted = !event.metaKey && model.accelerator(chord);
       get('shortcut-' + key + '-error').textContent = accepted ? '' : window.AgentPawI18n.text("请按 Ctrl+Shift 或 Ctrl+Alt 加字母、数字、F1–F12 或空格");
-      if (accepted) { input.value = accepted; shortcutDirty = true; }
+      if (accepted) { input.value = accepted; shortcutDirty = true; saveShortcuts(); }
     });
   }
   function saveShortcuts() {
     const shortcuts = Object.fromEntries(model.SHORTCUT_ACTIONS.map(key => [key, get('shortcut-' + key).value]));
     const error = model.validateShortcuts(shortcuts);
-    if (error) { get('shortcut-status').textContent = error; return; }
+    if (error) { flashStatus(get('shortcut-status'), error, 'error'); return; }
     save({ shortcuts }, true);
   }
-  get('shortcut-save').addEventListener('click', saveShortcuts);
   get('shortcut-disable').addEventListener('click', () => {
     model.SHORTCUT_ACTIONS.forEach(key => { get('shortcut-' + key).value = ''; }); shortcutDirty = true; saveShortcuts();
   });
   window.pet.onWorkflowPreferences(render);
-  window.pet.getWorkflowPreferences().then(render).catch(() => { status.textContent = window.AgentPawI18n.text("任务提醒设置加载失败，请重新打开设置"); });
+  window.pet.getWorkflowPreferences().then(render).catch(() => { flashStatus(status, window.AgentPawI18n.text("任务提醒设置加载失败，请重新打开设置"), 'error'); });
 })();
