@@ -6,7 +6,7 @@
   <p>Works with <strong>Codex</strong> · <strong>Claude Code</strong> · <strong>WorkBuddy</strong> · <strong>opencode</strong></p>
 
   <p>
-    <a href="https://github.com/vista-zhangg/agentpaw/releases/latest"><img src="https://img.shields.io/badge/Download%20for%20Windows-2.1.0-0078D4?style=for-the-badge&logo=windows" alt="Download for Windows"></a>
+    <a href="https://github.com/vista-zhangg/agentpaw/releases/latest"><img src="https://img.shields.io/badge/Download%20for%20Windows-2.1.1-0078D4?style=for-the-badge&logo=windows" alt="Download for Windows"></a>
   </p>
   <p>
     <a href="README.md">English</a> ·
