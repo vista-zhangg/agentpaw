@@ -41,7 +41,7 @@ function createAlerts({ getPreferences, getSurface, isPrivate, playSound, showTo
         playSound(kind);
       }
       if (prefs.systemNotifications && !surface.visible && toastDue(event)) {
-        showToast(describe(event, isPrivate()));
+        showToast(describe(event, isPrivate()), event);
       }
     },
   };

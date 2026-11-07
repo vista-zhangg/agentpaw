@@ -93,7 +93,7 @@ The details panel brings tokens, cache hit rate, context windows, models and ref
 <summary><strong>All features</strong></summary>
 
 - **Status at a glance** — working, thinking, parallel tasks, compaction, permission waits, user input, completion, errors, breaks and sleep; background tasks and scheduled wakeups stay active until they actually clear.
-- **Calmer notifications** — choose Standard or Needs attention only, combine completion notices, defer transient failures, and mute an agent or project while keeping permission cards available.
+- **Calmer notifications** — choose Standard or Needs attention only, combine completion notices, defer transient failures, and mute an agent or project while keeping permission cards available. A sound can tell you when something needs you, and Windows notifications step in when the companion is hidden or a full-screen app is open. Both are switches under Notifications in Settings.
 - **Quick view** — what needs you (approve on the spot), what is running with model, elapsed time and context use, recent sessions and the last 7 days. Finished tasks stay marked on the capsule until you open them. Follow, rename or mute a project in place.
 - **Claude Code plan usage (optional)** — turn it on under Settings → Connections to see your 5h / 7d Pro or Max usage in the details panel, quick view and tray menu. It uses Claude Code's documented status line data, so it updates only when you run `claude` in a terminal; the Claude desktop app and IDE extensions may not run the status line, and then no usage appears. An existing status line keeps working.
 - **Codex quota in the tray** — right-click the tray icon for the masked current account, 5h / 7d remaining quota, reset times and last update. Missing windows show `--`.

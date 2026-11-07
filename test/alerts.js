@@ -15,7 +15,7 @@ function setup(prefs = {}, surface = {}) {
     getSurface: () => state.surface,
     isPrivate: () => state.privacy,
     playSound: tone => state.sounds.push(tone),
-    showToast: toast => state.toasts.push(toast),
+    showToast: (toast, event) => state.toasts.push({ ...toast, event }),
     describe: (event, isPrivate) => ({ title: isPrivate ? 'private' : event.kind, body: '' }),
     now: () => state.time,
   });
@@ -45,6 +45,7 @@ const done = { kind: 'completion-summary', count: 1 };
   alerts.handle(waiting);
   assert.deepStrictEqual(state.sounds, ['attention']);
   assert.strictEqual(state.toasts.length, 1, 'a hidden window falls back to a system notification');
+  assert.strictEqual(state.toasts[0].event, waiting, 'the notification keeps its event for the click');
 }
 for (const event of [waiting, reply, failed]) {
   const { state, alerts } = setup({}, { visible: false });

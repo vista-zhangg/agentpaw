@@ -991,11 +991,18 @@ function routeTaskEvent(event) {
 
 // Windows drops a notification's click handler if the object is collected.
 const liveToasts = new Set();
-function showAlertToast({ title, body }) {
+async function openAlert(event) {
+  // Codex has a precise thread link; Claude approvals are answered in the quick view.
+  const session = event.agent === 'codex' && core.getSession(event.sessionId);
+  if (session && await focusSession(session, { openExternal: url => shell.openExternal(url) })) return;
+  showWorkflowSurface('peek');
+}
+
+function showAlertToast({ title, body }, event) {
   if (!Notification.isSupported()) return;
   const toast = new Notification({ title, body, silent: true });
   const release = () => liveToasts.delete(toast);
-  toast.on('click', () => { release(); showWorkflowSurface('peek'); });
+  toast.on('click', () => { release(); openAlert(event).catch(() => showWorkflowSurface('peek')); });
   toast.on('close', release);
   liveToasts.add(toast);
   toast.show();
