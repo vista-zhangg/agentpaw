@@ -8,11 +8,12 @@
   let busy = false;
   let shortcutDirty = false;
   const agentButtons = new Map();
+  const ALERT_TOGGLES = { 'alert-sound-toggle': 'sound', 'alert-toast-toggle': 'systemNotifications', 'alert-done-toggle': 'alertOnDone' };
   window.addEventListener('agentpaw:language', () => { if (value) render(value); });
   const status = get('workflow-status');
   function setBusy(next) {
     busy = next;
-    document.querySelectorAll('.workflow-modes button, #workflow-agents button, #workflow-projects button, #mute-project-select, .workflow-shortcuts input, #shortcut-disable')
+    document.querySelectorAll('.workflow-modes button, #alert-sound-toggle, #alert-toast-toggle, #alert-done-toggle, #workflow-agents button, #workflow-projects button, #mute-project-select, .workflow-shortcuts input, #shortcut-disable')
       .forEach(control => { control.disabled = next; });
   }
   function render(next) {
@@ -21,6 +22,10 @@
     for (const mode of ['standard', 'attention']) {
       get('notify-' + mode).setAttribute('aria-pressed', String(next.notifications.mode === mode));
     }
+    for (const [id, field] of Object.entries(ALERT_TOGGLES)) {
+      get(id).setAttribute('aria-checked', String(next.notifications[field] === true));
+    }
+    get('alert-preview').hidden = next.notifications.sound !== true;
     for (const [key, button] of agentButtons) {
       button.setAttribute('aria-checked', String(!next.notifications.mutedAgents.includes(key)));
       button.setAttribute('aria-label', window.AgentPawAgents.label(key) + window.AgentPawI18n.text(' 任务提醒'));
@@ -70,6 +75,10 @@
   }
   get('mute-project-select').addEventListener('change', event => { if (event.target.value) save({ muteProject: event.target.value }); });
   for (const mode of ['standard', 'attention']) get('notify-' + mode).addEventListener('click', () => save({ notifications: { mode } }));
+  for (const [id, field] of Object.entries(ALERT_TOGGLES)) {
+    get(id).addEventListener('click', () => save({ notifications: { [field]: value?.notifications[field] !== true } }));
+  }
+  get('alert-preview').addEventListener('click', () => { window.pet.previewAlertSound(); });
   for (const key of window.AgentPawAgents.SHORT_KEYS) {
     const card = document.createElement('div'); card.className = 'setting-card';
     const name = document.createElement('div'); name.className = 'setting-title'; name.textContent = window.AgentPawAgents.label(key);

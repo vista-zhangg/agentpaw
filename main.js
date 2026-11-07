@@ -11,9 +11,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { fileURLToPath, pathToFileURL } = require('url');
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen, dialog, shell, protocol, net, powerMonitor, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen, dialog, shell, protocol, net, powerMonitor, globalShortcut, Notification } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const BRAND = require('./shared/brand');
+const Agents = require('./shared/agents');
 const { IPC } = require('./shared/ipc-channels');
 const { isAssetId } = require('./backend/pet-assets');
 const { PetCharacterStore } = require('./backend/pet-characters');
@@ -35,6 +36,7 @@ const { createCore } = require('./backend/core');
 const { createMetering } = require('./backend/metering');
 const { createPricingSync } = require('./backend/pricing-sync');
 const { createPermissions } = require('./backend/permission');
+const { createAlerts } = require('./backend/alerts');
 const { createServer } = require('./backend/server');
 const adapter = require('./backend/adapter');
 const hooks = require('./backend/hooks');
@@ -124,6 +126,7 @@ let codexQuotaState = unavailableCodexQuota('idle');
 let claudeQuota = null; // Claude Code 订阅额度（可选，经 statusLine 中继）
 let demoTour = null; // 演示一遍：叠加在真实数据上的脚本化任务
 let workbuddyMetering = null; // WorkBuddy 转录 token 台账（只读，从 ~/.workbuddy/projects 扫描）
+let alerts = null;
 let opencodeMetering = null; // opencode 用量台账（只读，tail ~/.agentpaw/opencode-usage.jsonl）
 let updateService = null;
 let restReminders = null;
@@ -986,6 +989,38 @@ function routeTaskEvent(event) {
   taskNotifications.push({ ...event, projectKey: projectKey(session || { id: event.sessionId }) });
 }
 
+// Windows drops a notification's click handler if the object is collected.
+const liveToasts = new Set();
+function showAlertToast({ title, body }) {
+  if (!Notification.isSupported()) return;
+  const toast = new Notification({ title, body, silent: true });
+  const release = () => liveToasts.delete(toast);
+  toast.on('click', () => { release(); showWorkflowSurface('peek'); });
+  toast.on('close', release);
+  liveToasts.add(toast);
+  toast.show();
+}
+
+function describeAlert(event, isPrivate) {
+  const tool = event.agent ? Agents.label(event.agent) : BRAND.name;
+  const details = i18n.text("打开 AgentPaw 查看");
+  if (isPrivate) {
+    return { title: BRAND.name, body: event.kind === 'completion-summary' ? i18n.text("任务已完成") : i18n.text("有任务需要你处理") };
+  }
+  if (event.kind === 'completion-summary') {
+    return { title: event.count > 1 ? i18n.text("{0} 个任务已完成", [event.count]) : i18n.text("任务已完成"), body: event.project || details };
+  }
+  if (event.kind === 'waiting') return { title: i18n.text("{0} 需要授权", [tool]), body: event.project || details };
+  if (event.kind === 'needsinput') return { title: i18n.text("{0} 需要你回复", [tool]), body: event.project || details };
+  return { title: i18n.text("{0} 出错了", [tool]), body: event.project || details };
+}
+
+function alertSurface() {
+  const visibility = companionState().visibility;
+  return { visible: visibility.visible === true, quiet: visibility.quietUntil > Date.now(),
+    fullscreen: visibility.fullscreen === true, locked: desktopLocked || desktopPaused };
+}
+
 function workflowSettings() {
   const value = config.get();
   const muted = new Set(value.notifications.mutedProjects.map(row => row.key));
@@ -1035,6 +1070,11 @@ function registerWorkflowIpc() {
   const fromSettings = e => !!(settingsWin && !settingsWin.isDestroyed() && e.sender === settingsWin.webContents);
   const fromPet = e => !!stateOfSender(e.sender);
   ipcMain.handle(IPC.GET_WORKFLOW_PREFERENCES, e => fromSettings(e) ? workflowSettings() : null);
+  ipcMain.handle(IPC.PREVIEW_ALERT_SOUND, (e) => {
+    if (!fromSettings(e)) return false;
+    sendPet(IPC.ALERT_SOUND, 'attention');
+    return true;
+  });
   ipcMain.handle(IPC.SET_WORKFLOW_PREFERENCES, (e, value) => {
     if (!fromSettings(e) || !value || typeof value !== 'object') return { ok: false };
     if (value.shortcuts) {
@@ -1102,7 +1142,11 @@ function bootBackend() {
   taskCenter = createTaskCenter({ file: require('./backend/paths').statePath('task-center.json') });
   taskNotifications = createTaskNotifications({
     getPreferences: () => config.get().notifications,
-    deliver: (ev) => sendPetEvent({ ...ev, project: taskCenter.lookup(ev.sessionId)?.alias || ev.project }),
+    deliver: (ev) => {
+      const event = { ...ev, project: taskCenter.lookup(ev.sessionId)?.alias || ev.project };
+      sendPetEvent(event);
+      alerts.handle(event);
+    },
     record: (ev) => { const added = taskCenter.record(ev); if (added) scheduleEmit(); return added; },
   });
   const codexDir = env.value('CODEX_DIR') || undefined;
@@ -1208,6 +1252,14 @@ function bootBackend() {
     pricingSync.start();
   }
 
+  alerts = createAlerts({
+    getPreferences: () => config.get().notifications,
+    getSurface: alertSurface,
+    isPrivate: () => config.get().privacyMode === true,
+    playSound: (tone) => sendPet(IPC.ALERT_SOUND, tone),
+    showToast: showAlertToast,
+    describe: describeAlert,
+  });
   permissions = createPermissions({
     onAdded: (entry) => {
       const session = core.getSession(entry.sessionId);

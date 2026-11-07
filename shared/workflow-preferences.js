@@ -6,7 +6,7 @@
   if (root) root.AgentPawWorkflow = api;
 })(typeof window !== 'undefined' ? window : null, function (agents) {
   const SHORTCUT_ACTIONS = Object.freeze(['peek', 'next', 'toggle']);
-  const DEFAULTS = Object.freeze({ mode: 'standard', mutedAgents: [], mutedProjects: [] });
+  const DEFAULTS = Object.freeze({ mode: 'standard', sound: true, systemNotifications: true, alertOnDone: false, mutedAgents: [], mutedProjects: [] });
   const text = (value, max) => typeof value === 'string' ? value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, max) : '';
   function notifications(raw = {}) {
     if (!raw || typeof raw !== 'object') raw = {};
@@ -17,6 +17,9 @@
     }
     return {
       mode: raw.mode === 'attention' ? 'attention' : 'standard',
+      sound: raw.sound !== false,
+      systemNotifications: raw.systemNotifications !== false,
+      alertOnDone: raw.alertOnDone === true,
       mutedAgents: [...new Set((Array.isArray(raw.mutedAgents) ? raw.mutedAgents : [])
         .filter(key => agents.isKnownKey(key)))],
       mutedProjects: [...projects.values()],

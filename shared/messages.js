@@ -5520,5 +5520,85 @@
     "终端 claude 回复后更新",
     "After a terminal reply",
     "終端機 claude 回覆後更新"
+  ],
+  [
+    "提醒方式",
+    "Alert style",
+    "提醒方式"
+  ],
+  [
+    "提醒音",
+    "Alert sound",
+    "提醒音"
+  ],
+  [
+    "需要你处理时播放提示音",
+    "Play a sound when something needs you",
+    "需要你處理時播放提示音"
+  ],
+  [
+    "试听",
+    "Preview",
+    "試聽"
+  ],
+  [
+    "系统通知",
+    "System notifications",
+    "系統通知"
+  ],
+  [
+    "看不到伙伴时，用 Windows 通知提醒",
+    "Use Windows notifications when the companion is not on screen",
+    "看不到夥伴時，用 Windows 通知提醒"
+  ],
+  [
+    "完成时也提醒",
+    "Also alert when tasks finish",
+    "完成時也提醒"
+  ],
+  [
+    "任务完成时也响铃或发送通知",
+    "Play a sound or notify when a task finishes, too",
+    "任務完成時也響鈴或傳送通知"
+  ],
+  [
+    "安静时不响也不发通知；全屏时只发通知，不响。",
+    "Quiet time stays silent with no notifications. Full screen sends notifications without sound.",
+    "安靜時不響也不傳送通知；全螢幕時只傳送通知，不響。"
+  ],
+  [
+    "打开 AgentPaw 查看",
+    "Open AgentPaw for details",
+    "開啟 AgentPaw 查看"
+  ],
+  [
+    "任务已完成",
+    "Task finished",
+    "任務已完成"
+  ],
+  [
+    "有任务需要你处理",
+    "Something needs your attention",
+    "有任務需要你處理"
+  ],
+  [
+    "{0} 个任务已完成",
+    "{0} tasks finished",
+    "{0} 個任務已完成"
+  ],
+  [
+    "{0} 需要授权",
+    "{0} needs approval",
+    "{0} 需要授權"
+  ],
+  [
+    "{0} 需要你回复",
+    "{0} needs a reply",
+    "{0} 需要你回覆"
+  ],
+  [
+    "{0} 出错了",
+    "{0} hit an error",
+    "{0} 發生錯誤"
   ]
 ];});

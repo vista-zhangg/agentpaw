@@ -1,3 +1,4 @@
+.alert-controls { display: flex; align-items: center; gap: 10px; flex: none; }
 .workflow-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .workflow-modes button { padding: 15px; text-align: left; border: 1px solid var(--ui-line); background: var(--ui-surface); border-radius: 12px; cursor: pointer; color: var(--ui-text); }
 .workflow-modes button[aria-pressed="true"] { background: var(--ui-blue-soft); border-color: #9dc8f4; }

@@ -233,6 +233,14 @@ app.whenReady().then(async()=>{
     assert(muteKey, 'recent projects can be muted from Settings');
     await new Promise(resolve => setTimeout(resolve,100));
     assert(workflow.notifications.mutedProjects.some(row => row.key === muteKey && row.label), 'muted project keeps its observed name');
+    const alertState = () => settings.webContents.executeJavaScript(`['alert-sound-toggle','alert-toast-toggle','alert-done-toggle'].map(id => document.getElementById(id).getAttribute('aria-checked')).join() + '|' + document.getElementById('alert-preview').hidden`);
+    assert.equal(await alertState(),'true,true,false|false','alerts start with sound and notifications on, completions off');
+    await settings.webContents.executeJavaScript(`document.getElementById('alert-sound-toggle').click()`);
+    await new Promise(r=>setTimeout(r,80));
+    assert.equal(await alertState(),'false,true,false|true','sound switch saves at once and hides the preview button');
+    await settings.webContents.executeJavaScript(`document.getElementById('alert-sound-toggle').click()`);
+    await new Promise(r=>setTimeout(r,80));
+    assert.equal(await alertState(),'true,true,false|false','sound switch turns back on');
     await capture(settings,'settings-workflow-muted');
     assert.equal(await settings.webContents.executeJavaScript(`(() => {
       const input=document.getElementById('shortcut-peek'); input.focus();
@@ -497,6 +505,11 @@ app.whenReady().then(async()=>{
     await pet.webContents.executeJavaScript(`closeActionPop(); Object.defineProperty(window,'screenY',window.previewScreenYDescriptor); delete window.previewScreenYDescriptor; void 0;`);
     pet.setSize(520,420);
     log('Compact quick view: both directions, empty and scrolling content, live visibility changes and click-through passed');
+    pet.hide();
+    assert.equal(await pet.webContents.executeJavaScript(`window.AgentPawAlertSound.play('attention')`),true,'alert tone plays from a hidden window');
+    pet.show();
+    await require('./check-hidden-companion.cjs')(pet,{capture,log});
+    await pet.webContents.executeJavaScript(`applyStats({...lastStats,chipDisplay:{...lastStats.chipDisplay,...${JSON.stringify({...defaults,showCat:false,showTokens:true})}}}); void 0;`);
     await require('./check-notepad-layout.cjs')(pet,{stats,defaults,capture,log});
     companion.rest.pending={id:'preview-rest-capsule',kinds:['water'],createdAt:Date.now()};
     pet.webContents.send('companion:state',companion);
