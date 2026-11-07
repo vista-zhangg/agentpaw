@@ -63,7 +63,7 @@ Chat au travail, Milk Tea Mouse, Mimi Bee et Line Dog sont intégrés. Dans Para
 
 ## Données et confidentialité
 
-Tout reste sur votre machine : les données de session sont lues et traitées localement, et les paramètres et la consommation sont stockés dans `~/.agentpaw/`. Seule la grille publique de prix de models.dev est téléchargée. Les quotas Codex sont lus via le propre App Server de Codex, qui gère l'authentification ; AgentPaw ne lit pas `~/.codex/auth.json`. Les montants affichés sont des estimations aux prix publics de l'API, pas une facture d'abonnement. Voir la [documentation sur la confidentialité](docs/PRIVACY.md).
+Tout reste sur votre machine : les données de session sont lues et traitées localement, et les paramètres et la consommation sont stockés dans `~/.agentpaw/`. En dehors de la grille publique de prix de models.dev, AgentPaw ne se connecte qu'à GitHub pour vérifier et télécharger les mises à jour. Les quotas Codex sont lus via le propre App Server de Codex, qui gère l'authentification ; AgentPaw ne lit pas `~/.codex/auth.json`. Les montants affichés sont des estimations aux prix publics de l'API, pas une facture d'abonnement. Voir la [documentation sur la confidentialité](docs/PRIVACY.md).
 
 ## Licence, crédits et contributions
 

@@ -20,7 +20,7 @@ AgentPaw 将配置、窗口位置、运行时令牌、模型价格缓存、用�
 
 休息提醒使用系统提供的空闲时长、锁屏和休眠状态累计电脑使用时间；全屏免打扰检查前台窗口是否覆盖显示器。不会记录按键、鼠标点击内容、屏幕画面或前台窗口标题。提醒偏好和「今天跳过」日期保存在同一本机配置目录，不上传使用习惯。
 
-任务提醒偏好、静音项目的目录散列与显示名、快捷键保存在 `config.json`。`task-center.json` 保存会话别名／关注以及最近 7 天、最多 100 条事件摘要（事件类型、时间、项目显示名、Agent、会话标识、已读状态）；它不复制聊天正文、命令或权限内容，也不保存终端进程标识。最近记录可在行动中心清空。隐私模式会遮蔽这些显示名与别名，但不会停止本机记录。全局快捷键仅注册用户选择的组合，不记录其他按键。
+任务提醒偏好、静音项目的目录散列与显示名、快捷键保存在 `config.json`。`task-center.json` 保存会话别名／关注以及最近 7 天、最多 100 条事件摘要（事件类型、时间、项目显示名、Agent、会话标识、已读状态）；它不复制聊天正文、命令或权限内容，也不保存终端进程标识。最近记录可在快速视图清空。隐私模式会遮蔽这些显示名与别名，但不会停止本机记录。全局快捷键仅注册用户选择的组合，不记录其他按键。
 
 ### 网络访问
 
@@ -38,7 +38,7 @@ Claude Code 订阅额度是可选功能，默认关闭。在设置“连接”�
 
 ### 用户控制
 
-- 右键 AgentPaw可通过 ON/OFF 一键切换「隐私模式」，设置中也提供同步开关：桌宠和详情面板会隐藏项目/会话名、回复正文、授权命令、方案、问题选项与操作流明细，同时保留工作/等待/异常状态和用量汇总。
+- 右键 AgentPaw 可在菜单中勾选「隐私模式」，设置中也提供同步开关：桌宠和详情面板会隐藏项目/会话名、回复正文、授权命令、方案、问题选项与操作流明细，同时保留工作/等待/异常状态和用量汇总。
 - 隐私模式只是本机展示层遮蔽，不停止 watcher、hook、权限等待或用量统计。开启时当前气泡和敏感卡片会立即关闭；关闭后仍未处理的事项会恢复显示。
 - 退出 AgentPaw 即停止 watcher 与本地服务；
 - 可在设置的 Agent 接入区域或通过 `npm run uninstall:hooks` 卸载本项目 hook/插件；
@@ -54,7 +54,6 @@ AgentPaw is a local-first Windows desktop application. It has no cloud account, 
 - Claude Code hook events, transcripts, and process information;
 - local Codex rollout JSONL files;
 - Current account type, email, plan, and subscription quota windows returned by Codex App Server. The email remains in memory only for account identification and is displayed in masked form;
-- local  logs and process information;
 - WorkBuddy hooks, transcripts, and usage fields;
 - opencode plugin events and the local usage file.
 
@@ -66,7 +65,7 @@ Configuration, window position, runtime token, model-price cache, usage ledgers,
 
 Break reminders use system idle duration and lock/suspend state to count time at the computer. Fullscreen quiet mode checks whether the foreground window covers a display. Neither feature records keystrokes, click contents, screenshots, or foreground window titles. Reminder preferences and skip-for-today dates stay in the same local configuration directory; usage habits are not uploaded.
 
-Task notification preferences, muted project directory hashes and display names, and shortcut bindings are stored in `config.json`. `task-center.json` stores session aliases/follows and up to 100 event summaries for seven days (event type, timestamp, project display name, agent, session identifier and read state). It does not copy message bodies, commands, permission content, or terminal process identifiers. Clear recent events in the action center. Privacy mode masks names and aliases without stopping local recording. Global shortcuts register only the chosen key combinations; other keystrokes are not recorded.
+Task notification preferences, muted project directory hashes and display names, and shortcut bindings are stored in `config.json`. `task-center.json` stores session aliases/follows and up to 100 event summaries for seven days (event type, timestamp, project display name, agent, session identifier and read state). It does not copy message bodies, commands, permission content, or terminal process identifiers. Clear recent events in quick view. Privacy mode masks names and aliases without stopping local recording. Global shortcuts register only the chosen key combinations; other keystrokes are not recorded.
 
 ### Network access
 
@@ -84,7 +83,7 @@ Displayed cost is calculated from public API prices for local trend analysis. It
 
 ### User control
 
-- Toggle **Privacy mode** from the cat's compact ON/OFF context action or the synchronized Settings switch. It hides project/session names, response text, permission commands, plans, question options, and operation details while keeping essential state and aggregate usage visible.
+- Toggle **Privacy mode** from the pet's right-click menu or the synchronized Settings switch. It hides project/session names, response text, permission commands, plans, question options, and operation details while keeping essential state and aggregate usage visible.
 - Privacy mode masks the local presentation layer only. It does not stop watchers, hooks, pending permissions, or usage accounting. Existing bubbles and sensitive cards close immediately; unresolved items return after privacy mode is disabled.
 - Exiting AgentPaw stops its watchers and local service.
 - Use the Agent integration area in Settings or `npm run uninstall:hooks` to remove AgentPaw-managed hooks and plugins.

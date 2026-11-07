@@ -119,7 +119,7 @@ On first launch AgentPaw only connects to tools the current Windows account alre
 
 - Everything stays on your machine. Session data is read and processed locally; configuration and usage ledgers live in `~/.agentpaw/`.
 - The local HTTP service binds to loopback only, and write endpoints require a fresh per-run token.
-- The only download is the public price list from models.dev. Transcripts, permission contents and usage statistics are never uploaded.
+- Apart from the public price list from models.dev, AgentPaw only connects to GitHub to check for and download updates. Transcripts, permission contents and usage statistics are never uploaded.
 - Codex quota is read through Codex's own App Server, which handles authentication. AgentPaw does not read `~/.codex/auth.json` or call ChatGPT web endpoints.
 - Claude Code plan usage (off by default) comes only from the documented status line data; no Claude credentials are read.
 
@@ -130,8 +130,7 @@ See [Privacy and data boundaries](docs/PRIVACY.md) for the full policy.
 ```text
 Claude hooks ─────┐
 Codex rollouts ───┼──> local server / watchers ──> adapter / core ──> pet + details panel
-Codex logs ───────┤                                      └────────> unified usage ledger
-WorkBuddy ────────┤
+WorkBuddy ────────┤                                      └────────> unified usage ledger
 opencode plugin ──┤
 Codex App Server ─────> tray context menu (5h / 7d) + low-quota bubble
 ```

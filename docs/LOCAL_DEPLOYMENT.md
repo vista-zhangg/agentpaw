@@ -20,7 +20,7 @@ AI 任务与用量功能需要用户安装并使用过以下至少一个 agent�
 - 新开的 Claude Code / Codex / WorkBuddy / opencode 会话会出现在桌宠的会话列表中；
 - 配置、位置和用量历史保存在 `~/.agentpaw/`；界面支持 English、简体中文和繁體中文，默认 English；
 - 托盘菜单中的设置可以配置开机自动启动和下班彩蛋时间，默认时间为 10:55 和 16:55；
-- 「陪伴与休息」设置页可以调整喝水、伸展、远眺提醒与全屏免打扰；伙伴形象与胶囊均使用同一组设置；
+- 「休息」设置页可以调整喝水、伸展、远眺提醒与全屏免打扰；伙伴形象与胶囊均使用同一组设置；
 
 如果只使用 Codex，不希望安装任何 Hook 或插件，可以按下方 PowerShell 示例设置 `AGENTPAW_NO_HOOKS` 后启动。
 
@@ -120,7 +120,7 @@ npm run package:win
 
 ## 卸载
 
-先从 AgentPaw托盘选择“卸载已安装的钩子和插件”，或在源码目录运行：
+先在 AgentPaw 的“设置 → 连接”中选择“卸载接入”，或在源码目录运行：
 
 ```powershell
 npm run uninstall:hooks

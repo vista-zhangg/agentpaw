@@ -119,7 +119,7 @@ GIF 会统一适配为 120 × 120 画布：透明背景原样保留，能安全�
 
 - 数据都留在本机：会话数据只在本机读取和处理，配置与用量台账保存在 `~/.agentpaw/`。
 - 本地 HTTP 服务只监听 loopback，写接口要求每次运行随机生成的令牌。
-- 唯一的下载是 models.dev 的公开价目表；transcript、权限内容和统计数据从不上传。
+- 除 models.dev 的公开价目表外，只有应用更新会连接 GitHub 检查和下载；transcript、权限内容和统计数据从不上传。
 - Codex 额度通过 Codex 自己的 App Server 读取，认证由 Codex 负责；AgentPaw 不读取 `~/.codex/auth.json`，也不访问 ChatGPT 网页接口。
 - Claude Code 订阅额度（默认关闭）只取自官方状态栏数据，不读取 Claude 的凭据。
 

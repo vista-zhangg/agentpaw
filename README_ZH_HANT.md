@@ -63,7 +63,7 @@
 
 ## 資料與隱私
 
-資料都留在本機：工作階段資料只在本機讀取與處理，設定與用量紀錄保存在 `~/.agentpaw/`。唯一的下載是 models.dev 的公開價格表。Codex 額度透過 Codex 自己的 App Server 讀取，認證由 Codex 負責；AgentPaw 不讀取 `~/.codex/auth.json`。面板金額依公開 API 單價估算，不等同於訂閱帳單。完整說明見[隱私與資料邊界](docs/PRIVACY.md)。
+資料都留在本機：工作階段資料只在本機讀取與處理，設定與用量紀錄保存在 `~/.agentpaw/`。除 models.dev 的公開價格表外，只有應用程式更新會連線 GitHub 檢查與下載。Codex 額度透過 Codex 自己的 App Server 讀取，認證由 Codex 負責；AgentPaw 不讀取 `~/.codex/auth.json`。面板金額依公開 API 單價估算，不等同於訂閱帳單。完整說明見[隱私與資料邊界](docs/PRIVACY.md)。
 
 ## 授權、署名與貢獻
 
