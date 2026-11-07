@@ -2,6 +2,11 @@
 
 // Pure primitives shared by every provider ledger. Provider-specific usage
 // shapes, pricing policies, parsers and persistence stay in their own modules.
+// Ledgers are whole-file JSON snapshots, read only at startup: live numbers come
+// from memory. Each snapshot holds its source cursors, so usage since the last
+// save is replayed from the source after a crash, never lost or counted twice.
+const SAVE_DELAY_MS = 5 * 60 * 1000;
+
 function num(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
@@ -100,6 +105,7 @@ function hourlyHistory(tokensByDay = {}, costByDay = {}) {
 }
 
 module.exports = {
+  SAVE_DELAY_MS,
   num,
   dayKey,
   modelHistory,

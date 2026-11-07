@@ -19,7 +19,7 @@ const os = require('os');
 const path = require('path');
 const { createHash } = require('crypto');
 const { STATE_DIR } = require('./paths');
-const { num, dayKey, modelHistory, hourlyHistory } = require('./metering-common');
+const { SAVE_DELAY_MS, num, dayKey, modelHistory, hourlyHistory } = require('./metering-common');
 const { createMeterQueue } = require('./meter-queue');
 
 const SESSIONS_DIR = path.join(os.homedir(), '.codex', 'sessions');
@@ -280,6 +280,7 @@ function addUsage(target, delta, messageDelta = 0) {
 }
 
 function createCodexMetering(options = {}) {
+  const saveDelayMs = options.saveDelayMs || SAVE_DELAY_MS;
   const sessionsDir = options.sessionsDir || SESSIONS_DIR;
   const archivedSessionsDir = options.archivedSessionsDir === false ? null
     : options.archivedSessionsDir || (options.sessionsDir
@@ -378,7 +379,7 @@ function createCodexMetering(options = {}) {
   function scheduleSave() {
     dirty = true;
     if (saveTimer) return;
-    saveTimer = setTimeout(() => { saveTimer = null; if (dirty) saveNow(); }, 2000);
+    saveTimer = setTimeout(() => { saveTimer = null; if (dirty) saveNow(); }, saveDelayMs);
     if (saveTimer.unref) saveTimer.unref();
   }
 

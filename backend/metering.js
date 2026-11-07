@@ -21,7 +21,7 @@ const fsp = fs.promises;
 const os = require('os');
 const path = require('path');
 const { STATE_DIR } = require('./paths');
-const { num, dayKey, modelHistory, hourlyHistory } = require('./metering-common');
+const { SAVE_DELAY_MS, num, dayKey, modelHistory, hourlyHistory } = require('./metering-common');
 const { createMeterQueue } = require('./meter-queue');
 
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
@@ -207,6 +207,7 @@ function usageCost(usage, price) {
 }
 
 function createMetering(options = {}) {
+  const saveDelayMs = options.saveDelayMs || SAVE_DELAY_MS;
   const projectsDir = options.projectsDir || PROJECTS_DIR;
   const stateDir = options.stateDir || STATE_DIR;
   const statePath = options.statePath || path.join(stateDir, 'usage.json');
@@ -279,7 +280,7 @@ function createMetering(options = {}) {
   function scheduleSave() {
     dirty = true;
     if (saveTimer) return;
-    saveTimer = setTimeout(() => { saveTimer = null; if (dirty) saveNow(); }, 2000);
+    saveTimer = setTimeout(() => { saveTimer = null; if (dirty) saveNow(); }, saveDelayMs);
     if (saveTimer.unref) saveTimer.unref();
   }
 

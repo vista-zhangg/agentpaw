@@ -25,7 +25,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const { STATE_DIR } = require('./paths');
-const { num, dayKey, modelHistory, hourlyHistory, mergeLifetime } = require('./metering-common');
+const { SAVE_DELAY_MS, num, dayKey, modelHistory, hourlyHistory, mergeLifetime } = require('./metering-common');
 const { createMeterQueue } = require('./meter-queue');
 
 const USAGE_FILE = path.join(STATE_DIR, 'opencode-usage.jsonl');
@@ -155,6 +155,7 @@ function addUsage(target, delta, messageDelta = 0) {
 }
 
 function createOpenCodeMetering(options = {}) {
+  const saveDelayMs = options.saveDelayMs || SAVE_DELAY_MS;
   const usageFile = options.usageFile || USAGE_FILE;
   const stateDir = options.stateDir || STATE_DIR;
   const statePath = options.statePath || path.join(stateDir, 'opencode-usage.json');
@@ -226,7 +227,7 @@ function createOpenCodeMetering(options = {}) {
   function scheduleSave() {
     dirty = true;
     if (saveTimer) return;
-    saveTimer = setTimeout(() => { saveTimer = null; if (dirty) saveNow(); }, 2000);
+    saveTimer = setTimeout(() => { saveTimer = null; if (dirty) saveNow(); }, saveDelayMs);
     if (saveTimer.unref) saveTimer.unref();
   }
 
