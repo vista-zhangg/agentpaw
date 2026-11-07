@@ -7,7 +7,10 @@ const { text, muted } = require('../shared/workflow-preferences');
 const Agents = require('../shared/agents');
 
 const RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
-const MAX_RECENT = 100;
+const MAX_RECENT = 2000;
+// Stored rows span the retention window; renderers get the newest rows plus
+// anything unread, and whole-window totals in recentCounts.
+const RECENT_VIEW = 200;
 const hash = value => createHash('sha256').update(value).digest('hex');
 function projectKey(session) {
   const cwd = text(session && session.cwd, 4096).replace(/\\/g, '/').replace(/\/$/, '').toLowerCase();
@@ -93,10 +96,13 @@ function createTaskCenter({ file, now = Date.now } = {}) {
       return [row];
     });
     if (changed) persist();
-    return { ...stats, sessions: rows, actions, recent: recent.map(row => ({ ...row,
-      alias: preferences.get(row.sessionId)?.alias || '',
-      focusable: row.agent === 'codex' || sessions.get(row.sessionId)?.focusable === true,
-    })), taskCenterStorageError: storageError };
+    const recentCounts = { done: 0, failed: 0, attention: 0 };
+    for (const row of recent) recentCounts[row.kind]++;
+    return { ...stats, sessions: rows, actions, recentCounts,
+      recent: recent.filter((row, index) => index < RECENT_VIEW || !row.read).map(row => ({ ...row,
+        alias: preferences.get(row.sessionId)?.alias || '',
+        focusable: row.agent === 'codex' || sessions.get(row.sessionId)?.focusable === true,
+      })), taskCenterStorageError: storageError };
   }
   return {
     record, sync,
@@ -165,4 +171,4 @@ function createTaskCenter({ file, now = Date.now } = {}) {
   };
 }
 
-module.exports = { createTaskCenter, projectKey, RETENTION_MS, MAX_RECENT };
+module.exports = { createTaskCenter, projectKey, RETENTION_MS, MAX_RECENT, RECENT_VIEW };

@@ -302,7 +302,7 @@
   const KIND = { done: ["完成", 'st-done'], failed: ["失败", 'st-error'], attention: ["需要你", 'st-need'] };
   function renderRecent() {
     const rows = stats.recent || [];
-    const count = kind => rows.filter(row => row.kind === kind).length;
+    const count = kind => stats.recentCounts?.[kind] ?? rows.filter(row => row.kind === kind).length;
     const unread = rows.filter(row => !row.read).length;
     const toggle = get('ac-recent-toggle');
     toggle.innerHTML = '';

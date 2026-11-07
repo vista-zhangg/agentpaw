@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 const prefs = require('../shared/workflow-preferences');
 const { createTaskNotifications } = require('../backend/task-notifications');
-const { createTaskCenter, projectKey, MAX_RECENT, RETENTION_MS } = require('../backend/task-center');
+const { createTaskCenter, projectKey, MAX_RECENT, RECENT_VIEW, RETENTION_MS } = require('../backend/task-center');
 const { createWorkflowShortcuts, nextAttention } = require('../backend/workflow-shortcuts');
 const { protectStats } = require('../backend/privacy');
 
@@ -105,8 +105,24 @@ assert.equal(decorated.sessions[0].focusable, true);
 assert.equal(center.update('unknown', { alias: '', pinned: true }).ok, false);
 center.sync(snapshot, notifications); center.clear();
 assert.equal(center.sync(snapshot, notifications).recent.length, 0, 'clear does not replay a still-pending request');
-for (let i = 0; i < 105; i++) center.record({ ...session, kind: 'done', eventKey: String(i), ts: time });
-assert.equal(center.sync(snapshot, notifications).recent.length, MAX_RECENT);
+// A heavy user writes about 100 records a day: a week must fit, while renderers
+// stay on a bounded list with whole-window totals.
+assert(MAX_RECENT >= 7 * 200, 'history keeps a busy week');
+const seeded = Array.from({ length: MAX_RECENT + 5 }, (_, i) => ({ sessionId: session.sessionId, agent: session.agent,
+  project: session.project, projectKey: session.projectKey, id: String(i).padStart(64, '0'), kind: 'done', at: time - i, read: i >= 3 }));
+fs.writeFileSync(file, JSON.stringify({ version: 1, preferences: [], recent: seeded }));
+center = createTaskCenter({ file, now: () => time });
+const quiet = { sessions: [], actions: [] }; // no pending action adding its own row
+const windowed = center.sync(quiet, notifications);
+assert.equal(windowed.recentCounts.done, MAX_RECENT, 'totals cover every stored row');
+assert.equal(windowed.recent.length, RECENT_VIEW, 'renderers get a bounded list');
+center.record({ ...session, kind: 'done', eventKey: 'over-the-cap', ts: time });
+assert.equal(center.sync(quiet, notifications).recentCounts.done, MAX_RECENT, 'storage stays capped');
+center.markRead(windowed.recent.map(row => row.id));
+const oldUnread = seeded[RECENT_VIEW + 2];
+fs.writeFileSync(file, JSON.stringify({ version: 1, preferences: [], recent: seeded.map(row => ({ ...row, read: row.id !== oldUnread.id })) }));
+center = createTaskCenter({ file, now: () => time });
+assert(center.sync(quiet, notifications).recent.some(row => row.id === oldUnread.id), 'unread rows stay visible past the list limit');
 advance(RETENTION_MS + 1);
 assert.equal(center.sync({ sessions: [], actions: [] }, notifications).recent.length, 0);
 // Completions stay unread until the session is opened or starts another turn.

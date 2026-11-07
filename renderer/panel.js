@@ -161,11 +161,11 @@ function renderSessions(sessions) {
   }
 }
 
-function renderRecent(recent) {
+function renderRecent(recent, counts) {
   const rows = Array.isArray(recent) ? recent : [];
   $('recent-block').hidden = !rows.length;
   if (!rows.length) return;
-  const count = kind => rows.filter(row => row.kind === kind).length;
+  const count = kind => counts?.[kind] ?? rows.filter(row => row.kind === kind).length;
   const parts = [window.AgentPawI18n.text('近 7 天：完成 {0}', [count('done')])];
   if (count('failed')) parts.push(window.AgentPawI18n.text('失败 {0}', [count('failed')]));
   if (count('attention')) parts.push(window.AgentPawI18n.text('需处理 {0}', [count('attention')]));
@@ -201,7 +201,7 @@ function renderLive(s) {
   renderQuota(s.codexQuota);
   renderClaudeQuota(s.claudeQuota);
   renderSessions(s.sessions);
-  renderRecent(s.recent);
+  renderRecent(s.recent, s.recentCounts);
 }
 setInterval(() => {
   for (const node of document.querySelectorAll('.live-clock')) node.textContent = elapsedText(Date.now() - Number(node.dataset.start));
