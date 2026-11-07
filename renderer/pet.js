@@ -766,7 +766,7 @@ function movePetDuringDrag(gesture, e, targetX, targetY) {
 
 // 从快照重建队列（多任务都在、且标明项目）
 function refreshAsk(stats) {
-  // 记事本行动中心开着时，事项在那里处理，别再另弹选项面板抢窗口
+  // 快速视图开着时，事项在那里处理，别再另弹选项面板抢窗口
   if (actionPopOpen) { hideAsk(); return; }
   const actionSource = Array.isArray(stats.actions)
     ? stats.actions
@@ -804,7 +804,7 @@ function enqueueChoice(c) {
   answered.delete(choiceKey(c));
   const i = askQueue.findIndex((x) => choiceKey(x) === choiceKey(c));
   if (i < 0) askQueue.push(c);
-  // 记事本行动中心开着 → 新事项在那里显示，不另弹面板
+  // 快速视图开着 → 新事项在那里显示，不另弹面板
   if (actionPopOpen) { renderActionPop(); return; }
   // 你正在答当前面板时，新任务先进队列、不抢面板（等你答完再显示），避免打断
   if (isInteracting() && askActive) return;
@@ -1134,7 +1134,7 @@ function hideAsk({ keepFocus = false } = {}) {
   }
 }
 
-// ---------- 记事本 / 行动中心 ----------
+// ---------- 快速视图 ----------
 let curSessions = [];
 let curActions = [];
 let actionPopOpen = false;
@@ -1279,7 +1279,7 @@ function openActionPop() {
   bubble.classList.add('hidden');
   if (window.AgentPawCompanion) window.AgentPawCompanion.hide();
   // Switching panels keeps focus so the old panel's async blur cannot dismiss
-  // the action center immediately after it opens.
+  // the quick view immediately after it opens.
   if (askActive) hideAsk({ keepFocus: true });
   if (quotaPopoverOpen) closeQuotaPopover({ keepFocus: true });
   renderActionPop();
@@ -1743,7 +1743,7 @@ window.pet.onEvent((ev) => {
       break;
     case 'completion-summary':
       if (['waiting', 'needsinput', 'error'].includes(state)) break;
-      transient('happy', 1800, ev.count > 1 ? window.AgentPawI18n.text("{0} 个任务已完成，点击行动中心回看", [ev.count]) : window.AgentPawI18n.text("{0} · 这一轮已完成", [ev.project || window.AgentPawI18n.text("任务")]), 3800);
+      transient('happy', 1800, ev.count > 1 ? window.AgentPawI18n.text("{0} 个任务已完成，点击快速视图回看", [ev.count]) : window.AgentPawI18n.text("{0} · 这一轮已完成", [ev.project || window.AgentPawI18n.text("任务")]), 3800);
       break;
     case 'error':
       transient('error', 2600, ev.text || t('bub.error'), 3000);
@@ -2227,7 +2227,7 @@ function applyStats(s) {
   // stack. Measure after both have been refreshed so a long amount or a new
   // parallel task is included in the next BrowserWindow size.
   fitRestingFrame();
-  updateNotepad(s); // 记事本：行动中心
+  updateNotepad(s); // 快速视图
 
   // 选项面板：按快照重建队列（多任务都在、标明项目；防漏事件/启动时已在等待）
   refreshAsk(s);
@@ -2386,7 +2386,7 @@ function finishDrag(el, e, cancelled) {
       requestAnimationFrame(() => { if (window.AgentPawCompanion) window.AgentPawCompanion.refresh(); });
     }, 0);
   } else if (!wasPurr && !cancelled) {
-    // 左键短按 = 按当前优先级打开待处理卡/行动中心/工作速览；
+    // 左键短按 = 按当前优先级打开待处理卡/快速视图；
     // 拖动仍由上面的 4px 阈值独立裁决，不会误触点击。
     handleCatClick();
   } else if (cancelled) {
