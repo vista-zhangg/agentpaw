@@ -43,6 +43,10 @@ const BUSY_STATES = new Set(States.BUSY_STATES);
 // 要清掉上一轮的完成徽标；Claude 路径永远不会发这个事件名。
 // ElicitationResult: WorkBuddy 的「用户答完了 AskUserQuestion」——同样是新工作
 // 开始，且必须立刻解除 Elicitation 留下的 notification 态。
+// Background hooks: one of these can land after a lifecycle event that really
+// happened later, and must not undo it (say, turn a finished session back to
+// working).
+const BACKGROUND_TOOL_EVENTS = new Set(['PreToolUse', 'PostToolUse', 'PostToolUseFailure']);
 const WORK_START_EVENTS = new Set(['UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'SubagentStart', 'TaskStarted', 'ElicitationResult']);
 
 // Stale-cleanup thresholds (ms). An idle session whose terminal process is still
@@ -167,9 +171,13 @@ function createCore(options = {}) {
     if (event === 'IdleNotification') return applyIdleNotification(id, f);
     const now = Date.now();
     const prev = sessions.get(id);
+    const isToolEvent = BACKGROUND_TOOL_EVENTS.has(event);
+    const eventTs = Number.isFinite(f.eventTs) ? f.eventTs : null;
+    if (isToolEvent && prev && eventTs !== null && eventTs < (prev.lifecycleEventTs || 0)) return prev;
     const isNew = !prev;
     const s = prev || { id, createdAt: now, state: 'idle', recentEvents: [] };
     const prevState = s.state;
+    if (!isToolEvent && eventTs !== null) s.lifecycleEventTs = Math.max(s.lifecycleEventTs || 0, eventTs);
 
     // Merge identity / focus fields only when provided (never clobber with null).
     setField(s, 'agentId', f.agentId);

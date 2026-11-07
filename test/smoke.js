@@ -126,6 +126,15 @@ async function main() {
   r = await post('/state', { state: 'bogus', event: 'X', session_id: SID });
   check('unknown state → 400', () => assert.strictEqual(r.status, 400));
 
+  console.log('\n[3b] late background tool event keeps the later lifecycle state');
+  await post('/state', { state: 'thinking', event: 'UserPromptSubmit', session_id: 'late-tool', event_ts: 1000 });
+  await post('/state', { state: 'idle', event: 'Stop', session_id: 'late-tool', event_ts: 2000 });
+  r = await post('/state', { state: 'working', event: 'PostToolUse', session_id: 'late-tool', event_ts: 1500 });
+  check('late tool event → accepted but ignored', () => {
+    assert.strictEqual(r.status, 200);
+    assert.strictEqual(core.getSession('late-tool').state, 'idle');
+  });
+
   console.log('\n[4] permission hold-open → decide allow (byte-exact)');
   const permSid = 'perm-session-bbbb';
   // create the session first so the choice gets a project name

@@ -27,6 +27,8 @@ function createInstaller(cfg) {
   const HOOK_SCRIPT = cfg.hookScript;
   const MARKER = cfg.marker;
   const COMMAND_EVENTS = cfg.events;
+  // Events that never return a decision can run without holding up the tool.
+  const ASYNC_EVENTS = new Set(cfg.asyncEvents || []);
   const WITH_PERMISSION = cfg.withPermission !== false; // Claude only, by default
   const INTEGRATION_ID = cfg.integrationId || MARKER;
   const INTEGRATION_LABEL = cfg.integrationLabel || INTEGRATION_ID;
@@ -54,12 +56,14 @@ function createInstaller(cfg) {
   }
 
   function commandHook(event) {
-    return {
+    const hook = {
       type: 'command',
       shell: 'powershell',
       command: hookRuntime.buildHookCommand(HOOK_SCRIPT, event),
       timeout: STATE_TIMEOUT_S,
     };
+    if (ASYNC_EVENTS.has(event)) hook.async = true;
+    return hook;
   }
 
   function isOurCommand(hook) {
@@ -192,7 +196,8 @@ function createInstaller(cfg) {
       const hooks = settings.hooks || {};
       const commandsOk = COMMAND_EVENTS.every((event) =>
         Array.isArray(hooks[event]) &&
-        hooks[event].some((group) => Array.isArray(group && group.hooks) && group.hooks.some(isOurCommand)));
+        hooks[event].some((group) => Array.isArray(group && group.hooks) && group.hooks.some((hook) =>
+          isOurCommand(hook) && (!ASYNC_EVENTS.has(event) || hook.async === true))));
       if (!commandsOk) return false;
       if (!WITH_PERMISSION) return true;
       const desiredUrl = buildPermissionUrl(port || BASE_PORT, token);

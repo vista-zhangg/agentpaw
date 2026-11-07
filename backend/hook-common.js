@@ -174,10 +174,12 @@ function buildBody(event, p, agentId) {
 
 function runHook(event, agentId) {
   if (!EVENT_STATE[event]) process.exit(0);
+  const eventTs = Date.now();
   readStdin().then((payload) => {
     let body;
     try { body = buildBody(event, payload || {}, agentId); } catch { body = null; }
     if (!body) process.exit(0);
+    body.event_ts = eventTs;
     transport.postState(body, () => process.exit(0));
     setTimeout(() => process.exit(0), 250); // never hang the host tool
   }).catch(() => process.exit(0));

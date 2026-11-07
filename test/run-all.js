@@ -59,6 +59,8 @@ const TESTS = Object.freeze([
   'opencode-plugin.js',
   'notify-policy.js',
   'task-workflow.js',
+  'hook-flow.js',
+  'meter-idle-save.js',
   'quick-view-ui.js',
   'ask-card.js',
   'workflow-main.js',

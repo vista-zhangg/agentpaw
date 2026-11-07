@@ -229,6 +229,7 @@ function createServer(deps) {
         backgroundTasksCount: Number.isFinite(data.background_tasks_count) ? data.background_tasks_count : 0,
         sessionCronsCount: Number.isFinite(data.session_crons_count) ? data.session_crons_count : 0,
         stopHookActive: data.stop_hook_active === true,
+        eventTs: Number.isFinite(data.event_ts) ? data.event_ts : null,
         // Trust the agent_id our own hook stamps (validated against the known
         // set). Falls back to 'claude-code' for legacy/Claude hook traffic.
         agentId: isKnownAgentId(data.agent_id) ? data.agent_id : 'claude-code',

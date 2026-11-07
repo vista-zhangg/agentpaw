@@ -299,7 +299,8 @@ function createPermissions(options = {}) {
   }
 
   function cleanup() {
-    for (const entry of [...pending.values()]) resolveEntry(entry, 'deny', 'Pet is quitting');
+    // Quitting is not an answer: let the agent fall back to its own prompt.
+    for (const entry of [...pending.values()]) resolveEntry(entry, 'no-decision', 'Pet is quitting');
   }
 
   return {

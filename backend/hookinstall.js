@@ -15,6 +15,10 @@ const SETTINGS_PATH = path.join(os.homedir(), '.claude', 'settings.json');
 const HOOK_SCRIPT = hookRuntime.runtimeHookPath('agentpaw-hook.js');
 const MARKER = 'agentpaw-hook.js';
 
+// Tool events fire on every tool call and only report state, so they run in
+// the background. Late arrivals are ordered by event_ts in core.js.
+const ASYNC_EVENTS = ['PreToolUse', 'PostToolUse', 'PostToolUseFailure'];
+
 const COMMAND_EVENTS = [
   'SessionStart', 'SessionEnd', 'UserPromptSubmit',
   'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'Stop', 'StopFailure',
@@ -31,6 +35,7 @@ module.exports = createInstaller({
   hookScript: HOOK_SCRIPT,
   marker: MARKER,
   events: COMMAND_EVENTS,
+  asyncEvents: ASYNC_EVENTS,
   withPermission: true, // Claude Code supports the blocking PermissionRequest hook
 });
 
