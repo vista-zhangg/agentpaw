@@ -3006,11 +3006,6 @@
     "查看訂閱額度刷新時間"
   ],
   [
-    "行动中心内容",
-    "Action center content",
-    "行動中心內容"
-  ],
-  [
     "调整隐私、接入、更新方式和角色表情",
     "Privacy, connections, updates and characters",
     "調整隱私、接入、更新方式和角色表情"
@@ -3116,19 +3111,9 @@
     "各 Agent 的任務提醒"
   ],
   [
-    "关闭后仍保留状态和待处理数量，可从行动中心处理；不会替你允许或拒绝授权。额度与休息提醒沿用各自设置。",
-    "Status and pending counts remain available when notifications are off. Review items in the action center; AgentPaw never decides approvals for you. Quota and break reminders keep their own settings.",
-    "關閉后仍保留狀態和待處理數量，可從行動中心處理；不會替你允許或拒絕授權。額度與休息提醒沿用各自設定。"
-  ],
-  [
     "已静音的项目",
     "Muted projects",
     "已靜音的專案"
-  ],
-  [
-    "在桌伴 → 行动中心 → 会话 → 编辑中设置项目静音。",
-    "Manage project muting in Companion → Action center → Sessions → Edit.",
-    "在桌伴 → 行動中心 → 工作階段 → 編輯中設定專案靜音。"
   ],
   [
     "全局快捷键",

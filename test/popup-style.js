@@ -1,7 +1,7 @@
 'use strict';
 
 // Structural checks for the reduced pet surface. The cat keeps its state,
-// radial menu, ask card and action center; the removed session window, language
+// radial menu, ask card and quick view; the removed session window, language
 // switcher, audio path, and old territory/loot visuals must not come back
 // accidentally.
 
