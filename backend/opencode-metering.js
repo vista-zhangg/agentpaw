@@ -174,6 +174,10 @@ function createOpenCodeMetering(options = {}) {
   let scanning = false;
   const operations = createMeterQueue();
   let dirty = false;
+  // Only a scan that ingested something rewrites the ledger; bumping the scan
+  // clock alone must not cost a full JSON write every 30 seconds. The first
+  // scan of a run always saves, and a failed save stays pending for the next.
+  let scanChanged = true;
   let saveTimer = null;
   let timer = null;
   let loaded = false;
@@ -216,7 +220,7 @@ function createOpenCodeMetering(options = {}) {
       fs.writeFileSync(tmp, JSON.stringify(state), { encoding: 'utf8', mode: 0o600 });
       fs.renameSync(tmp, statePath);
       try { fs.chmodSync(statePath, 0o600); } catch {}
-    } catch {}
+    } catch { scanChanged = true; }
   }
 
   function scheduleSave() {
@@ -315,6 +319,7 @@ function createOpenCodeMetering(options = {}) {
       try { ingestLine(line, floor); } catch {}
     }
     state.cursors[usageFile] = newOffset;
+    scanChanged = true;
   }
 
   async function performScan() {
@@ -325,7 +330,7 @@ function createOpenCodeMetering(options = {}) {
       pruneDaily();
       state.diagnostics.lastScanTs = Date.now();
       state.diagnostics.scannedFiles = 1;
-      scheduleSave();
+      if (scanChanged) { scanChanged = false; scheduleSave(); }
     } catch {
     } finally {
       scanning = false;

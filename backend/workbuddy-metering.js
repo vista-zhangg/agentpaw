@@ -201,6 +201,10 @@ function createWorkbuddyMetering(options = {}) {
   let migrationPending = false;
   const operations = createMeterQueue();
   let dirty = false;
+  // Only a scan that ingested something rewrites the ledger; bumping the scan
+  // clock alone must not cost a full JSON write every 30 seconds. The first
+  // scan of a run always saves, and a failed save stays pending for the next.
+  let scanChanged = true;
   let saveTimer = null;
   let timer = null;
   let loaded = false;
@@ -235,7 +239,7 @@ function createWorkbuddyMetering(options = {}) {
       const tmp = path.join(stateDir, `.workbuddy-usage.${process.pid}.${Date.now()}.tmp`);
       fs.writeFileSync(tmp, JSON.stringify(state), { encoding: 'utf8', mode: 0o600 });
       fs.renameSync(tmp, statePath);
-    } catch {}
+    } catch { scanChanged = true; }
   }
 
   function scheduleSave() {
@@ -344,6 +348,7 @@ function createWorkbuddyMetering(options = {}) {
       fileState.offset = 0;
       fileState.carry = '';
       fileState.replaying = true;
+      scanChanged = true;
     }
     if (fileState.offset === stat.size) return;
     const stream = fs.createReadStream(file, { start: fileState.offset, encoding: 'utf8' });
@@ -364,6 +369,7 @@ function createWorkbuddyMetering(options = {}) {
     fileState.carry = carry;
     fileState.replaying = false;
     state.files[file] = fileState;
+    scanChanged = true;
   }
 
   async function performScan() {
@@ -380,6 +386,7 @@ function createWorkbuddyMetering(options = {}) {
         oldLifetime = { ...state.lifetime };
         resetHistory();
         migrationPending = false;
+        scanChanged = true;
       }
       for (const file of files) {
         try { await scanFile(file); } catch {}
@@ -388,7 +395,7 @@ function createWorkbuddyMetering(options = {}) {
       state.diagnostics.lastScanTs = Date.now();
       state.diagnostics.scannedFiles = files.length;
       pruneDaily();
-      scheduleSave();
+      if (scanChanged) { scanChanged = false; scheduleSave(); }
     } catch {
     }
   }

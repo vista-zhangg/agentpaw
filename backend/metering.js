@@ -234,6 +234,10 @@ function createMetering(options = {}) {
   let scanning = false;
   const operations = createMeterQueue();
   let dirty = false;
+  // Only a scan that ingested something rewrites the ledger; bumping the scan
+  // clock alone must not cost a full JSON write every 30 seconds. The first
+  // scan of a run always saves, and a failed save stays pending for the next.
+  let scanChanged = true;
   let saveTimer = null;
   let loaded = false;
 
@@ -287,7 +291,7 @@ function createMetering(options = {}) {
       fs.writeFileSync(tmp, JSON.stringify(state), { encoding: 'utf8', mode: 0o600 });
       fs.renameSync(tmp, statePath);
       try { fs.chmodSync(statePath, 0o600); } catch {}
-    } catch {}
+    } catch { scanChanged = true; }
   }
 
   function pruneDaily() {
@@ -424,6 +428,7 @@ function createMetering(options = {}) {
       ingest(key, tsMs, msg.model || 'unknown', usage);
     }
     state.cursors[file] = newOffset;
+    scanChanged = true;
   }
 
   async function listTranscripts(dir = projectsDir, out = []) {
@@ -451,7 +456,7 @@ function createMetering(options = {}) {
       state.diagnostics.lastScanTs = Date.now();
       state.diagnostics.scannedFiles = files.length;
       state.diagnostics.records = Object.keys(state.records).length;
-      scheduleSave();
+      if (scanChanged) { scanChanged = false; scheduleSave(); }
     } catch {
     } finally {
       scanning = false;

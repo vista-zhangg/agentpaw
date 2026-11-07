@@ -305,6 +305,10 @@ function createCodexMetering(options = {}) {
   const operations = createMeterQueue();
   let pricing = loadPricing();
   let dirty = false;
+  // Only a scan that ingested something rewrites the ledger; bumping the scan
+  // clock alone must not cost a full JSON write every 30 seconds. The first
+  // scan of a run always saves, and a failed save stays pending for the next.
+  let scanChanged = true;
   let saveTimer = null;
   let timer = null;
   let loaded = false;
@@ -366,6 +370,7 @@ function createCodexMetering(options = {}) {
       fs.renameSync(tmp, statePath);
     } catch (error) {
       dirty = true;
+      scanChanged = true;
       if (strict) throw error;
     }
   }
@@ -477,6 +482,7 @@ function createCodexMetering(options = {}) {
 
   async function backfillQuota(fileState, file) {
     if (Array.isArray(fileState.quotaEvents)) return;
+    scanChanged = true;
     fileState.quotaEvents = [];
     delete fileState.quotaUsage;
     if (!fileState.offset) return;
@@ -543,9 +549,11 @@ function createCodexMetering(options = {}) {
       fileState.offset = 0;
       fileState.carry = '';
       fileState.replaying = true;
+      scanChanged = true;
     }
     if (!Array.isArray(fileState.quotaEvents) && stat.mtimeMs < Date.now() - QUOTA_HISTORY_MS) {
       fileState.quotaEvents = [];
+      scanChanged = true;
     }
     await backfillQuota(fileState, file);
     if (fileState.offset === stat.size) return;
@@ -565,6 +573,7 @@ function createCodexMetering(options = {}) {
     fileState.carry = carry;
     fileState.replaying = false;
     state.files[fileKey] = fileState;
+    scanChanged = true;
   }
 
   async function performScan() {
@@ -578,7 +587,7 @@ function createCodexMetering(options = {}) {
       pruneDaily();
       state.diagnostics.lastScanTs = Date.now();
       state.diagnostics.scannedFiles = files.length;
-      scheduleSave();
+      if (scanChanged) { scanChanged = false; scheduleSave(); }
     } catch {
     } finally {
       scanning = false;
